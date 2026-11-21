@@ -18,9 +18,13 @@ func _init() -> void:
 	var total := 0
 	var failures: Array[String] = []
 	for file in files:
-		var script: GDScript = load("%s/%s" % [TEST_DIR, file])
-		var suite = script.new()
 		print(file)
+		var script = load("%s/%s" % [TEST_DIR, file])
+		if not script is GDScript or not script.can_instantiate():
+			failures.append("%s: could not load (see the script error above)" % file)
+			print("  FAIL could not load")
+			continue
+		var suite = script.new()
 		for method in script.get_script_method_list():
 			var method_name: String = method["name"]
 			if not method_name.begins_with("test_"):
