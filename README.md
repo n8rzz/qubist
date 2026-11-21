@@ -22,6 +22,8 @@ The core uses `Vector3i(x, y, h)`: `x` is width, `y` is depth and `h` (stored in
 
 Open the folder in Godot 4.3+ and press Play, or run `godot --path .`. The window opens at iPhone size (390×844). With a mouse: drag pieces from the tray onto the tower, scroll over the tower to zoom.
 
+To run it on your iPhone, follow [docs/ios-device-build.md](docs/ios-device-build.md).
+
 ## Running the tests
 
 Requires Godot 4.3 or newer on your `PATH`.
