@@ -16,6 +16,9 @@ var failures: Array[String] = []
 
 
 func _initialize() -> void:
+	# Test at iPhone size; headless windows otherwise start at a default size.
+	DisplayServer.window_set_size(Vector2i(390, 844))
+	root.size = Vector2i(390, 844)
 	main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 
