@@ -30,6 +30,17 @@ jobs:
           set -o pipefail
           timeout 300 ./godot --headless --path . --script res://tests/run_tests.gd 2>&1 | tee test-output.txt
 
+      - name: Report failures as annotations
+        if: always()
+        run: |
+          # Surface each failed check and script error on the pull request.
+          grep -E "^  - " test-output.txt | sed 's/^  - //' | head -50 | while IFS= read -r line; do
+            echo "::error title=Test failed::$line"
+          done || true
+          grep -E -A2 "SCRIPT ERROR|Parse Error" test-output.txt | head -60 | paste -sd' ' | sed 's/--/\n/g' | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error title=Script error::$line"
+          done || true
+
       - name: Fail on script errors
         if: always()
         run: |
