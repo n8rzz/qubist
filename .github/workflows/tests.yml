@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  core:
+    name: Core tests (Godot ${{ vars.GODOT_VERSION || '4.3' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GODOT_VERSION: ${{ vars.GODOT_VERSION || '4.3' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL -o godot.zip "$base/$name.zip"
+          unzip -q godot.zip
+          mv "$name" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          timeout 300 ./godot --headless --path . --script res://tests/run_tests.gd 2>&1 | tee test-output.txt
+
+      - name: Fail on script errors
+        if: always()
+        run: |
+          # A runtime error inside a test is printed but doesn't stop the run,
+          # so treat any script or parse error in the output as a failure.
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" test-output.txt; then
+            echo "::error::Godot reported script errors (see above)."
+            exit 1
+          fi

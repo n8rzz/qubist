@@ -26,6 +26,8 @@ godot --headless --path . --script res://tests/run_tests.gd
 
 The runner prints one line per test and exits with code 1 if any test fails.
 
+GitHub Actions runs the same tests on every pull request and on pushes to `main` (`.github/workflows/tests.yml`), using Godot 4.3 by default. To test against another version, set a repository variable named `GODOT_VERSION` (for example `4.4`).
+
 ## Using the core
 
 ```gdscript
