@@ -9,6 +9,7 @@ config_version=5
 config/name="Qubist"
 config/description="A 3D block-stacking puzzle: fill straight lines in a 6x6x12 tower to clear them."
 config/features=PackedStringArray("4.3", "Mobile")
+config/icon="res://icon.png"
 
 [display]
 
@@ -20,3 +21,4 @@ window/stretch/mode="canvas_items"
 [rendering]
 
 renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true

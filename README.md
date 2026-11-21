@@ -16,6 +16,8 @@ The product requirements live in Notion (Qubist › PRD and Concept wireframes).
 
 The core uses `Vector3i(x, y, h)`: `x` is width, `y` is depth and `h` (stored in `.z`) is the layer, with `h = 0` as the floor. The 3D view will map this to Godot's Y-up space as `(x, h, y)`.
 
+To run it on your iPhone, follow [docs/ios-device-build.md](docs/ios-device-build.md).
+
 ## Running the tests
 
 Requires Godot 4.3 or newer on your `PATH`.
