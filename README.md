@@ -10,11 +10,17 @@ The product requirements live in Notion (Qubist › PRD and Concept wireframes).
 | --- | --- |
 | `core/` | The game rules in plain GDScript: grid, pieces, placement, line clearing, scoring, dealing, game state. No rendering and no platform code, so it can be unit-tested and reused on Android. |
 | `config/` | Data that tunes the game: grid size, tray size, scoring numbers (`game.json`) and piece shapes (`pieces.json`). |
+| `game/` | The greybox game screen: layout, 3D tower view, camera, piece previews and touch input. Builds its UI in code. |
+| `scenes/` | `main.tscn`, the scene the game starts in. |
 | `tests/` | Unit tests for everything in `core/`, with a small built-in runner (no add-ons needed). |
 
 ## Coordinates
 
 The core uses `Vector3i(x, y, h)`: `x` is width, `y` is depth and `h` (stored in `.z`) is the layer, with `h = 0` as the floor. The 3D view will map this to Godot's Y-up space as `(x, h, y)`.
+
+## Running the game
+
+Open the folder in Godot 4.3+ and press Play, or run `godot --path .`. The window opens at iPhone size (390×844). With a mouse: drag pieces from the tray onto the tower, scroll over the tower to zoom.
 
 ## Running the tests
 
@@ -22,6 +28,12 @@ Requires Godot 4.3 or newer on your `PATH`.
 
 ```sh
 godot --headless --path . --script res://tests/run_tests.gd
+```
+
+A smoke test loads the game screen headless and plays moves through the real drag path:
+
+```sh
+godot --headless --path . --script res://tests/smoke_main.gd
 ```
 
 The runner prints one line per test and exits with code 1 if any test fails.
