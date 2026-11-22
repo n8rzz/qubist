@@ -92,3 +92,20 @@ static func preview_point(p: Vector3, step: int) -> Vector2:
 	return Vector2(
 		ground.dot(screen_right(step)),
 		ground.dot(toward_camera(step)) * sin(pitch) - p.z * cos(pitch))
+
+
+## How many steps each cleared cell is from the nearest placed cell, as a
+## dictionary of cell -> int (Manhattan distance). The clear effect ripples
+## out from the placed piece one step at a time. With nothing placed, every
+## cell is 0 steps away.
+static func ripple_steps(cleared: Array, placed: Array) -> Dictionary:
+	var steps := {}
+	for c in cleared:
+		var best := 0
+		if not placed.is_empty():
+			best = 1 << 30
+			for p in placed:
+				var d: Vector3i = (c as Vector3i) - (p as Vector3i)
+				best = mini(best, absi(d.x) + absi(d.y) + absi(d.z))
+		steps[c] = best
+	return steps

@@ -83,3 +83,25 @@ func test_z_mode_counts_from_the_top() -> void:
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 11), ViewMath.MODE_Z, 0, SIZE), 0)
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 0), ViewMath.MODE_Z, 0, SIZE), 11)
 	check_eq(ViewMath.layer_from_viewer(Vector3i(4, 1, 6), ViewMath.MODE_Z, 3, SIZE), 5)
+
+
+func test_ripple_starts_at_the_placed_cells() -> void:
+	var line: Array = []
+	for x in range(6):
+		line.append(Vector3i(x, 2, 0))
+	var steps := ViewMath.ripple_steps(line, [Vector3i(5, 2, 0)])
+	check_eq(steps[Vector3i(5, 2, 0)], 0, "the placed cell goes first")
+	check_eq(steps[Vector3i(4, 2, 0)], 1)
+	check_eq(steps[Vector3i(0, 2, 0)], 5, "the far end goes last")
+
+
+func test_ripple_uses_the_nearest_placed_cell() -> void:
+	var line: Array = [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(3, 0, 0)]
+	var steps := ViewMath.ripple_steps(line, [Vector3i(0, 0, 0), Vector3i(3, 0, 0)])
+	check_eq(steps[Vector3i(1, 0, 0)], 1)
+	check_eq(steps[Vector3i(2, 0, 0)], 1)
+
+
+func test_ripple_with_nothing_placed_starts_everywhere() -> void:
+	var steps := ViewMath.ripple_steps([Vector3i(1, 1, 1)], [])
+	check_eq(steps[Vector3i(1, 1, 1)], 0)
