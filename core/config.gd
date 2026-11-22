@@ -12,7 +12,6 @@ const DEFAULT_PIECES_PATH := "res://config/pieces.json"
 var grid_size := Vector3i(6, 6, 12)
 var tray_size := 3
 var max_rerolls := 5
-var points_per_cube_placed := 1
 var points_per_cube_cleared := 10
 var streak_bonus := 50
 var pieces: Array = []
@@ -52,7 +51,6 @@ func apply(game_data: Dictionary, pieces_data: Dictionary) -> void:
 	max_rerolls = int(dealer.get("max_rerolls", 5))
 
 	var scoring: Dictionary = game_data.get("scoring", {})
-	points_per_cube_placed = int(scoring.get("points_per_cube_placed", 1))
 	points_per_cube_cleared = int(scoring.get("points_per_cube_cleared", 10))
 	streak_bonus = int(scoring.get("streak_bonus", 50))
 

@@ -3,7 +3,6 @@
   "tray_size": 3,
   "dealer": { "max_rerolls": 5 },
   "scoring": {
-    "points_per_cube_placed": 1,
     "points_per_cube_cleared": 10,
     "streak_bonus": 50
   }

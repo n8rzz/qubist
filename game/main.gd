@@ -377,11 +377,13 @@ func _on_game_over(final_score: int) -> void:
 
 
 ## Floating "+points" over the move, and a combo/streak banner when they apply.
+## Only line clears score, so a move that clears nothing shows nothing.
 func _show_score_gain(result: Dictionary) -> void:
-	var cells: Array = result.cleared if not result.cleared.is_empty() else result.placed
+	if int(result.score.total) <= 0:
+		return
 	var at := viewport_box.get_global_rect().position \
-		+ tower.project_point(ViewMath.cells_center(cells, config.grid_size))
-	var pop := _label("+%s" % _format(int(result.score.total)), 24 if result.lines.size() > 0 else 18, SCORE_POP_COLOR)
+		+ tower.project_point(ViewMath.cells_center(result.cleared, config.grid_size))
+	var pop := _label("+%s" % _format(int(result.score.total)), 24, SCORE_POP_COLOR)
 	add_child(pop)
 	pop.reset_size()
 	pop.position = at - pop.size * 0.5
