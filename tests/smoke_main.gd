@@ -53,8 +53,8 @@ func _play() -> void:
 			main._turn(1)
 			main.tower.rig._tween.custom_step(1.0)
 		if i % 5 == 2:
-			main._set_slice_mode(i % 2)
-			main._set_slice_depth(i % 4)
+			main._set_slice_mode(i % 3)
+			main._set_slice_depth(i % 10)
 		if main.autoplay_one_move():
 			moves += 1
 		else:

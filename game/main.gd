@@ -31,6 +31,9 @@ const SNAP_RADIUS := 72.0
 ## the ghost.
 const OCCLUDE_RADIUS := 1.1
 
+## Swiper button and chip labels, indexed by ViewMath mode.
+const AXIS_NAMES := ["X", "Y", "Z"]
+
 const BG := Color("#F4F4F2")
 const INK := Color("#222222")
 const MUTED := Color("#555555")
@@ -52,7 +55,6 @@ var drag_preview: PiecePreview
 var slice_chip: Label
 var show_all_button: Button
 var slice_slider: HSlider
-var slice_label: Label
 var axis_buttons: Array[Button] = []
 var overlay: Control
 var overlay_panel: VBoxContainer
@@ -257,12 +259,18 @@ func _refresh() -> void:
 			_box(WHITE, LINE, 16) if piece != null else _box(Color(0, 0, 0, 0), Color("#9A9A9A"), 16))
 
 	var layers := ViewMath.slice_layer_count(slice_mode, step, config.grid_size)
+	# Modes can have different layer counts (Z has 12, X/Y have 6), so keep the
+	# depth inside the current mode's range.
+	slice_depth = mini(slice_depth, layers - 1)
 	slice_slider.max_value = layers - 1
-	var axis_name := "X" if slice_mode == ViewMath.MODE_X else "Y"
+	slice_slider.set_value_no_signal(slice_depth)
+	var axis_name: String = AXIS_NAMES[slice_mode]
 	slice_chip.visible = slice_depth > 0
 	show_all_button.visible = slice_depth > 0
-	slice_chip.text = "Slice %d of %d · %s" % [slice_depth + 1, layers, axis_name]
-	slice_label.text = "Swiper · full tower" if slice_depth == 0 else "Swiper · slice %d" % (slice_depth + 1)
+	# X/Y number slices from the front. Z numbers them from the floor, so the
+	# label matches the layer the player sees on top.
+	var slice_number := layers - slice_depth if slice_mode == ViewMath.MODE_Z else slice_depth + 1
+	slice_chip.text = "Slice %d of %d · %s" % [slice_number, layers, axis_name]
 	for i in range(axis_buttons.size()):
 		axis_buttons[i].set_pressed_no_signal(i == slice_mode)
 
@@ -423,6 +431,19 @@ func _build_tower_area() -> Control:
 	show_all_button.pressed.connect(func(): _set_slice_depth(0))
 	show_all_button.visible = false
 	area.add_child(show_all_button)
+
+	# Rotate buttons sit in the bottom corners beside the base, so the swiper
+	# can use the whole controls row.
+	for dir in [-1, 1]:
+		var b := _icon_button("rotate_left" if dir < 0 else "rotate_right",
+			"Rotate tower left" if dir < 0 else "Rotate tower right", 52, 26)
+		b.set_anchors_preset(Control.PRESET_BOTTOM_LEFT if dir < 0 else Control.PRESET_BOTTOM_RIGHT)
+		b.offset_left = 4 if dir < 0 else -56
+		b.offset_right = 56 if dir < 0 else -4
+		b.offset_top = -56
+		b.offset_bottom = -4
+		b.pressed.connect(_turn.bind(dir))
+		area.add_child(b)
 	return area
 
 
@@ -449,12 +470,8 @@ func _build_tray() -> Control:
 func _build_controls() -> Control:
 	var row := HBoxContainer.new()
 	row.custom_minimum_size.y = CONTROLS_HEIGHT
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", 8)
 
-	var left := _icon_button("rotate_left", "Rotate tower left", 56, 28)
-	left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	left.pressed.connect(func(): _turn(-1))
-	row.add_child(left)
 
 	var swiper := PanelContainer.new()
 	swiper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -462,17 +479,17 @@ func _build_controls() -> Control:
 	swiper.custom_minimum_size.y = 56
 	swiper.add_theme_stylebox_override("panel", _box(WHITE, LINE, 28, 2, Vector2(6, 6)))
 	var inner := HBoxContainer.new()
-	inner.add_theme_constant_override("separation", 8)
+	inner.add_theme_constant_override("separation", 10)
 	swiper.add_child(inner)
 
 	var axes := HBoxContainer.new()
-	axes.add_theme_constant_override("separation", 2)
+	axes.add_theme_constant_override("separation", 0)
 	var group := ButtonGroup.new()
-	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y]:
-		var b := _text_button("X" if mode == ViewMath.MODE_X else "Y", 14)
+	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
+		var b := _text_button(AXIS_NAMES[mode], 14)
 		b.toggle_mode = true
 		b.button_group = group
-		b.custom_minimum_size = Vector2(40, 40)
+		b.custom_minimum_size = Vector2(44, 40)
 		b.add_theme_stylebox_override("normal", _box(Color("#ECECEA"), Color(0, 0, 0, 0), 20, 0))
 		b.add_theme_stylebox_override("hover", _box(Color("#E2E2E0"), Color(0, 0, 0, 0), 20, 0))
 		b.add_theme_stylebox_override("pressed", _box(Color("#333333"), Color(0, 0, 0, 0), 20, 0))
@@ -483,28 +500,26 @@ func _build_controls() -> Control:
 		axis_buttons.append(b)
 	inner.add_child(axes)
 
-	var slider_column := VBoxContainer.new()
-	slider_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slider_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	slider_column.add_theme_constant_override("separation", 0)
-	slice_label = _label("Swiper · full tower", 10, MUTED)
-	slice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	slider_column.add_child(slice_label)
+	# The chip over the tower names the slice, so the slider gets the bar's
+	# full height and a large grabber to make it easy to hit with a thumb.
 	slice_slider = HSlider.new()
+	slice_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slice_slider.size_flags_vertical = Control.SIZE_FILL
 	slice_slider.min_value = 0
 	slice_slider.max_value = config.grid_size.y - 1
 	slice_slider.step = 1
 	slice_slider.focus_mode = Control.FOCUS_NONE
-	slice_slider.custom_minimum_size.y = 24
+	slice_slider.custom_minimum_size.y = 40
+	var grabber := _grabber_texture(26)
+	slice_slider.add_theme_icon_override("grabber", grabber)
+	slice_slider.add_theme_icon_override("grabber_highlight", grabber)
+	slice_slider.add_theme_stylebox_override("slider", _track(Color("#D6D6D3")))
+	slice_slider.add_theme_stylebox_override("grabber_area", _track(Color("#333333")))
+	slice_slider.add_theme_stylebox_override("grabber_area_highlight", _track(Color("#333333")))
 	slice_slider.value_changed.connect(func(v: float): _set_slice_depth(int(v)))
-	slider_column.add_child(slice_slider)
-	inner.add_child(slider_column)
+	inner.add_child(slice_slider)
 	row.add_child(swiper)
 
-	var right := _icon_button("rotate_right", "Rotate tower right", 56, 28)
-	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	right.pressed.connect(func(): _turn(1))
-	row.add_child(right)
 	return row
 
 
@@ -567,6 +582,28 @@ func _box(bg: Color, border: Color, radius: int, width: int = 2, padding := Vect
 	box.content_margin_bottom = padding.y
 	box.anti_aliasing = true
 	return box
+
+
+## Slider track: a rounded bar 8 px thick.
+func _track(color: Color) -> StyleBoxFlat:
+	var box := _box(color, Color(0, 0, 0, 0), 4, 0)
+	box.content_margin_top = 4
+	box.content_margin_bottom = 4
+	return box
+
+
+## A round slider grabber: white with a dark ring, drawn in code so the
+## greybox needs no image assets.
+func _grabber_texture(diameter: int) -> ImageTexture:
+	var img := Image.create(diameter, diameter, false, Image.FORMAT_RGBA8)
+	var r := diameter * 0.5
+	for y in range(diameter):
+		for x in range(diameter):
+			var d := Vector2(x + 0.5 - r, y + 0.5 - r).length()
+			var ring := clampf(r - d, 0.0, 1.0)
+			var fill := clampf(r - 2.5 - d, 0.0, 1.0)
+			img.set_pixel(x, y, Color("#333333").lerp(WHITE, fill) * Color(1, 1, 1, ring))
+	return ImageTexture.create_from_image(img)
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:
