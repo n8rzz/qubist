@@ -11,7 +11,8 @@ const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
 const GhostLinesShader := preload("res://game/shaders/ghost_lines.gdshader")
 
-const CUBE_SIZE := 0.94
+## Cubes fill most of their 1-unit cell, leaving a thin gap between blocks.
+const CUBE_SIZE := 0.97
 ## Mid-grey stone, so cubes stand apart from the base and the sky.
 const BLOCK_COLOR := Color("#A8A8A3")
 ## Darker line along every cube edge, so cells can be counted.
