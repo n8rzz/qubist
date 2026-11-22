@@ -45,6 +45,8 @@ func _process(_delta: float) -> bool:
 	frame += 1
 	if frame == 5:
 		_check_layout()
+	elif frame == 7:
+		_check_home()
 	elif frame == 10:
 		_play()
 	elif frame == 15:
@@ -63,6 +65,20 @@ func _check_layout() -> void:
 		failures.append("tower area is too small: %s" % rect)
 	if main.tray_slots.size() != 3:
 		failures.append("expected 3 tray slots, found %d" % main.tray_slots.size())
+
+
+## Launch opens Home with no Continue (nothing saved yet); New game leaves
+## it for the game (#72).
+func _check_home() -> void:
+	if not main.home.visible or not main.menu_open():
+		failures.append("launch did not open Home")
+	if main.home.continue_button.visible:
+		failures.append("Home offered Continue with no game to resume")
+	main.home.new_game_button.pressed.emit()
+	if main.home.visible or main.menu_open():
+		failures.append("New game did not leave Home")
+	if main.game == null or main.game.moves != 0:
+		failures.append("New game did not start a fresh game")
 
 
 func _play() -> void:
@@ -139,6 +155,8 @@ func _check_stats() -> void:
 	main.show_settings()
 	if not main.settings_sheet.visible or not main.menu_open():
 		failures.append("gear did not open the Settings sheet")
+	if not main.settings_sheet.home_button.visible:
+		failures.append("Settings opened in a game has no Home row")
 	main.settings_sheet.stats_button.pressed.emit()
 	if main.settings_sheet.visible or not main.stats_screen.visible:
 		failures.append("Settings › Stats did not open the Stats screen")
@@ -151,7 +169,30 @@ func _check_stats() -> void:
 	main.settings_sheet.close_sheet()
 	if main.menu_open():
 		failures.append("closing Settings left a menu open")
+	_check_home_menus()
 	SaveFile.remove(STATS_PATH)
+
+
+## Home's Stats closes back to Home; Home's Settings has no Home row; and
+## Settings › Home from a game returns to Home (#72).
+func _check_home_menus() -> void:
+	main.show_home()
+	main.home.stats_button.pressed.emit()
+	if not main.stats_screen.visible:
+		failures.append("Home › Stats did not open the Stats screen")
+	main.stats_screen.back_pressed.emit()
+	if main.stats_screen.visible or main.settings_sheet.visible or not main.home.visible:
+		failures.append("Back from Stats did not return to Home")
+	main.home.settings_button.pressed.emit()
+	if not main.settings_sheet.visible or main.settings_sheet.home_button.visible:
+		failures.append("Home › Settings should open Settings without a Home row")
+	main.settings_sheet.close_sheet()
+	main.home.new_game_button.pressed.emit()
+	main.show_settings()
+	main.settings_sheet.home_button.pressed.emit()
+	if not main.home.visible or main.settings_sheet.visible:
+		failures.append("Settings › Home did not return to Home")
+	main.home.new_game_button.pressed.emit()
 
 
 ## Settings › Display › Grid ticks shows the ticks, saves the choice and a
@@ -192,6 +233,13 @@ func _check_resume() -> void:
 
 	var resumed = _make_main()
 	root.add_child(resumed)
+	if not resumed.home.visible or not resumed.home.continue_button.visible:
+		failures.append("Home did not offer Continue for a saved game")
+	elif resumed.home.continue_score.text != "· %s" % main._format(main.game.score):
+		failures.append("Continue shows %s, expected score %d" % [resumed.home.continue_score.text, main.game.score])
+	resumed.home.continue_button.pressed.emit()
+	if resumed.home.visible or resumed.menu_open():
+		failures.append("Continue did not leave Home")
 	if JSON.stringify(resumed.game.to_dict()) != JSON.stringify(expected):
 		failures.append("resumed game differs from the saved one")
 	if resumed.tower.rig.view_step() != step or not is_equal_approx(resumed.tower.rig.camera.size, zoom):

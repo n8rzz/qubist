@@ -16,6 +16,7 @@ const SaveFile := preload("res://core/save_file.gd")
 const Settings := preload("res://core/settings.gd")
 const SettingsSheet := preload("res://game/settings_sheet.gd")
 const StatsScreen := preload("res://game/stats_screen.gd")
+const HomeScreen := preload("res://game/home_screen.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const SAFE_TOP := 54
@@ -104,6 +105,10 @@ var overlay: Control
 var overlay_panel: VBoxContainer
 var settings_sheet: SettingsSheet
 var stats_screen: StatsScreen
+var home: HomeScreen
+## Stats was opened from the Settings sheet, so Back returns there; from
+## Home, Back just closes it.
+var _stats_from_settings := false
 
 var slice_mode := ViewMath.MODE_X
 var slice_depth := 0
@@ -129,6 +134,7 @@ func _ready() -> void:
 	_build_ui()
 	if not resume_game():
 		new_game()
+	show_home()
 
 
 func _notification(what: int) -> void:
@@ -522,7 +528,7 @@ func _on_game_over(final_score: int) -> void:
 		return
 	_record_finished_game()
 	_show_overlay("No moves left", "Score %s\nBest %s" % [_format(final_score), _format(stats.best_score)],
-		"Play again", new_game)
+		"Play again", new_game, "Home", show_home)
 
 
 ## Adds the finished game to the lifetime stats and saves them, once per game.
@@ -535,16 +541,56 @@ func _record_finished_game() -> void:
 	SaveFile.remove(game_save_path)
 
 
-## True while the Settings sheet or the Stats screen covers the game.
+## True while Home, the Settings sheet or the Stats screen covers the game.
 func menu_open() -> bool:
 	return (settings_sheet != null and settings_sheet.visible) \
-		or (stats_screen != null and stats_screen.visible)
+		or (stats_screen != null and stats_screen.visible) \
+		or (home != null and home.visible)
+
+
+## True if there's a game worth resuming: started and not over.
+func can_continue() -> bool:
+	return game != null and not game.is_over and game.moves > 0
+
+
+## Shows Home over the game (#72). The game stays saved, ready for Continue.
+func show_home() -> void:
+	_clear_drag()
+	save_game()
+	_hide_overlay()
+	settings_sheet.visible = false
+	stats_screen.visible = false
+	var resume := can_continue()
+	home.open(stats.best_score, game.score if resume else -1,
+		game.grid.filled_cells() if resume else [])
+	# Nothing to draw behind Home, so let the 3D view rest.
+	viewport_box.visible = false
+
+
+func _leave_home() -> void:
+	home.visible = false
+	viewport_box.visible = true
+	_refresh()
+
+
+func _on_home_new_game() -> void:
+	new_game()
+	_leave_home()
+
+
+func _on_home_continue() -> void:
+	_leave_home()
+
+
+func _on_home_stats() -> void:
+	_stats_from_settings = false
+	stats_screen.open(stats)
 
 
 func show_settings() -> void:
 	_clear_drag()
 	stats_screen.visible = false
-	settings_sheet.open()
+	settings_sheet.open(not home.visible)
 
 
 ## Turns the grid ticks on the tower's border on or off and saves it (#56).
@@ -556,8 +602,16 @@ func set_grid_ticks(on: bool) -> void:
 
 
 func show_stats() -> void:
+	_stats_from_settings = true
 	settings_sheet.visible = false
 	stats_screen.open(stats)
+
+
+func _on_stats_back() -> void:
+	if _stats_from_settings:
+		show_settings()
+	else:
+		stats_screen.visible = false
 
 
 ## Floating "+points" over the move, and a combo/streak banner when they apply.
@@ -658,13 +712,21 @@ func _build_ui() -> void:
 	overlay = _build_overlay()
 	add_child(overlay)
 
+	home = HomeScreen.new()
+	home.new_game_pressed.connect(_on_home_new_game)
+	home.continue_pressed.connect(_on_home_continue)
+	home.stats_pressed.connect(_on_home_stats)
+	home.settings_pressed.connect(show_settings)
+	add_child(home)
+
 	settings_sheet = SettingsSheet.new()
 	settings_sheet.stats_pressed.connect(show_stats)
+	settings_sheet.home_pressed.connect(show_home)
 	settings_sheet.grid_ticks_toggled.connect(set_grid_ticks)
 	settings_sheet.set_grid_ticks(settings.grid_ticks)
 	add_child(settings_sheet)
 	stats_screen = StatsScreen.new()
-	stats_screen.back_pressed.connect(show_settings)
+	stats_screen.back_pressed.connect(_on_stats_back)
 	add_child(stats_screen)
 
 
