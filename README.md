@@ -57,6 +57,7 @@ if game.can_place(0, Vector3i(2, 3, 0)):
     print(result.score.total, " points")
 
 var save := game.to_dict()      # JSON-safe; restore with game.from_dict(save)
+                                # from_dict() refuses saves from another config
 ```
 
 ## Adding a piece

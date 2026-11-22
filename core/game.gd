@@ -10,7 +10,7 @@ const Rules := preload("res://core/rules.gd")
 const Scoring := preload("res://core/scoring.gd")
 const Dealer := preload("res://core/dealer.gd")
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 
 signal piece_placed(tray_index: int, piece, origin: Vector3i)
 signal lines_cleared(lines: Array, cells: Array)
@@ -145,6 +145,7 @@ func to_dict() -> Dictionary:
 		ids.append("" if piece == null else piece.id)
 	return {
 		"version": SAVE_VERSION,
+		"config": config.signature(),
 		"grid": {
 			"size": [grid.width, grid.depth, grid.height],
 			"cells": grid.to_array(),
@@ -163,9 +164,15 @@ func to_dict() -> Dictionary:
 
 
 ## Restores a snapshot from to_dict(). Returns false if it does not fit this
-## game's config (different grid size or unknown pieces); the game is then
-## left unchanged.
+## game's config (another save version, a changed config, a different grid
+## size or unknown pieces); the game is then left unchanged.
 func from_dict(data: Dictionary) -> bool:
+	if int(data.get("version", 0)) != SAVE_VERSION:
+		push_warning("Saved game is version %s, not %d; not restored" % [data.get("version"), SAVE_VERSION])
+		return false
+	if str(data.get("config", "")) != config.signature():
+		push_warning("Saved game was made with a different config; not restored")
+		return false
 	var saved_grid: Dictionary = data.get("grid", {})
 	var saved_size: Array = saved_grid.get("size", [])
 	if saved_size.size() != 3 \
@@ -179,8 +186,12 @@ func from_dict(data: Dictionary) -> bool:
 		push_warning("Saved game grid is incomplete; not restored")
 		return false
 
+	var saved_tray: Array = data.get("tray", [])
+	if saved_tray.size() != config.tray_size:
+		push_warning("Saved game has a different tray size; not restored")
+		return false
 	var restored_tray: Array = []
-	for id in data.get("tray", []):
+	for id in saved_tray:
 		if str(id) == "":
 			restored_tray.append(null)
 			continue

@@ -11,6 +11,8 @@ extends SceneTree
 const MOVES := 30
 ## Keeps the smoke test's finished games out of the real stats file.
 const STATS_PATH := "user://test_saves/smoke_stats.json"
+## Likewise for the auto-saved game (#18).
+const GAME_PATH := "user://test_saves/smoke_game.json"
 const SaveFile := preload("res://core/save_file.gd")
 
 var main
@@ -23,9 +25,16 @@ func _initialize() -> void:
 	# headless default (wider than a phone). Layout is fluid, so the drag path
 	# is the same; check real sizes on a device.
 	SaveFile.remove(STATS_PATH)
-	main = load("res://scenes/main.tscn").instantiate()
-	main.stats_path = STATS_PATH
+	SaveFile.remove(GAME_PATH)
+	main = _make_main()
 	root.add_child(main)
+
+
+func _make_main():
+	var screen = load("res://scenes/main.tscn").instantiate()
+	screen.stats_path = STATS_PATH
+	screen.game_save_path = GAME_PATH
+	return screen
 
 
 func _process(_delta: float) -> bool:
@@ -36,6 +45,8 @@ func _process(_delta: float) -> bool:
 		_play()
 	elif frame == 15:
 		_check_stats()
+	elif frame == 18:
+		_check_resume()
 	elif frame == 20:
 		_finish()
 	return false
@@ -114,6 +125,8 @@ func _check_stats() -> void:
 		failures.append("finished game counted %d times" % (main.stats.games_played - before))
 	if main.stats.best_score < main.game.score:
 		failures.append("best score %d is below the finished score %d" % [main.stats.best_score, main.game.score])
+	if FileAccess.file_exists(GAME_PATH):
+		failures.append("a finished game left its auto-save behind")
 	var saved: Dictionary = SaveFile.read(STATS_PATH)
 	if int(saved.get("games_played", -1)) != main.stats.games_played:
 		failures.append("stats file has %s games, expected %d" % [saved.get("games_played"), main.stats.games_played])
@@ -134,6 +147,41 @@ func _check_stats() -> void:
 	if main.menu_open():
 		failures.append("closing Settings left a menu open")
 	SaveFile.remove(STATS_PATH)
+
+
+## A placement saves the game and camera; a fresh screen picks both up, and
+## a save that doesn't fit the config is dropped for a new game (#18).
+func _check_resume() -> void:
+	main.new_game()
+	main._turn(1)
+	main.tower.rig._tween.custom_step(1.0)
+	main.tower.rig.zoom_by(1.2)
+	if not main.autoplay_one_move():
+		failures.append("resume check could not place a piece")
+		return
+	main.finish_animations()
+	var expected: Dictionary = main.game.to_dict()
+	var step: int = main.tower.rig.view_step()
+	var zoom: float = main.tower.rig.camera.size
+
+	var resumed = _make_main()
+	root.add_child(resumed)
+	if JSON.stringify(resumed.game.to_dict()) != JSON.stringify(expected):
+		failures.append("resumed game differs from the saved one")
+	if resumed.tower.rig.view_step() != step or not is_equal_approx(resumed.tower.rig.camera.size, zoom):
+		failures.append("resumed camera is step %d zoom %.2f, expected %d zoom %.2f" % [
+			resumed.tower.rig.view_step(), resumed.tower.rig.camera.size, step, zoom])
+	resumed.queue_free()
+
+	var data := SaveFile.read(GAME_PATH)
+	data.game.config = "other"
+	SaveFile.write(GAME_PATH, data)
+	var fresh = _make_main()
+	root.add_child(fresh)
+	if fresh.game.moves != 0:
+		failures.append("a save from another config was resumed")
+	fresh.queue_free()
+	SaveFile.remove(GAME_PATH)
 
 
 func _finish() -> void:

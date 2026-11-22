@@ -173,6 +173,29 @@ func test_restore_rejects_other_grid_size() -> void:
 	check(not Game.new(Config.new(), 1).from_dict(saved))
 
 
+func test_restore_rejects_changed_config() -> void:
+	var saved: Dictionary = _game().to_dict()
+	var pieces := Config.load_json(Config.DEFAULT_PIECES_PATH)
+	pieces.pieces[0].cells.append([9, 9, 9])
+	check(not Game.new(Config.new({}, pieces), 1).from_dict(saved), "changed piece shape")
+	var bigger := Config.load_json(Config.DEFAULT_GAME_PATH)
+	bigger.grid.height = 14
+	check(not Game.new(Config.new(bigger), 1).from_dict(saved), "changed grid")
+
+
+func test_restore_ignores_scoring_changes() -> void:
+	var saved: Dictionary = _game().to_dict()
+	var rescored := Config.load_json(Config.DEFAULT_GAME_PATH)
+	rescored.scoring.streak_bonus = 999
+	check(Game.new(Config.new(rescored), 1).from_dict(saved))
+
+
+func test_restore_rejects_other_version() -> void:
+	var saved: Dictionary = _game().to_dict()
+	saved["version"] = Game.SAVE_VERSION - 1
+	check(not Game.new(Config.new(), 1).from_dict(saved))
+
+
 func test_random_games_play_to_the_end() -> void:
 	# Plays seeded games with random legal moves until each ends, checking
 	# that the rules hold on every move.
