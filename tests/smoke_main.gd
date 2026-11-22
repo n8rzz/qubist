@@ -57,10 +57,19 @@ func _play() -> void:
 			main._set_slice_depth(i % 10)
 		if main.autoplay_one_move():
 			moves += 1
+			if not main.tower.is_animating():
+				failures.append("move %d did not start the move animation" % i)
+			# The next drag is blocked until the animation ends.
+			main.finish_animations()
 		else:
 			failures.append("move %d did not go through the drag path" % i)
 	main._set_slice_depth(0)
 	print("Placed %d of %d moves; score %d" % [moves, MOVES, main.game.score])
+	# A new game mid-animation must cancel it cleanly.
+	if main.autoplay_one_move():
+		main.new_game()
+		if main.tower.is_animating():
+			failures.append("new game left the move animation running")
 
 
 func _finish() -> void:

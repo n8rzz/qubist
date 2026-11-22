@@ -41,6 +41,13 @@ const LINE := Color("#555555")
 const ACCENT := Color("#2559C9")
 const WHITE := Color.WHITE
 
+# Placeholder feedback (#47).
+const SCORE_POP_COLOR := Color("#1B428F")
+const SCORE_POP_RISE := 56.0
+const SCORE_POP_SECONDS := 0.9
+const BANNER_SECONDS := 1.2
+const TRAY_FADE_SECONDS := 0.2
+
 var config: Config = Config.new()
 var game: Game
 var best_score := 0
@@ -67,6 +74,8 @@ var _has_target := false
 var _target := Vector3i.ZERO
 var _touches := {}
 var _pinch_distance := 0.0
+## Game over arrived while the move animation was playing; show it after.
+var _pending_game_over := false
 
 
 func _ready() -> void:
@@ -77,8 +86,11 @@ func _ready() -> void:
 
 func new_game() -> void:
 	_clear_drag()
+	tower.cancel_move_animation()
+	_pending_game_over = false
 	game = Game.new(config)
 	game.game_over.connect(_on_game_over)
+	game.tray_refilled.connect(_on_tray_refilled)
 	game.start()
 	_hide_overlay()
 	_refresh()
@@ -140,7 +152,9 @@ func _touch_spread() -> float:
 # --- Dragging a piece ---
 
 func _start_drag(index: int, finger: Vector2) -> void:
-	if game.is_over or overlay.visible or game.tray[index] == null:
+	# No new move until the last one has finished animating, so the grid and
+	# the view stay in step.
+	if game.is_over or overlay.visible or tower.is_animating() or game.tray[index] == null:
 		return
 	_drag_index = index
 	drag_preview.set_piece(game.tray[index], tower.rig.view_step())
@@ -187,6 +201,9 @@ func _end_drag(finger: Vector2) -> void:
 		var result: Dictionary = game.place(index, origin)
 		if result.ok:
 			Input.vibrate_handheld(15)
+			# Sliced-away cubes stay faded instead of animating.
+			tower.play_move(result.placed, result.cleared, _faded_cells())
+			_show_score_gain(result)
 	_refresh()
 
 
@@ -312,10 +329,72 @@ func _faded_cells() -> Dictionary:
 	return faded
 
 
+func _on_move_animation_finished() -> void:
+	_refresh_blocks()
+	if _pending_game_over:
+		_pending_game_over = false
+		_on_game_over(game.score)
+
+
+## Skips any running animation. Used by the smoke test.
+func finish_animations() -> void:
+	tower.finish_move_animation()
+
+
 func _on_game_over(final_score: int) -> void:
+	if tower.is_animating():
+		_pending_game_over = true
+		return
 	best_score = maxi(best_score, final_score)
 	_show_overlay("No moves left", "Score %s\nBest %s" % [_format(final_score), _format(best_score)],
 		"Play again", new_game)
+
+
+## Floating "+points" over the move, and a combo/streak banner when they apply.
+func _show_score_gain(result: Dictionary) -> void:
+	var cells: Array = result.cleared if not result.cleared.is_empty() else result.placed
+	var at := viewport_box.get_global_rect().position \
+		+ tower.project_point(ViewMath.cells_center(cells, config.grid_size))
+	var pop := _label("+%s" % _format(int(result.score.total)), 24 if result.lines.size() > 0 else 18, SCORE_POP_COLOR)
+	add_child(pop)
+	pop.reset_size()
+	pop.position = at - pop.size * 0.5
+	var tween := pop.create_tween().set_parallel()
+	tween.tween_property(pop, "position:y", pop.position.y - SCORE_POP_RISE, SCORE_POP_SECONDS) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(pop, "modulate:a", 0.0, SCORE_POP_SECONDS).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(pop.queue_free)
+
+	var parts: Array[String] = []
+	if int(result.score.combo) > 1:
+		parts.append("Combo ×%d" % int(result.score.combo))
+	if result.lines.size() > 0 and int(result.score.streak) > 1:
+		parts.append("Streak %d" % int(result.score.streak))
+	if parts.is_empty():
+		return
+	var banner := _label("  ·  ".join(parts), 18, WHITE)
+	banner.add_theme_stylebox_override("normal", _box(ACCENT, ACCENT, 18, 0, Vector2(16, 8)))
+	add_child(banner)
+	banner.reset_size()
+	var rect := viewport_box.get_global_rect()
+	banner.position = Vector2(rect.get_center().x - banner.size.x * 0.5, rect.position.y + 56)
+	banner.pivot_offset = banner.size * 0.5
+	banner.scale = Vector2(0.6, 0.6)
+	var bt := banner.create_tween()
+	bt.tween_property(banner, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	bt.tween_interval(BANNER_SECONDS)
+	bt.tween_property(banner, "modulate:a", 0.0, 0.3)
+	bt.tween_callback(banner.queue_free)
+
+
+## New pieces fade into their slots, one after another.
+func _on_tray_refilled(_tray: Array) -> void:
+	for i in range(tray_previews.size()):
+		var preview: Control = tray_previews[i]
+		preview.modulate.a = 0.0
+		var tween := preview.create_tween()
+		tween.tween_interval(i * 0.06)
+		tween.tween_property(preview, "modulate:a", 1.0, TRAY_FADE_SECONDS)
 
 
 func _show_pause() -> void:
@@ -414,6 +493,7 @@ func _build_tower_area() -> Control:
 	sub.add_child(tower)
 	tower.setup(config.grid_size)
 	tower.rig.view_changed.connect(func(_step): _refresh())
+	tower.move_animation_finished.connect(_on_move_animation_finished)
 
 	slice_chip = _label("", 13, Color("#1B428F"))
 	slice_chip.add_theme_stylebox_override("normal", _box(WHITE, ACCENT, 16, 2, Vector2(10, 4)))

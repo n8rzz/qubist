@@ -24,6 +24,20 @@ const BASE_COLOR := Color("#CFCFCB")
 const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
 const BACKGROUND_COLOR := Color("#F4F4F2")
 
+# Placeholder move animation (#47). Real effects come later.
+## A placed piece drops this far, in cubes, as it lands.
+const DROP_HEIGHT := 0.6
+const LAND_SECONDS := 0.1
+## Cleared cubes flash this colour, then shrink to nothing.
+const FLASH_COLOR := Color("#FFD23F")
+const FLASH_EDGE_COLOR := Color("#B8860B")
+const FLASH_SECONDS := 0.15
+const SHRINK_SECONDS := 0.25
+
+## Emitted when the move animation ends (or is skipped). Not emitted when it is
+## cancelled.
+signal move_animation_finished
+
 var grid_size := Vector3i(6, 6, 12)
 var rig: CameraRig
 
@@ -32,6 +46,16 @@ var _faded := MultiMeshInstance3D.new()
 var _ghost := MultiMeshInstance3D.new()
 var _ghost_ok := _material(GHOST_OK_COLOR, true)
 var _ghost_bad := _material(GHOST_BAD_COLOR, true)
+## Cubes of the piece being placed, drawn apart while they drop in.
+var _landing := MultiMeshInstance3D.new()
+## Cubes being cleared, drawn apart so the grid can update straight away.
+var _clearing := MultiMeshInstance3D.new()
+var _clearing_material: ShaderMaterial
+## Placed cells still landing; update_blocks leaves them out of the solid set.
+var _landing_set := {}
+var _landing_cells: Array = []
+var _clearing_cells: Array = []
+var _move_tween: Tween
 
 
 func setup(size: Vector3i) -> void:
@@ -48,7 +72,12 @@ func setup(size: Vector3i) -> void:
 	_ghost.multimesh = _make_multimesh()
 	_ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_ghost.visible = false
-	for node in [_solid, _faded, _ghost]:
+	_landing.multimesh = _make_multimesh()
+	_landing.material_override = _solid.material_override
+	_clearing.multimesh = _make_multimesh()
+	_clearing_material = _block_material(SolidShader, BLOCK_COLOR, EDGE_COLOR)
+	_clearing.material_override = _clearing_material
+	for node in [_solid, _faded, _ghost, _landing, _clearing]:
 		add_child(node)
 
 	rig = CameraRig.new()
@@ -63,7 +92,7 @@ func update_blocks(cells: Array, faded: Dictionary) -> void:
 	for c in cells:
 		if faded.has(c):
 			faint.append(c)
-		else:
+		elif not _landing_set.has(c):
 			solid.append(c)
 	_fill(_solid, solid)
 	_fill(_faded, faint)
@@ -77,6 +106,82 @@ func show_ghost(cells: Array, legal: bool) -> void:
 
 func hide_ghost() -> void:
 	_ghost.visible = false
+
+
+## Plays the placeholder move animation: `placed` cubes (minus any in `skip`,
+## such as sliced-away ones) drop into place, then `cleared` cubes flash and
+## shrink away. The grid should already hold the result of the move; call
+## update_blocks() after this so the landing cubes are left out.
+func play_move(placed: Array, cleared: Array, skip: Dictionary) -> void:
+	cancel_move_animation()
+	var cleared_set := {}
+	for c in cleared:
+		cleared_set[c] = true
+	for c in placed:
+		# Placed cubes that clear stay in the clearing set, so they land and
+		# flash in one place.
+		if not cleared_set.has(c) and not skip.has(c):
+			_landing_set[c] = true
+			_landing_cells.append(c)
+	_clearing_cells = cleared.duplicate()
+	var total := LAND_SECONDS
+	if not cleared.is_empty():
+		total += FLASH_SECONDS + SHRINK_SECONDS
+	_set_move_time(0.0)
+	_move_tween = create_tween()
+	_move_tween.tween_method(_set_move_time, 0.0, total, total)
+	_move_tween.finished.connect(_end_move_animation.bind(true))
+
+
+func is_animating() -> bool:
+	return _move_tween != null and _move_tween.is_valid()
+
+
+## Jumps the move animation to its end, emitting move_animation_finished.
+func finish_move_animation() -> void:
+	if is_animating():
+		_move_tween.kill()
+		_end_move_animation(true)
+
+
+## Stops the move animation without emitting move_animation_finished.
+func cancel_move_animation() -> void:
+	if _move_tween != null:
+		_move_tween.kill()
+	_end_move_animation(false)
+
+
+func _end_move_animation(notify: bool) -> void:
+	_move_tween = null
+	_landing_set.clear()
+	_landing_cells.clear()
+	_clearing_cells.clear()
+	_landing.multimesh.instance_count = 0
+	_clearing.multimesh.instance_count = 0
+	if notify:
+		move_animation_finished.emit()
+
+
+func _set_move_time(t: float) -> void:
+	var land := clampf(t / LAND_SECONDS, 0.0, 1.0)
+	var drop := Vector3(0, DROP_HEIGHT * (1.0 - ease(land, 0.4)), 0)
+	var lmm := _landing.multimesh
+	lmm.instance_count = _landing_cells.size()
+	for i in range(_landing_cells.size()):
+		lmm.set_instance_transform(i, Transform3D(Basis(), ViewMath.to_world(_landing_cells[i], grid_size) + drop))
+
+	# Clearing cubes sit still while the piece lands, flash, then shrink.
+	var after_land := t - LAND_SECONDS
+	var flash := clampf(after_land / FLASH_SECONDS, 0.0, 1.0) if after_land > 0.0 else 0.0
+	var shrink := clampf((after_land - FLASH_SECONDS) / SHRINK_SECONDS, 0.0, 1.0)
+	var size := maxf(1.0 - ease(shrink, 2.0), 0.001)
+	_clearing_material.set_shader_parameter("face_color", BLOCK_COLOR.lerp(FLASH_COLOR, flash))
+	_clearing_material.set_shader_parameter("edge_color", EDGE_COLOR.lerp(FLASH_EDGE_COLOR, flash))
+	var cmm := _clearing.multimesh
+	cmm.instance_count = _clearing_cells.size()
+	for i in range(_clearing_cells.size()):
+		var shrunk := Basis().scaled(Vector3.ONE * size)
+		cmm.set_instance_transform(i, Transform3D(shrunk, ViewMath.to_world(_clearing_cells[i], grid_size)))
 
 
 func camera() -> Camera3D:
