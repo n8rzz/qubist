@@ -213,3 +213,68 @@ static func piece_edges(cells: Array) -> Dictionary:
 					elif count == 2:
 						inner.append([start, end])
 	return {"outer": outer, "inner": inner}
+
+
+## Grid ticks (#56): short marks on the tower's border, one per cell along
+## the top rim and the base's lip and one per layer on each corner post.
+## Every MAJOR_TICK_EVERY-th mark is a longer major tick.
+const MAJOR_TICK_EVERY := 3
+const TICK_LENGTH := 0.24
+const MAJOR_TICK_LENGTH := 0.5
+## Floor ticks lie on the base's lip, which is half a cube wide.
+const FLOOR_TICK_MAX := 0.42
+## Floor ticks sit just above the base, like the floor grid.
+const FLOOR_TICK_LIFT := 0.005
+
+
+## World-space line segments for the grid ticks, as consecutive endpoint
+## pairs: {"minor": Array[Vector3], "major": Array[Vector3]}.
+static func border_ticks(grid_size: Vector3i) -> Dictionary:
+	var minor: Array[Vector3] = []
+	var major: Array[Vector3] = []
+	var hx := grid_size.x * 0.5
+	var hz := grid_size.y * 0.5
+	var top := float(grid_size.z)
+
+	# Corner posts: at every layer, a mark into each of the two walls.
+	for corner in [Vector2(-hx, -hz), Vector2(hx, -hz), Vector2(hx, hz), Vector2(-hx, hz)]:
+		var into_x := -signf(corner.x)
+		var into_z := -signf(corner.y)
+		for h in range(1, grid_size.z):
+			var is_major := h % MAJOR_TICK_EVERY == 0
+			var out: Array[Vector3] = major if is_major else minor
+			var length := MAJOR_TICK_LENGTH if is_major else TICK_LENGTH
+			var at := Vector3(corner.x, h, corner.y)
+			out.append(at)
+			out.append(at + Vector3(into_x * length, 0, 0))
+			out.append(at)
+			out.append(at + Vector3(0, 0, into_z * length))
+
+	# Top rim and base lip: a mark at every cell boundary along each edge.
+	# The rim's hang down the wall; the lip's point out across the base.
+	for axis in [0, 1]:
+		var cells := grid_size.x if axis == 0 else grid_size.y
+		var half := hx if axis == 0 else hz
+		var across := hz if axis == 0 else hx
+		for i in range(1, cells):
+			var is_major := i % MAJOR_TICK_EVERY == 0
+			var out: Array[Vector3] = major if is_major else minor
+			var length := MAJOR_TICK_LENGTH if is_major else TICK_LENGTH
+			var along := -half + i
+			for side in [-1.0, 1.0]:
+				var rim := _edge_point(axis, along, side * across, top)
+				out.append(rim)
+				out.append(rim - Vector3(0, length, 0))
+				var lip := _edge_point(axis, along, side * across, FLOOR_TICK_LIFT)
+				var outward := _edge_point(axis, 0.0, side * minf(length, FLOOR_TICK_MAX), 0.0)
+				out.append(lip)
+				out.append(lip + outward)
+	return {"minor": minor, "major": major}
+
+
+## A point on the footprint's edge: `along` runs on world x (axis 0) or z
+## (axis 1), `across` is the other horizontal coordinate.
+static func _edge_point(axis: int, along: float, across: float, height: float) -> Vector3:
+	if axis == 0:
+		return Vector3(along, height, across)
+	return Vector3(across, height, along)
