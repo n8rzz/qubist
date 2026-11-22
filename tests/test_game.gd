@@ -37,7 +37,7 @@ func test_place_without_clear() -> void:
 	var result: Dictionary = game.place(0, Vector3i(0, 0, 0))
 	check(result.ok)
 	check_eq(result.lines.size(), 0)
-	check_eq(game.score, 2)
+	check_eq(game.score, 0, "placing without clearing scores nothing")
 	check_eq(game.moves, 1)
 	check(game.tray[0] == null, "placed slot stays empty until refill")
 	check(game.grid.is_filled(Vector3i(1, 0, 0)))
@@ -67,7 +67,7 @@ func test_completing_a_line_clears_and_scores() -> void:
 	check(result.ok)
 	check_eq(result.lines.size(), 1)
 	check_eq(result.cleared.size(), 6)
-	check_eq(game.score, 2 + 60)
+	check_eq(game.score, 60)
 	check_eq(game.grid.filled_count(), 0)
 	check_eq(game.streak, 1)
 	check_eq(game.lines_cleared_total, 1)
@@ -90,7 +90,7 @@ func test_crossing_lines_share_one_cube() -> void:
 	var result: Dictionary = game.place(0, Vector3i(0, 0, 0))
 	check_eq(result.lines.size(), 2)
 	check_eq(result.cleared.size(), 11, "shared corner cube is removed once")
-	check_eq(game.score, 2 + (60 + 60) * 2)
+	check_eq(game.score, (60 + 60) * 2)
 	check_eq(game.best_combo, 2)
 	check(game.grid.is_filled(Vector3i(0, 0, 1)), "upper half of the bar is left floating")
 
@@ -100,15 +100,15 @@ func test_streak_builds_and_resets() -> void:
 	_fill(game, _row(0, 0, [0, 1, 2, 3]))
 	_fill(game, _row(1, 0, [0, 1, 2, 3]))
 	game.place(0, Vector3i(4, 0, 0))
-	check_eq(game.score, 62)
+	check_eq(game.score, 60)
 	var second: Dictionary = game.place(1, Vector3i(4, 1, 0))
 	check_eq(second.score.streak_bonus, 50)
-	check_eq(game.score, 62 + 112)
+	check_eq(game.score, 60 + 110)
 	check_eq(game.streak, 2)
 	game.place(2, Vector3i(0, 3, 0))
 	check_eq(game.streak, 0)
 	check_eq(game.longest_streak, 2)
-	check_eq(game.score, 62 + 112 + 8)
+	check_eq(game.score, 60 + 110)
 
 
 func test_tray_refills_after_three_placements() -> void:
@@ -197,7 +197,10 @@ func test_random_games_play_to_the_end() -> void:
 			var pick: Array = options[rng.randi_range(0, options.size() - 1)]
 			var result: Dictionary = game.place(pick[0], pick[1])
 			check(result.ok)
-			check(game.score > last_score, "every move scores at least its placed cubes")
+			if result.lines.is_empty():
+				check_eq(game.score, last_score, "a move that clears nothing scores nothing")
+			else:
+				check(game.score > last_score, "a move that clears a line scores")
 			last_score = game.score
 			check_eq(Rules.full_lines_through(game.grid, game.grid.filled_cells()).size(), 0, "no full line is left on the grid")
 		check(game.is_over, "seed %d ended within 2000 moves" % game_seed)

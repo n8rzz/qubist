@@ -97,7 +97,7 @@ func place(tray_index: int, origin: Vector3i) -> Dictionary:
 		best_combo = maxi(best_combo, lines.size())
 		lines_cleared_total += lines.size()
 
-	var breakdown: Dictionary = scoring.score_placement(placed.size(), lengths, streak)
+	var breakdown: Dictionary = scoring.score_placement(lengths, streak)
 	score += int(breakdown.total)
 
 	if not lines.is_empty():
