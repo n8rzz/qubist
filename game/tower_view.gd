@@ -7,9 +7,17 @@ extends Node3D
 const ViewMath := preload("res://game/view_math.gd")
 const CameraRig := preload("res://game/camera_rig.gd")
 
+const SolidShader := preload("res://game/shaders/block_solid.gdshader")
+const FadedShader := preload("res://game/shaders/block_faded.gdshader")
+
 const CUBE_SIZE := 0.94
-const BLOCK_COLOR := Color("#D9D9D6")
-const FADED_COLOR := Color(0.85, 0.85, 0.84, 0.15)
+## Mid-grey stone, so cubes stand apart from the base and the sky.
+const BLOCK_COLOR := Color("#A8A8A3")
+## Darker line along every cube edge, so cells can be counted.
+const EDGE_COLOR := Color("#5E5E5A")
+## Faded blocks keep the block colour at low opacity and a faint outline.
+const FADED_COLOR := Color(BLOCK_COLOR, 0.15)
+const FADED_EDGE_COLOR := Color(EDGE_COLOR, 0.45)
 const GHOST_OK_COLOR := Color(0.18, 0.62, 0.36, 0.45)
 const GHOST_BAD_COLOR := Color(0.85, 0.25, 0.2, 0.45)
 const BASE_COLOR := Color("#CFCFCB")
@@ -33,9 +41,9 @@ func setup(size: Vector3i) -> void:
 	_add_guides()
 
 	_solid.multimesh = _make_multimesh()
-	_solid.material_override = _material(BLOCK_COLOR)
+	_solid.material_override = _block_material(SolidShader, BLOCK_COLOR, EDGE_COLOR)
 	_faded.multimesh = _make_multimesh()
-	_faded.material_override = _material(FADED_COLOR, true)
+	_faded.material_override = _block_material(FadedShader, FADED_COLOR, FADED_EDGE_COLOR)
 	_faded.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_ghost.multimesh = _make_multimesh()
 	_ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -109,6 +117,15 @@ func _make_multimesh() -> MultiMesh:
 	box.size = Vector3.ONE * CUBE_SIZE
 	mm.mesh = box
 	return mm
+
+
+func _block_material(shader: Shader, face: Color, edge: Color) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = shader
+	m.set_shader_parameter("face_color", face)
+	m.set_shader_parameter("edge_color", edge)
+	m.set_shader_parameter("half_size", CUBE_SIZE * 0.5)
+	return m
 
 
 func _material(color: Color, transparent := false, unshaded := false) -> StandardMaterial3D:
