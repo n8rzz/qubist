@@ -23,6 +23,7 @@ const GHOST_BAD_COLOR := Color(0.85, 0.25, 0.2, 0.45)
 const BASE_COLOR := Color("#CFCFCB")
 const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
 const BACKGROUND_COLOR := Color("#F4F4F2")
+const BASE_THICKNESS := 0.4
 
 # Placeholder move animation (#47). Real effects come later.
 ## A placed piece drops this far, in cubes, as it lands.
@@ -203,6 +204,38 @@ func depth_of(c: Vector3i) -> float:
 	return (ViewMath.to_world(c, grid_size) - cam.origin).dot(-cam.basis.z)
 
 
+## Where to put the axis labels, in viewport pixels: [x, y, z]. X and Y sit
+## `gap` pixels outside the middle of the base's right-front and left-front
+## edges, the edges the swiper's X and Y modes cut along. Z sits `gap` pixels
+## below the base's front corner.
+func axis_label_points(gap: float) -> Array[Vector2]:
+	var hx := grid_size.x * 0.5 + 0.5
+	var hz := grid_size.y * 0.5 + 0.5
+	var y := -BASE_THICKNESS
+	var corners: Array[Vector2] = []
+	for c in [Vector3(hx, y, hz), Vector3(-hx, y, hz), Vector3(-hx, y, -hz), Vector3(hx, y, -hz)]:
+		corners.append(project_point(c))
+	# The front corner is the lowest on screen; its neighbours end the two
+	# front edges.
+	var front := 0
+	for i in range(1, 4):
+		if corners[i].y > corners[front].y:
+			front = i
+	var a := corners[(front + 1) % 4]
+	var b := corners[(front + 3) % 4]
+	var right := a if a.x > b.x else b
+	var left := b if a.x > b.x else a
+	var center := project_point(Vector3(0, y, 0))
+	var f := corners[front]
+	var x_mid := (f + right) * 0.5
+	var y_mid := (f + left) * 0.5
+	return [
+		x_mid + (x_mid - center).normalized() * gap,
+		y_mid + (y_mid - center).normalized() * gap,
+		f + Vector2(0, gap),
+	]
+
+
 ## On-screen size of one cube, in viewport pixels.
 func cube_pixels() -> float:
 	return get_viewport().get_visible_rect().size.y / rig.camera.size
@@ -262,11 +295,11 @@ func _add_environment() -> void:
 
 func _add_base() -> void:
 	var slab := BoxMesh.new()
-	slab.size = Vector3(grid_size.x + 1, 0.4, grid_size.y + 1)
+	slab.size = Vector3(grid_size.x + 1, BASE_THICKNESS, grid_size.y + 1)
 	var base := MeshInstance3D.new()
 	base.mesh = slab
 	base.material_override = _material(BASE_COLOR)
-	base.position = Vector3(0, -0.2, 0)
+	base.position = Vector3(0, -BASE_THICKNESS * 0.5, 0)
 	add_child(base)
 
 
