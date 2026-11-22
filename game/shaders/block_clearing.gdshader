@@ -1,4 +1,6 @@
 shader_type spatial;
+// Marks the stencil so swept cubes never draw over these (#67).
+stencil_mode write, compare_always, 1;
 
 // Cubes about to break in a line clear. Each instance's colour (red channel)
 // says how far it has flashed, so cubes can flash one after another in a
