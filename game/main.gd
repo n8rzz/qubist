@@ -35,6 +35,12 @@ const OCCLUDE_RADIUS := 1.1
 
 ## Swiper button and chip labels, indexed by ViewMath mode.
 const AXIS_NAMES := ["X", "Y", "Z"]
+## Axis labels around the tower's base (#53): small and quiet, so they don't
+## compete with the blocks. They fade out while the tower turns.
+const AXIS_LABEL_SIZE := 11
+const AXIS_LABEL_COLOR := Color("#8A8A86")
+const AXIS_LABEL_GAP := 10.0
+const AXIS_LABEL_FADE_SECONDS := 0.1
 
 const BG := Color("#F4F4F2")
 const INK := Color("#222222")
@@ -65,6 +71,8 @@ var slice_chip: Label
 var show_all_button: Button
 var slice_slider: HSlider
 var axis_buttons: Array[Button] = []
+## Axis labels on the tower, indexed by ViewMath mode.
+var axis_labels: Array[Label] = []
 var overlay: Control
 var overlay_panel: VBoxContainer
 
@@ -96,6 +104,22 @@ func new_game() -> void:
 	game.start()
 	_hide_overlay()
 	_refresh()
+
+
+func _process(delta: float) -> void:
+	_update_axis_labels(delta)
+
+
+## Keeps the axis labels beside the base as the view zooms, resizes or turns.
+func _update_axis_labels(delta: float) -> void:
+	# The front corner swaps halfway through a turn, so hide the labels until
+	# the turn ends rather than have them jump.
+	var target := 0.0 if tower.rig.is_turning() else 1.0
+	var points := tower.axis_label_points(AXIS_LABEL_GAP)
+	for i in range(axis_labels.size()):
+		var label := axis_labels[i]
+		label.modulate.a = move_toward(label.modulate.a, target, delta / AXIS_LABEL_FADE_SECONDS)
+		label.position = points[i] - label.size * 0.5
 
 
 # --- Input ---
@@ -502,6 +526,11 @@ func _build_tower_area() -> Control:
 	tower.setup(config.grid_size)
 	tower.rig.view_changed.connect(func(_step): _refresh())
 	tower.move_animation_finished.connect(_on_move_animation_finished)
+
+	for axis_name in AXIS_NAMES:
+		var axis_label := _label(axis_name, AXIS_LABEL_SIZE, AXIS_LABEL_COLOR)
+		area.add_child(axis_label)
+		axis_labels.append(axis_label)
 
 	slice_chip = _label("", 13, Color("#1B428F"))
 	slice_chip.add_theme_stylebox_override("normal", _box(WHITE, ACCENT, 16, 2, Vector2(10, 4)))
