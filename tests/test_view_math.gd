@@ -105,3 +105,52 @@ func test_ripple_uses_the_nearest_placed_cell() -> void:
 func test_ripple_with_nothing_placed_starts_everywhere() -> void:
 	var steps := ViewMath.ripple_steps([Vector3i(1, 1, 1)], [])
 	check_eq(steps[Vector3i(1, 1, 1)], 0)
+
+
+func test_corners_line_up_with_cell_centers() -> void:
+	var c := Vector3i(2, 4, 3)
+	var lo := ViewMath.corner_to_world(c, SIZE)
+	var hi := ViewMath.corner_to_world(c + Vector3i.ONE, SIZE)
+	check_eq((lo + hi) * 0.5, ViewMath.to_world(c, SIZE))
+
+
+func test_single_cube_has_six_faces_and_twelve_outer_edges() -> void:
+	var cells := [Vector3i(0, 0, 0)]
+	check_eq(ViewMath.exposed_faces(cells).size(), 6)
+	var edges := ViewMath.piece_edges(cells)
+	check_eq(edges.outer.size(), 12)
+	check_eq(edges.inner.size(), 0)
+
+
+func test_shared_faces_are_not_exposed() -> void:
+	var pair := [Vector3i(0, 0, 0), Vector3i(1, 0, 0)]
+	check_eq(ViewMath.exposed_faces(pair).size(), 10, "the touching faces drop out")
+
+
+func test_two_cubes_split_their_long_faces_with_inner_edges() -> void:
+	var edges := ViewMath.piece_edges([Vector3i(0, 0, 0), Vector3i(1, 0, 0)])
+	check_eq(edges.outer.size(), 16, "the 2x1x1 box outline in unit-long pieces")
+	check_eq(edges.inner.size(), 4, "one ring of seams where the cubes meet")
+
+
+func test_big_cube_hides_its_center_edges() -> void:
+	var cells: Array = []
+	for x in range(2):
+		for y in range(2):
+			for z in range(2):
+				cells.append(Vector3i(x, y, z))
+	var edges := ViewMath.piece_edges(cells)
+	check_eq(edges.outer.size(), 24, "12 box edges, each two cubes long")
+	check_eq(edges.inner.size(), 24, "a cross on each of the six faces")
+	check_eq(ViewMath.exposed_faces(cells).size(), 24)
+
+
+func test_l_shape_inner_corner_is_an_outer_edge() -> void:
+	var edges := ViewMath.piece_edges([Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(0, 1, 0)])
+	var crease := [Vector3i(1, 1, 0), Vector3i(1, 1, 1)]
+	check(edges.outer.has(crease), "the concave corner is part of the outline")
+
+
+func test_diagonal_cubes_keep_both_outlines() -> void:
+	var edges := ViewMath.piece_edges([Vector3i(0, 0, 0), Vector3i(1, 1, 0)])
+	check_eq(edges.outer.size(), 23, "both outlines, sharing one vertical edge")
