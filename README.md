@@ -11,7 +11,7 @@ The product requirements live in Notion (Qubist › PRD and Concept wireframes).
 | `core/` | The game rules in plain GDScript: grid, pieces, placement, line clearing, scoring, dealing, game state. No rendering and no platform code, so it can be unit-tested and reused on Android. |
 | `config/` | Data that tunes the game: grid size, tray size, scoring numbers (`game.json`) and piece shapes (`pieces.json`). |
 | `game/` | The greybox game screen: layout, 3D tower view, camera, piece previews and touch input. Builds its UI in code. |
-| `scenes/` | `main.tscn`, the scene the game starts in. |
+| `scenes/` | `loading.tscn`, the loading view the app starts in, and `main.tscn`, the game screen it hands off to (opening on Home). |
 | `tests/` | Unit tests for everything in `core/`, with a small built-in runner (no add-ons needed). |
 
 ## Coordinates
@@ -36,6 +36,12 @@ A smoke test loads the game screen headless and plays moves through the real dra
 
 ```sh
 godot --headless --path . --script res://tests/smoke_main.gd
+```
+
+Another checks that the loading view holds for its minimum time, then hands off to Home:
+
+```sh
+godot --headless --path . --script res://tests/smoke_loading.gd
 ```
 
 The runner prints one line per test and exits with code 1 if any test fails.

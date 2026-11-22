@@ -35,14 +35,19 @@ jobs:
           set -o pipefail
           timeout 120 ./godot --headless --path . --script res://tests/smoke_main.gd 2>&1 | tee smoke-output.txt
 
+      - name: Smoke test the loading view
+        run: |
+          set -o pipefail
+          timeout 120 ./godot --headless --path . --script res://tests/smoke_loading.gd 2>&1 | tee loading-output.txt
+
       - name: Report failures as annotations
         if: always()
         run: |
           # Surface each failed check and script error on the pull request.
-          cat test-output.txt smoke-output.txt 2>/dev/null | grep -E "^  - " | sed 's/^  - //' | head -50 | while IFS= read -r line; do
+          cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | grep -E "^  - " | sed 's/^  - //' | head -50 | while IFS= read -r line; do
             echo "::error title=Test failed::$line"
           done || true
-          cat test-output.txt smoke-output.txt 2>/dev/null | grep -E -A2 "SCRIPT ERROR|Parse Error" | head -60 | paste -sd' ' | sed 's/--/\n/g' | while IFS= read -r line; do
+          cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | grep -E -A2 "SCRIPT ERROR|Parse Error" | head -60 | paste -sd' ' | sed 's/--/\n/g' | while IFS= read -r line; do
             [ -n "$line" ] && echo "::error title=Script error::$line"
           done || true
 
@@ -51,7 +56,7 @@ jobs:
         run: |
           # A runtime error inside a test is printed but doesn't stop the run,
           # so treat any script or parse error in the output as a failure.
-          if cat test-output.txt smoke-output.txt 2>/dev/null | grep -E "SCRIPT ERROR|Parse Error|Failed to load script"; then
+          if cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | grep -E "SCRIPT ERROR|Parse Error|Failed to load script"; then
             echo "::error::Godot reported script errors (see above)."
             exit 1
           fi
