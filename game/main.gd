@@ -31,6 +31,9 @@ const SNAP_RADIUS := 72.0
 ## the ghost.
 const OCCLUDE_RADIUS := 1.1
 
+## Swiper button and chip labels, indexed by ViewMath mode.
+const AXIS_NAMES := ["X", "Y", "H"]
+
 const BG := Color("#F4F4F2")
 const INK := Color("#222222")
 const MUTED := Color("#555555")
@@ -257,12 +260,19 @@ func _refresh() -> void:
 			_box(WHITE, LINE, 16) if piece != null else _box(Color(0, 0, 0, 0), Color("#9A9A9A"), 16))
 
 	var layers := ViewMath.slice_layer_count(slice_mode, step, config.grid_size)
+	# Modes can have different layer counts (H has 12, X/Y have 6), so keep the
+	# depth inside the current mode's range.
+	slice_depth = mini(slice_depth, layers - 1)
 	slice_slider.max_value = layers - 1
-	var axis_name := "X" if slice_mode == ViewMath.MODE_X else "Y"
+	slice_slider.set_value_no_signal(slice_depth)
+	var axis_name: String = AXIS_NAMES[slice_mode]
 	slice_chip.visible = slice_depth > 0
 	show_all_button.visible = slice_depth > 0
-	slice_chip.text = "Slice %d of %d · %s" % [slice_depth + 1, layers, axis_name]
-	slice_label.text = "Swiper · full tower" if slice_depth == 0 else "Swiper · slice %d" % (slice_depth + 1)
+	# X/Y number slices from the front. H numbers them from the floor, so the
+	# label matches the layer the player sees on top.
+	var slice_number := layers - slice_depth if slice_mode == ViewMath.MODE_H else slice_depth + 1
+	slice_chip.text = "Slice %d of %d · %s" % [slice_number, layers, axis_name]
+	slice_label.text = "Swiper · full tower" if slice_depth == 0 else "Swiper · slice %d" % slice_number
 	for i in range(axis_buttons.size()):
 		axis_buttons[i].set_pressed_no_signal(i == slice_mode)
 
@@ -468,8 +478,8 @@ func _build_controls() -> Control:
 	var axes := HBoxContainer.new()
 	axes.add_theme_constant_override("separation", 2)
 	var group := ButtonGroup.new()
-	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y]:
-		var b := _text_button("X" if mode == ViewMath.MODE_X else "Y", 14)
+	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_H]:
+		var b := _text_button(AXIS_NAMES[mode], 14)
 		b.toggle_mode = true
 		b.button_group = group
 		b.custom_minimum_size = Vector2(40, 40)

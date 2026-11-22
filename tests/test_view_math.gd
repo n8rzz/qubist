@@ -57,3 +57,29 @@ func test_preview_projection_directions() -> void:
 	check(higher.y < base.y, "higher layers draw further up the screen")
 	check(nearer.y > base.y, "cells nearer the camera draw lower on screen")
 	check(absf(nearer.x - base.x) < 0.001, "stepping straight toward the camera stays centered")
+
+
+func test_h_mode_steps_through_layers() -> void:
+	for step in range(4):
+		check_eq(ViewMath.slice_axis(ViewMath.MODE_H, step), 2)
+		check_eq(ViewMath.slice_layer_count(ViewMath.MODE_H, step, SIZE), 12)
+
+
+func test_h_mode_fades_layers_above_the_slice_at_every_rotation() -> void:
+	# Depth 3 cuts away the top three layers (h = 9, 10, 11); the slice at
+	# h = 8 and everything below stay solid, whichever way the tower faces.
+	for step in range(-1, 5):
+		for c in [Vector3i(0, 0, 11), Vector3i(5, 2, 9), Vector3i(3, 5, 9)]:
+			check(ViewMath.is_sliced_away(c, ViewMath.MODE_H, step, SIZE, 3),
+				"%s hidden at step %d" % [c, step])
+		for c in [Vector3i(0, 0, 8), Vector3i(5, 5, 0), Vector3i(2, 3, 4)]:
+			check(not ViewMath.is_sliced_away(c, ViewMath.MODE_H, step, SIZE, 3),
+				"%s solid at step %d" % [c, step])
+		check(not ViewMath.is_sliced_away(Vector3i(0, 0, 11), ViewMath.MODE_H, step, SIZE, 0),
+			"depth 0 shows everything")
+
+
+func test_h_mode_counts_from_the_top() -> void:
+	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 11), ViewMath.MODE_H, 0, SIZE), 0)
+	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 0), ViewMath.MODE_H, 0, SIZE), 11)
+	check_eq(ViewMath.layer_from_viewer(Vector3i(4, 1, 6), ViewMath.MODE_H, 3, SIZE), 5)
