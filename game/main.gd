@@ -431,6 +431,19 @@ func _build_tower_area() -> Control:
 	show_all_button.pressed.connect(func(): _set_slice_depth(0))
 	show_all_button.visible = false
 	area.add_child(show_all_button)
+
+	# Rotate buttons sit in the bottom corners beside the base, so the swiper
+	# can use the whole controls row.
+	for dir in [-1, 1]:
+		var b := _icon_button("rotate_left" if dir < 0 else "rotate_right",
+			"Rotate tower left" if dir < 0 else "Rotate tower right", 52, 26)
+		b.set_anchors_preset(Control.PRESET_BOTTOM_LEFT if dir < 0 else Control.PRESET_BOTTOM_RIGHT)
+		b.offset_left = 4 if dir < 0 else -56
+		b.offset_right = 56 if dir < 0 else -4
+		b.offset_top = -56
+		b.offset_bottom = -4
+		b.pressed.connect(_turn.bind(dir))
+		area.add_child(b)
 	return area
 
 
@@ -459,10 +472,6 @@ func _build_controls() -> Control:
 	row.custom_minimum_size.y = CONTROLS_HEIGHT
 	row.add_theme_constant_override("separation", 8)
 
-	var left := _icon_button("rotate_left", "Rotate tower left", 56, 28)
-	left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	left.pressed.connect(func(): _turn(-1))
-	row.add_child(left)
 
 	var swiper := PanelContainer.new()
 	swiper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -470,7 +479,7 @@ func _build_controls() -> Control:
 	swiper.custom_minimum_size.y = 56
 	swiper.add_theme_stylebox_override("panel", _box(WHITE, LINE, 28, 2, Vector2(6, 6)))
 	var inner := HBoxContainer.new()
-	inner.add_theme_constant_override("separation", 6)
+	inner.add_theme_constant_override("separation", 10)
 	swiper.add_child(inner)
 
 	var axes := HBoxContainer.new()
@@ -480,7 +489,7 @@ func _build_controls() -> Control:
 		var b := _text_button(AXIS_NAMES[mode], 14)
 		b.toggle_mode = true
 		b.button_group = group
-		b.custom_minimum_size = Vector2(36, 40)
+		b.custom_minimum_size = Vector2(44, 40)
 		b.add_theme_stylebox_override("normal", _box(Color("#ECECEA"), Color(0, 0, 0, 0), 20, 0))
 		b.add_theme_stylebox_override("hover", _box(Color("#E2E2E0"), Color(0, 0, 0, 0), 20, 0))
 		b.add_theme_stylebox_override("pressed", _box(Color("#333333"), Color(0, 0, 0, 0), 20, 0))
@@ -511,10 +520,6 @@ func _build_controls() -> Control:
 	inner.add_child(slice_slider)
 	row.add_child(swiper)
 
-	var right := _icon_button("rotate_right", "Rotate tower right", 56, 28)
-	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	right.pressed.connect(func(): _turn(1))
-	row.add_child(right)
 	return row
 
 
