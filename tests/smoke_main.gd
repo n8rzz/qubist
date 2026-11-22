@@ -61,15 +61,34 @@ func _play() -> void:
 				failures.append("move %d did not start the move animation" % i)
 			# The next drag is blocked until the animation ends.
 			main.finish_animations()
+			if main.shown_score != main.game.score:
+				failures.append("move %d: header shows %d, score is %d" % [i, main.shown_score, main.game.score])
 		else:
 			failures.append("move %d did not go through the drag path" % i)
 	main._set_slice_depth(0)
+	_check_score_tick()
 	print("Placed %d of %d moves; score %d" % [moves, MOVES, main.game.score])
 	# A new game mid-animation must cancel it cleanly.
 	if main.autoplay_one_move():
 		main.new_game()
 		if main.tower.is_animating():
 			failures.append("new game left the move animation running")
+
+
+## The header counts up to a new score instead of jumping (#25).
+func _check_score_tick() -> void:
+	main._snap_score()
+	var start: int = main.shown_score
+	main._tick_score_to(start + 1000)
+	if main.shown_score != start:
+		failures.append("score counter jumped instead of ticking")
+	main._score_tween.custom_step(main.SCORE_TICK_SECONDS * 0.5)
+	if main.shown_score <= start or main.shown_score >= start + 1000:
+		failures.append("score counter mid-tick shows %d" % main.shown_score)
+	main._score_tween.custom_step(main.SCORE_TICK_SECONDS)
+	if main.shown_score != start + 1000:
+		failures.append("score counter ended on %d, not %d" % [main.shown_score, start + 1000])
+	main._snap_score()
 
 
 func _finish() -> void:

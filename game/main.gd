@@ -54,11 +54,16 @@ const SCORE_POP_COLOR := Color("#1B428F")
 const SCORE_POP_RISE := 56.0
 const SCORE_POP_SECONDS := 0.9
 const BANNER_SECONDS := 1.2
+## The score counter counts up to the new total over this long (#25).
+const SCORE_TICK_SECONDS := 0.5
 const TRAY_FADE_SECONDS := 0.2
 
 var config: Config = Config.new()
 var game: Game
 var best_score := 0
+## The score the header shows; trails game.score while the counter ticks up.
+var shown_score := 0
+var _score_tween: Tween
 
 var tower: TowerView
 var viewport_box: SubViewportContainer
@@ -103,6 +108,7 @@ func new_game() -> void:
 	game.tray_refilled.connect(_on_tray_refilled)
 	game.start()
 	_hide_overlay()
+	_snap_score()
 	_refresh()
 
 
@@ -291,8 +297,7 @@ func _set_slice_depth(depth: int) -> void:
 func _refresh() -> void:
 	if game == null:
 		return
-	score_label.text = _format(game.score)
-	best_label.text = "Best %s" % _format(maxi(best_score, game.score))
+	_tick_score_to(game.score)
 
 	var step := tower.rig.view_step()
 	for i in range(tray_slots.size()):
@@ -365,6 +370,35 @@ func _on_move_animation_finished() -> void:
 ## Skips any running animation. Used by the smoke test.
 func finish_animations() -> void:
 	tower.finish_move_animation()
+	_snap_score()
+
+
+## Counts the header score up to `target`. A new gain mid-tick carries on from
+## the number on screen, so the counter never jumps back.
+func _tick_score_to(target: int) -> void:
+	if target == shown_score:
+		_set_shown_score(target)
+		return
+	if _score_tween != null:
+		_score_tween.kill()
+	_score_tween = create_tween()
+	_score_tween.tween_method(func(v: float) -> void: _set_shown_score(roundi(v)),
+		float(shown_score), float(target), SCORE_TICK_SECONDS) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+
+## Stops any tick and shows the current score at once.
+func _snap_score() -> void:
+	if _score_tween != null:
+		_score_tween.kill()
+		_score_tween = null
+	_set_shown_score(game.score if game != null else 0)
+
+
+func _set_shown_score(value: int) -> void:
+	shown_score = value
+	score_label.text = _format(value)
+	best_label.text = "Best %s" % _format(maxi(best_score, value))
 
 
 func _on_game_over(final_score: int) -> void:
