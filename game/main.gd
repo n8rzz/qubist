@@ -228,7 +228,7 @@ func _end_drag(finger: Vector2) -> void:
 		if result.ok:
 			Input.vibrate_handheld(15)
 			# Sliced-away cubes stay faded instead of animating.
-			tower.play_move(result.placed, result.cleared, _faded_cells())
+			tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
 			_show_score_gain(result)
 	_refresh()
 
