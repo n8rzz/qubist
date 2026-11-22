@@ -9,6 +9,12 @@
 
 	{ "id": "bar4_x", "shape": "4x1x1 bar", "weight": 0.333, "cells": [[0,0,0],[1,0,0],[2,0,0],[3,0,0]] },
 	{ "id": "bar4_y", "shape": "4x1x1 bar", "weight": 0.333, "cells": [[0,0,0],[0,1,0],[0,2,0],[0,3,0]] },
-	{ "id": "bar4_up", "shape": "4x1x1 bar", "weight": 0.334, "cells": [[0,0,0],[0,0,1],[0,0,2],[0,0,3]] }
+	{ "id": "bar4_up", "shape": "4x1x1 bar", "weight": 0.334, "cells": [[0,0,0],[0,0,1],[0,0,2],[0,0,3]] },
+
+	{ "id": "L4", "shape": "L, 1 wide", "weight": 1.0, "orientations": "all",
+	  "cells": [[0,0,0],[1,0,0],[2,0,0],[0,1,0]] },
+
+	{ "id": "corner3", "shape": "3-cube corner", "weight": 1.0, "orientations": "all",
+	  "cells": [[0,0,0],[1,0,0],[0,1,0]] }
   ]
 }
