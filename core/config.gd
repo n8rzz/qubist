@@ -57,12 +57,41 @@ func apply(game_data: Dictionary, pieces_data: Dictionary) -> void:
 	pieces.clear()
 	_by_id.clear()
 	for entry in pieces_data.get("pieces", []):
-		var piece := Piece.new(entry)
-		if _by_id.has(piece.id):
-			push_error("Duplicate piece id '%s'" % piece.id)
-			continue
-		pieces.append(piece)
-		_by_id[piece.id] = piece
+		for expanded in _expand(entry):
+			var piece := Piece.new(expanded)
+			if _by_id.has(piece.id):
+				push_error("Duplicate piece id '%s'" % piece.id)
+				continue
+			pieces.append(piece)
+			_by_id[piece.id] = piece
+
+
+## An entry with `"orientations": "all"` becomes one entry per distinct
+## rotation, with ids `<id>_00`, `<id>_01`, … that split the entry's weight
+## evenly. Any other entry is used as written.
+static func _expand(entry: Dictionary) -> Array:
+	if str(entry.get("orientations", "")) != "all":
+		return [entry]
+	var raw: Array[Vector3i] = []
+	for c in entry.get("cells", []):
+		raw.append(Vector3i(int(c[0]), int(c[1]), int(c[2])))
+	if raw.is_empty():
+		return [entry]
+	var id := str(entry.get("id", ""))
+	var turns: Array = Piece.orientations(raw)
+	var weight := float(entry.get("weight", 1.0)) / turns.size()
+	var out: Array = []
+	for i in turns.size():
+		var cells: Array = []
+		for c in turns[i]:
+			cells.append([c.x, c.y, c.z])
+		out.append({
+			"id": "%s_%02d" % [id, i],
+			"shape": str(entry.get("shape", id)),
+			"weight": weight,
+			"cells": cells,
+		})
+	return out
 
 
 ## Short fingerprint of everything a saved game depends on: grid size, tray

@@ -75,3 +75,11 @@ Add an entry to `config/pieces.json`. Each entry is one piece in one fixed orien
 ```
 
 `weight` sets how often the dealer picks it relative to the others.
+
+To deal a shape in every orientation, write it once and add `"orientations": "all"`. The config expands it into one piece per distinct 3D rotation (`L4_00`, `L4_01`, …) and splits `weight` evenly between them:
+
+```json
+{ "id": "L4", "shape": "L, 1 wide", "weight": 1.0, "orientations": "all", "cells": [[0,0,0],[1,0,0],[2,0,0],[0,1,0]] }
+```
+
+Changing the piece list changes the save signature, so a game saved under the old list starts fresh.

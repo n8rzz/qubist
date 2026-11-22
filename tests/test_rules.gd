@@ -42,6 +42,42 @@ func test_overhang_is_legal_with_one_supported_cube() -> void:
 	check(Rules.can_place(g, _piece("bar4_x"), Vector3i(0, 0, 1)))
 
 
+## The generated orientation of `shape` with exactly these cells.
+func _oriented(shape: String, cells: Array) -> Variant:
+	var want: Array[Vector3i] = []
+	for c in cells:
+		want.append(Vector3i(c[0], c[1], c[2]))
+	want.sort()
+	for piece in cfg.pieces:
+		if piece.id.begins_with(shape + "_"):
+			var have: Array[Vector3i] = piece.cells.duplicate()
+			have.sort()
+			if have == want:
+				return piece
+	return null
+
+
+func test_corner_fills_a_notch() -> void:
+	var g = _grid()
+	# Floor fill with an L-shaped gap at (0..1, 0..1) minus (1, 1).
+	_fill(g, [Vector3i(1, 1, 0)])
+	var corner = _oriented("corner3", [[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+	check(corner != null, "flat corner orientation exists")
+	check(Rules.can_place(g, corner, Vector3i(0, 0, 0)))
+	check(not Rules.can_place(g, corner, Vector3i(1, 0, 0)), "would overlap (1, 1)")
+
+
+func test_upside_down_l_rests_on_its_stem() -> void:
+	var g = _grid()
+	# Stem at (0, 0, 0), arm runs along x one layer up, overhanging the floor.
+	var l4 = _oriented("L4", [[0, 0, 0], [0, 0, 1], [1, 0, 1], [2, 0, 1]])
+	check(l4 != null, "upside-down L orientation exists")
+	check(Rules.can_place(g, l4, Vector3i(0, 0, 0)))
+	check(not Rules.can_place(g, l4, Vector3i(0, 0, 1)), "nothing under the stem")
+	_fill(g, [Vector3i(0, 0, 0)])
+	check(Rules.can_place(g, l4, Vector3i(0, 0, 1)), "stem on a block")
+
+
 func test_side_contact_alone_is_illegal() -> void:
 	var g = _grid()
 	_fill(g, [Vector3i(0, 0, 0), Vector3i(0, 0, 1)])
