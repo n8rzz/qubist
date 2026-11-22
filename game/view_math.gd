@@ -14,11 +14,11 @@ const BASE_YAW_DEG := 45.0
 
 ## Swiper modes. X cuts planes that run left-right across the screen and steps
 ## from the front of the tower to the back. Y cuts planes that run front-back
-## and steps across from one side. H cuts flat planes by layer and steps down
+## and steps across from one side. Z cuts flat planes by layer and steps down
 ## from the top of the tower; it doesn't change when the tower rotates.
 const MODE_X := 0
 const MODE_Y := 1
-const MODE_H := 2
+const MODE_Z := 2
 
 
 static func to_world(c: Vector3i, grid_size: Vector3i) -> Vector3:
@@ -52,9 +52,9 @@ static func screen_right(step: int) -> Vector2:
 	return Vector2(cos(yaw), -sin(yaw))
 
 
-## Which core axis the swiper steps along: 0 for x, 1 for y, 2 for h.
+## Which core axis the swiper steps along: 0 for x, 1 for y, 2 for z (layers).
 static func slice_axis(mode: int, step: int) -> int:
-	if mode == MODE_H:
+	if mode == MODE_Z:
 		return 2
 	var even := posmod(step, 2) == 0
 	if mode == MODE_X:
@@ -67,7 +67,7 @@ static func slice_layer_count(mode: int, step: int, grid_size: Vector3i) -> int:
 
 
 ## 0 for the layer nearest the viewer along the swiper's axis, counting back.
-## In H mode the viewer is above the tower, so 0 is the top layer.
+## In Z mode the viewer is above the tower, so 0 is the top layer.
 static func layer_from_viewer(c: Vector3i, mode: int, step: int, grid_size: Vector3i) -> int:
 	var axis := slice_axis(mode, step)
 	if axis == 2:
