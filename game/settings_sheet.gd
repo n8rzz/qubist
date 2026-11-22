@@ -1,13 +1,14 @@
 extends Control
 ## Settings bottom sheet, opened from the header gear (#20).
 ##
-## Holds the Game › Stats row (#32) and the Display › Grid ticks switch
-## (#56). The sound and haptics toggles and Replay tutorial come with #20
+## Holds the Game › Stats row (#32), Game › Home (#72) and the Display ›
+## Grid ticks switch (#56). The sound and haptics toggles and Replay tutorial come with #20
 ## and #29.
 
 const UI := preload("res://game/ui_style.gd")
 
 signal stats_pressed
+signal home_pressed
 signal grid_ticks_toggled(on: bool)
 signal closed
 
@@ -16,6 +17,7 @@ const ROW_HEIGHT := 52
 const SWITCH_OFF_COLOR := Color("#CFCFCB")
 
 var stats_button: Button
+var home_button: Button
 var grid_ticks_button: CheckButton
 
 
@@ -58,6 +60,10 @@ func _init() -> void:
 	stats_button = _row("Stats")
 	stats_button.pressed.connect(func(): stats_pressed.emit())
 	column.add_child(stats_button)
+	home_button = _row("Home")
+	home_button.tooltip_text = "Back to the home screen; your game is saved"
+	home_button.pressed.connect(func(): home_pressed.emit())
+	column.add_child(home_button)
 
 	column.add_child(UI.label("DISPLAY", 12, UI.MUTED))
 	grid_ticks_button = CheckButton.new()
@@ -77,7 +83,9 @@ func set_grid_ticks(on: bool) -> void:
 	grid_ticks_button.set_pressed_no_signal(on)
 
 
-func open() -> void:
+## `in_game`: opened from the game screen, so the Home row shows.
+func open(in_game := true) -> void:
+	home_button.visible = in_game
 	visible = true
 
 
