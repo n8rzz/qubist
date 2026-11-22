@@ -60,6 +60,15 @@ func zoom_by(factor: float) -> void:
 	camera.size = clampf(camera.size / factor, zoom_min, zoom_max)
 
 
+## Jumps straight to a view corner and zoom, as when resuming a saved game.
+func restore(step: int, zoom: float) -> void:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_turns = posmod(step, 4)
+	rotation.y = ViewMath.yaw_for_step(_turns)
+	camera.size = clampf(zoom, zoom_min, zoom_max)
+
+
 func reset() -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()

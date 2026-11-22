@@ -74,6 +74,9 @@ var game: Game
 var stats: Stats = Stats.new()
 ## Set before the node enters the tree to keep tests off the real save.
 var stats_path := "user://stats.json"
+## The in-progress game and camera, saved after every placement and when the
+## app goes to the background, and resumed on launch (#18).
+var game_save_path := "user://game.json"
 ## The game already added to `stats`, so it is never counted twice.
 var _recorded_game: Game
 ## The score the header shows; trails game.score while the counter ticks up.
@@ -119,20 +122,69 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	stats.from_dict(SaveFile.read(stats_path))
 	_build_ui()
-	new_game()
+	if not resume_game():
+		new_game()
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST:
+			save_game()
 
 
 func new_game() -> void:
+	var fresh := Game.new(config)
+	_use_game(fresh)
+	fresh.start()
+	_refresh()
+	save_game()
+
+
+## Picks up the saved game and camera. Returns false, leaving nothing
+## resumed, if there is no save or it doesn't fit the current config.
+func resume_game() -> bool:
+	var data := SaveFile.read(game_save_path)
+	if data.is_empty():
+		return false
+	var saved := Game.new(config)
+	if not saved.from_dict(data.get("game", {})):
+		SaveFile.remove(game_save_path)
+		return false
+	if saved.is_over:
+		# The app closed before the game-over screen counted it.
+		game = saved
+		_record_finished_game()
+		return false
+	_use_game(saved)
+	var view: Dictionary = data.get("view", {})
+	tower.rig.restore(int(view.get("step", 0)), float(view.get("zoom", tower.rig.camera.size)))
+	_refresh()
+	return true
+
+
+## Writes the current game and camera to `game_save_path`. A finished game
+## that is already in the stats is not saved, so it can't be counted again.
+func save_game() -> void:
+	if game == null:
+		return
+	if _recorded_game == game:
+		SaveFile.remove(game_save_path)
+		return
+	SaveFile.write(game_save_path, {
+		"game": game.to_dict(),
+		"view": {"step": tower.rig.view_step(), "zoom": tower.rig.camera.size},
+	})
+
+
+func _use_game(next: Game) -> void:
 	_clear_drag()
 	tower.cancel_move_animation()
 	_pending_game_over = false
-	game = Game.new(config)
+	game = next
 	game.game_over.connect(_on_game_over)
 	game.tray_refilled.connect(_on_tray_refilled)
-	game.start()
 	_hide_overlay()
 	_snap_score()
-	_refresh()
 
 
 func _process(delta: float) -> void:
@@ -281,6 +333,7 @@ func _end_drag(finger: Vector2) -> void:
 			# Sliced-away cubes stay faded instead of animating.
 			tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
 			_show_score_gain(result)
+			save_game()
 	_refresh()
 
 
@@ -474,6 +527,7 @@ func _record_finished_game() -> void:
 	_recorded_game = game
 	stats.record_game(game)
 	SaveFile.write(stats_path, stats.to_dict())
+	SaveFile.remove(game_save_path)
 
 
 ## True while the Settings sheet or the Stats screen covers the game.

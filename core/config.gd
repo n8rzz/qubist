@@ -65,6 +65,17 @@ func apply(game_data: Dictionary, pieces_data: Dictionary) -> void:
 		_by_id[piece.id] = piece
 
 
+## Short fingerprint of everything a saved game depends on: grid size, tray
+## size and every piece's id and cells. A save made under a different
+## signature is not resumed (#18). Scoring numbers are left out, since a
+## save still plays correctly when only they change.
+func signature() -> String:
+	var parts: Array = [grid_size, tray_size]
+	for piece in pieces:
+		parts.append([piece.id, piece.cells])
+	return str(parts).sha256_text().substr(0, 16)
+
+
 ## Returns the piece with this id, or null.
 func piece_by_id(id: String):
 	return _by_id.get(id)
