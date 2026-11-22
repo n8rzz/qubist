@@ -50,6 +50,48 @@ func test_swiper_front_follows_rotation() -> void:
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 5, 0), ViewMath.MODE_X, 2, SIZE), 5)
 
 
+func test_slice_plane_sits_between_cut_and_shown_layers() -> void:
+	# Start view, X mode, depth 3: y = 3..5 are cut, so the cut is at y = 3.
+	var plane := ViewMath.slice_plane(ViewMath.MODE_X, 0, SIZE, 3)
+	check_eq(plane.size(), 4)
+	for p in plane:
+		check_eq(p.y, 3)
+	check_eq(ViewMath.slice_toward_viewer(ViewMath.MODE_X, 0), Vector3i(0, 1, 0))
+	# Spans the whole footprint width and the full height.
+	check(plane.has(Vector3i(0, 3, 0)) and plane.has(Vector3i(6, 3, 12)))
+
+
+func test_slice_plane_at_depth_zero_is_the_front_face() -> void:
+	for p in ViewMath.slice_plane(ViewMath.MODE_X, 0, SIZE, 0):
+		check_eq(p.y, 6)
+	# Two quarter turns put y = 0 in front.
+	for p in ViewMath.slice_plane(ViewMath.MODE_X, 2, SIZE, 0):
+		check_eq(p.y, 0)
+	check_eq(ViewMath.slice_toward_viewer(ViewMath.MODE_X, 2), Vector3i(0, -1, 0))
+
+
+func test_slice_plane_follows_rotation() -> void:
+	# After two turns X mode depth 2 cuts y = 0, 1, so the cut is at y = 2.
+	for p in ViewMath.slice_plane(ViewMath.MODE_X, 2, SIZE, 2):
+		check_eq(p.y, 2)
+	# One turn swaps X mode onto the x axis.
+	var axis := ViewMath.slice_axis(ViewMath.MODE_X, 1)
+	check_eq(axis, 0)
+	var x := ViewMath.slice_plane(ViewMath.MODE_X, 1, SIZE, 2)[0].x
+	for c in [Vector3i(0, 0, 0), Vector3i(5, 0, 0)]:
+		var cut: bool = ViewMath.is_sliced_away(c, ViewMath.MODE_X, 1, SIZE, 2)
+		var in_front: bool = c.x >= x if ViewMath.slice_toward_viewer(ViewMath.MODE_X, 1).x > 0 else c.x < x
+		check_eq(cut, in_front, "plane at x = %d splits %s correctly" % [x, c])
+
+
+func test_z_slice_plane_is_flat_below_the_cut_layers() -> void:
+	for step in range(4):
+		var plane := ViewMath.slice_plane(ViewMath.MODE_Z, step, SIZE, 3)
+		for p in plane:
+			check_eq(p.z, 9, "h = 9..11 cut, so the cut is at h = 9")
+		check_eq(ViewMath.slice_toward_viewer(ViewMath.MODE_Z, step), Vector3i(0, 0, 1))
+
+
 func test_preview_projection_directions() -> void:
 	var base := ViewMath.preview_point(Vector3(0, 0, 0), 0)
 	var higher := ViewMath.preview_point(Vector3(0, 0, 1), 0)
