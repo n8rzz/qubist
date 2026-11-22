@@ -20,13 +20,13 @@ The core uses `Vector3i(x, y, h)`: `x` is width, `y` is depth and `h` (stored in
 
 ## Running the game
 
-Open the folder in Godot 4.3+ and press Play, or run `godot --path .`. The window opens at iPhone size (390×844). With a mouse: drag pieces from the tray onto the tower, scroll over the tower to zoom.
+Open the folder in Godot 4.7+ and press Play, or run `godot --path .`. The window opens at iPhone size (390×844). With a mouse: drag pieces from the tray onto the tower, scroll over the tower to zoom.
 
 To run it on your iPhone, follow [docs/ios-device-build.md](docs/ios-device-build.md).
 
 ## Running the tests
 
-Requires Godot 4.3 or newer on your `PATH`.
+Requires Godot 4.7 or newer on your `PATH`.
 
 ```sh
 godot --headless --path . --script res://tests/run_tests.gd
@@ -40,7 +40,7 @@ godot --headless --path . --script res://tests/smoke_main.gd
 
 The runner prints one line per test and exits with code 1 if any test fails.
 
-GitHub Actions runs the same tests on every pull request and on pushes to `main` (`.github/workflows/tests.yml`), using Godot 4.3 by default. To test against another version, set a repository variable named `GODOT_VERSION` (for example `4.4`).
+GitHub Actions runs the same tests on every pull request and on pushes to `main` (`.github/workflows/tests.yml`), using Godot 4.7.2 by default. To test against another version, set a repository variable named `GODOT_VERSION` (for example `4.7.1`).
 
 ## Using the core
 

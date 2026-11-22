@@ -11,7 +11,7 @@ With a free Apple ID:
 ## What you need
 
 - A Mac with the current **Xcode** from the Mac App Store.
-- **Godot 4.3** or newer (the same version the project uses).
+- **Godot 4.7** or newer (the same version the project uses).
 - An **iPhone** and a cable to connect it to the Mac.
 - An **Apple ID**.
 
