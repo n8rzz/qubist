@@ -5,7 +5,7 @@
 uniform vec4 face_color : source_color = vec4(0.66, 0.66, 0.64, 1.0);
 uniform vec4 edge_color : source_color = vec4(0.40, 0.40, 0.38, 1.0);
 // Half the cube's side length, in local units.
-uniform float half_size = 0.47;
+uniform float half_size = 0.485;
 // Width of the darkened band along each edge, in local units.
 uniform float edge_width = 0.045;
 
