@@ -38,13 +38,13 @@ const LAND_SECONDS := 0.1
 const RIPPLE_STEP_SECONDS := 0.025
 const FLASH_COLOR := Color("#FFD23F")
 const FLASH_EDGE_COLOR := Color("#B8860B")
-const CRACK_SECONDS := 0.07
+const CRACK_SECONDS := 0.08
 ## A cube swells by this much just before it breaks.
-const CRACK_SWELL := 0.08
+const CRACK_SWELL := 0.09
 ## How long chips and dust last after a cube breaks.
-const BURST_SECONDS := 0.4
+const BURST_SECONDS := 0.5
 const CHIPS_PER_CUBE := 5
-const CHIP_GRAVITY := 14.0
+const CHIP_GRAVITY := 11.0
 const DUST_PER_CUBE := 2
 const DUST_COLOR := Color("#D9D6CC")
 ## Clearing more than one line at once: extra chips and speed per extra line,
