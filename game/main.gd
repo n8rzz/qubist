@@ -20,6 +20,8 @@ const GAP := 8
 const HEADER_HEIGHT := 56
 const TRAY_HEIGHT := 140
 const CONTROLS_HEIGHT := 72
+## Pause is hidden for MVP (#42); re-enable for the post-MVP timed mode.
+const SHOW_PAUSE_BUTTON := false
 
 ## A dragged piece floats this far above the finger so the finger doesn't
 ## cover it.
@@ -454,6 +456,12 @@ func _build_header() -> Control:
 
 	var pause := _icon_button("pause", "Pause", 44, 12)
 	pause.pressed.connect(_show_pause)
+	if not SHOW_PAUSE_BUTTON:
+		# Keep the slot so the score stays centered, but make it inert.
+		pause.modulate.a = 0.0
+		pause.disabled = true
+		pause.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pause.focus_mode = Control.FOCUS_NONE
 	row.add_child(pause)
 	row.add_child(_spacer())
 
