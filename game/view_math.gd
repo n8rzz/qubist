@@ -84,6 +84,38 @@ static func is_sliced_away(c: Vector3i, mode: int, step: int, grid_size: Vector3
 	return depth > 0 and layer_from_viewer(c, mode, step, grid_size) < depth
 
 
+## Unit step along the swiper's axis, in core space, pointing toward the
+## viewer: toward the camera for X and Y, straight up for Z.
+static func slice_toward_viewer(mode: int, step: int) -> Vector3i:
+	var axis := slice_axis(mode, step)
+	var d := Vector3i.ZERO
+	if axis == 2:
+		d.z = 1
+	else:
+		var toward: float = toward_camera(step).x if axis == 0 else toward_camera(step).y
+		d[axis] = 1 if toward > 0.0 else -1
+	return d
+
+
+## The swiper's cut at `depth`, as four core-space corners in order around
+## it: the boundary between the layers cut away and the first layer still
+## shown. At depth 0 it lies on the tower's outer face nearest the viewer.
+static func slice_plane(mode: int, step: int, grid_size: Vector3i, depth: int) -> Array[Vector3i]:
+	var axis := slice_axis(mode, step)
+	var count: int = grid_size[axis]
+	var k := count - depth if slice_toward_viewer(mode, step)[axis] > 0 else depth
+	var u := (axis + 1) % 3
+	var v := (axis + 2) % 3
+	var out: Array[Vector3i] = []
+	for o in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1)]:
+		var p := Vector3i.ZERO
+		p[axis] = k
+		p[u] = o.x * grid_size[u]
+		p[v] = o.y * grid_size[v]
+		out.append(p)
+	return out
+
+
 ## Projects a core-space point (x, y, h) to 2D, matching the 3D camera's view,
 ## in units of one cube. Screen y grows downward.
 static func preview_point(p: Vector3, step: int) -> Vector2:

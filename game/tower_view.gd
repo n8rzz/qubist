@@ -33,6 +33,16 @@ const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
 const BACKGROUND_COLOR := Color("#F4F4F2")
 const BASE_THICKNESS := 0.4
 
+# Sweep plane (#51): while the swiper moves, a bright pane marks the cut and
+# the cube faces sitting on it light up. main.gd fades it in and out.
+const SWEEP_COLOR := Color("#2559C9")
+const SWEEP_FILL_ALPHA := 0.22
+const SWEEP_CAP_ALPHA := 0.7
+## Width of the pane's bright border, in cubes.
+const SWEEP_BORDER := 0.09
+## Lifts the lit faces off the cubes so they don't flicker against them.
+const SWEEP_CAP_LIFT := 0.004
+
 const ClearingShader := preload("res://game/shaders/block_clearing.gdshader")
 
 ## A placed piece drops this far, in cubes, as it lands.
@@ -97,6 +107,9 @@ var _dust_list: Array = []
 var _burst := 1.0
 var _shake := 0.0
 var _move_tween: Tween
+## The sweep pane and the lit faces under it, in one mesh.
+var _sweep := MeshInstance3D.new()
+var _sweep_material := _sweep_plane_material()
 
 
 func setup(size: Vector3i) -> void:
@@ -136,7 +149,11 @@ func setup(size: Vector3i) -> void:
 	_dust.multimesh = _make_dust_multimesh()
 	_dust.material_override = _dust_material()
 	_dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	for node in [_solid, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust]:
+	_sweep.mesh = ImmediateMesh.new()
+	_sweep.material_override = _sweep_material
+	_sweep.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_sweep.visible = false
+	for node in [_solid, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust, _sweep]:
 		add_child(node)
 
 	rig = CameraRig.new()
@@ -155,6 +172,53 @@ func update_blocks(cells: Array, faded: Dictionary) -> void:
 			solid.append(c)
 	_fill(_solid, solid)
 	_fill(_faded, faint)
+
+
+## Builds the sweep pane over `plane` (four core corners, from
+## ViewMath.slice_plane) and lights the `toward` faces of `cap_cells`, the
+## cubes sitting on the cut. Call set_sweep_alpha() to show it.
+func set_sweep(plane: Array, toward: Vector3i, cap_cells: Array) -> void:
+	var mesh: ImmediateMesh = _sweep.mesh
+	mesh.clear_surfaces()
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	var outer: Array[Vector3] = []
+	for p in plane:
+		outer.append(ViewMath.corner_to_world(p, grid_size))
+	# Inset each corner along both of its edges to get the border's inside.
+	var inner: Array[Vector3] = []
+	for i in range(4):
+		var c := outer[i]
+		var next := (outer[(i + 1) % 4] - c).normalized()
+		var prev := (outer[(i + 3) % 4] - c).normalized()
+		inner.append(c + (next + prev) * SWEEP_BORDER)
+	_add_quad(mesh, inner, Color(SWEEP_COLOR, SWEEP_FILL_ALPHA))
+	for i in range(4):
+		var j := (i + 1) % 4
+		_add_quad(mesh, [outer[i], outer[j], inner[j], inner[i]], SWEEP_COLOR)
+
+	var normal := Vector3(toward.x, toward.z, toward.y)
+	var u := Vector3(normal.y, normal.z, normal.x).abs()
+	var v := normal.cross(u).abs()
+	var half := CUBE_SIZE * 0.5
+	for c in cap_cells:
+		var center := ViewMath.to_world(c, grid_size) + normal * (half + SWEEP_CAP_LIFT)
+		_add_quad(mesh, [
+			center + (-u - v) * half, center + (u - v) * half,
+			center + (u + v) * half, center + (-u + v) * half,
+		], Color(SWEEP_COLOR, SWEEP_CAP_ALPHA))
+	mesh.surface_end()
+
+
+## 0 hides the sweep plane, 1 shows it at full strength.
+func set_sweep_alpha(alpha: float) -> void:
+	_sweep_material.albedo_color = Color(1, 1, 1, alpha)
+	_sweep.visible = alpha > 0.0
+
+
+func _add_quad(mesh: ImmediateMesh, corners: Array, color: Color) -> void:
+	mesh.surface_set_color(color)
+	for i in [0, 1, 2, 0, 2, 3]:
+		mesh.surface_add_vertex(corners[i])
 
 
 func show_ghost(cells: Array, legal: bool) -> void:
@@ -526,6 +590,17 @@ func _ghost_shell_material() -> StandardMaterial3D:
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.render_priority = 1
+	return m
+
+
+## Unlit and tinted per vertex. Drawn before the other see-through things,
+## so cut-away cubes and the ghost stay on top of it.
+func _sweep_plane_material() -> StandardMaterial3D:
+	var m := _material(Color(1, 1, 1, 0), true, true)
+	m.vertex_color_use_as_albedo = true
+	m.vertex_color_is_srgb = true
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.render_priority = -1
 	return m
 
 

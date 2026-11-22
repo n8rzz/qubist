@@ -46,6 +46,12 @@ const AXIS_LABEL_COLOR := Color("#8A8A86")
 const AXIS_LABEL_GAP := 10.0
 const AXIS_LABEL_FADE_SECONDS := 0.1
 
+## Sweep plane (#51): shown while the swiper moves, held briefly after it
+## stops, then faded out.
+const SWEEP_FADE_IN_SECONDS := 0.06
+const SWEEP_HOLD_SECONDS := 0.18
+const SWEEP_FADE_OUT_SECONDS := 0.45
+
 const BG := Color("#F4F4F2")
 const INK := Color("#222222")
 const MUTED := Color("#555555")
@@ -94,6 +100,11 @@ var stats_screen: StatsScreen
 
 var slice_mode := ViewMath.MODE_X
 var slice_depth := 0
+## True while a finger is on the swiper's slider.
+var _sweeping := false
+## Seconds left before the sweep plane starts to fade.
+var _sweep_hold := 0.0
+var _sweep_alpha := 0.0
 
 var _drag_index := -1
 var _has_target := false
@@ -126,6 +137,26 @@ func new_game() -> void:
 
 func _process(delta: float) -> void:
 	_update_axis_labels(delta)
+	_update_sweep(delta)
+
+
+## Marks the swiper as just moved, so the sweep plane shows and then fades.
+func _bump_sweep() -> void:
+	_sweep_hold = SWEEP_HOLD_SECONDS
+
+
+func _update_sweep(delta: float) -> void:
+	_sweep_hold = maxf(_sweep_hold - delta, 0.0)
+	var target := 1.0 if _sweeping or _sweep_hold > 0.0 else 0.0
+	# The cut's axis can swap as the tower turns, so keep it hidden meanwhile.
+	if tower.rig.is_turning():
+		target = 0.0
+		_sweep_hold = 0.0
+	var seconds := SWEEP_FADE_IN_SECONDS if target > _sweep_alpha else SWEEP_FADE_OUT_SECONDS
+	var alpha := move_toward(_sweep_alpha, target, delta / seconds)
+	if alpha != _sweep_alpha:
+		_sweep_alpha = alpha
+		tower.set_sweep_alpha(ease(alpha, 0.6))
 
 
 ## Keeps the axis labels beside the base as the view zooms, resizes or turns.
@@ -340,7 +371,19 @@ func _refresh() -> void:
 
 
 func _refresh_blocks() -> void:
-	tower.update_blocks(game.grid.filled_cells(), _faded_cells())
+	var filled: Array = game.grid.filled_cells()
+	var faded := _faded_cells()
+	tower.update_blocks(filled, faded)
+
+	# The sweep plane sits on the cut; the shown cubes right behind it light up.
+	var step := tower.rig.view_step()
+	var cap: Array = []
+	for c in filled:
+		if not faded.has(c) and ViewMath.layer_from_viewer(c, slice_mode, step, config.grid_size) == slice_depth:
+			cap.append(c)
+	tower.set_sweep(
+		ViewMath.slice_plane(slice_mode, step, config.grid_size, slice_depth),
+		ViewMath.slice_toward_viewer(slice_mode, step), cap)
 
 
 ## Cells to draw see-through: those the swiper has cut away, plus, while
@@ -696,6 +739,7 @@ func _build_controls() -> Control:
 		b.add_theme_color_override("font_pressed_color", WHITE)
 		b.add_theme_color_override("font_hover_pressed_color", WHITE)
 		b.pressed.connect(_set_slice_mode.bind(mode))
+		b.pressed.connect(_bump_sweep)
 		axes.add_child(b)
 		axis_buttons.append(b)
 	inner.add_child(axes)
@@ -716,7 +760,13 @@ func _build_controls() -> Control:
 	slice_slider.add_theme_stylebox_override("slider", _track(Color("#D6D6D3")))
 	slice_slider.add_theme_stylebox_override("grabber_area", _track(Color("#333333")))
 	slice_slider.add_theme_stylebox_override("grabber_area_highlight", _track(Color("#333333")))
-	slice_slider.value_changed.connect(func(v: float): _set_slice_depth(int(v)))
+	slice_slider.value_changed.connect(func(v: float):
+		_bump_sweep()
+		_set_slice_depth(int(v)))
+	slice_slider.drag_started.connect(func(): _sweeping = true)
+	slice_slider.drag_ended.connect(func(_changed: bool):
+		_sweeping = false
+		_bump_sweep())
 	inner.add_child(slice_slider)
 	row.add_child(swiper)
 
