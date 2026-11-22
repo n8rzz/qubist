@@ -31,6 +31,10 @@ const GHOST_INNER_LINE_ALPHA := 0.35
 const BASE_COLOR := Color("#CFCFCB")
 const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
 const BACKGROUND_COLOR := Color("#F4F4F2")
+## Grid ticks on the tower's border (#56), off unless the player turns them on.
+## Major ticks are darker as well as longer.
+const TICK_COLOR := Color(0.4, 0.4, 0.4, 0.7)
+const MAJOR_TICK_COLOR := Color(0.25, 0.25, 0.25, 0.9)
 const BASE_THICKNESS := 0.4
 
 # Sweep plane (#51): while the swiper moves, a bright pane marks the cut and
@@ -110,6 +114,7 @@ var _move_tween: Tween
 ## The sweep pane and the lit faces under it, in one mesh.
 var _sweep := MeshInstance3D.new()
 var _sweep_material := _sweep_plane_material()
+var _ticks := MeshInstance3D.new()
 
 
 func setup(size: Vector3i) -> void:
@@ -117,6 +122,7 @@ func setup(size: Vector3i) -> void:
 	_add_environment()
 	_add_base()
 	_add_guides()
+	_add_ticks()
 
 	_solid.multimesh = _make_multimesh()
 	_solid.material_override = _block_material(SolidShader, BLOCK_COLOR, EDGE_COLOR)
@@ -159,6 +165,15 @@ func setup(size: Vector3i) -> void:
 	rig = CameraRig.new()
 	rig.position = Vector3(0, size.z * 0.42, 0)
 	add_child(rig)
+
+
+## Shows or hides the grid ticks on the tower's border (#56).
+func set_grid_ticks(on: bool) -> void:
+	_ticks.visible = on
+
+
+func grid_ticks_visible() -> bool:
+	return _ticks.visible
 
 
 ## Draws `cells`; those in `faded` (a set of Vector3i keys) are see-through.
@@ -668,3 +683,22 @@ func _add_guides() -> void:
 	guides.mesh = mesh
 	guides.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(guides)
+
+
+## Grid ticks (#56): minor and major marks as two line surfaces, hidden
+## until set_grid_ticks() turns them on.
+func _add_ticks() -> void:
+	var ticks := ViewMath.border_ticks(grid_size)
+	var mesh := ImmediateMesh.new()
+	for group in [[ticks.minor, TICK_COLOR], [ticks.major, MAJOR_TICK_COLOR]]:
+		var points: Array = group[0]
+		if points.is_empty():
+			continue
+		mesh.surface_begin(Mesh.PRIMITIVE_LINES, _material(group[1], true, true))
+		for p in points:
+			mesh.surface_add_vertex(p)
+		mesh.surface_end()
+	_ticks.mesh = mesh
+	_ticks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_ticks.visible = false
+	add_child(_ticks)

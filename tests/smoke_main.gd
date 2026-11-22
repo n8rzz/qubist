@@ -13,6 +13,8 @@ const MOVES := 30
 const STATS_PATH := "user://test_saves/smoke_stats.json"
 ## Likewise for the auto-saved game (#18).
 const GAME_PATH := "user://test_saves/smoke_game.json"
+## And for player settings (#56).
+const SETTINGS_PATH := "user://test_saves/smoke_settings.json"
 const SaveFile := preload("res://core/save_file.gd")
 
 var main
@@ -26,6 +28,7 @@ func _initialize() -> void:
 	# is the same; check real sizes on a device.
 	SaveFile.remove(STATS_PATH)
 	SaveFile.remove(GAME_PATH)
+	SaveFile.remove(SETTINGS_PATH)
 	main = _make_main()
 	root.add_child(main)
 
@@ -34,6 +37,7 @@ func _make_main():
 	var screen = load("res://scenes/main.tscn").instantiate()
 	screen.stats_path = STATS_PATH
 	screen.game_save_path = GAME_PATH
+	screen.settings_path = SETTINGS_PATH
 	return screen
 
 
@@ -143,10 +147,32 @@ func _check_stats() -> void:
 	main.stats_screen.back_pressed.emit()
 	if main.stats_screen.visible or not main.settings_sheet.visible:
 		failures.append("Back from Stats did not return to Settings")
+	_check_grid_ticks()
 	main.settings_sheet.close_sheet()
 	if main.menu_open():
 		failures.append("closing Settings left a menu open")
 	SaveFile.remove(STATS_PATH)
+
+
+## Settings › Display › Grid ticks shows the ticks, saves the choice and a
+## fresh screen starts with it (#56).
+func _check_grid_ticks() -> void:
+	if main.tower.grid_ticks_visible():
+		failures.append("grid ticks showed before they were turned on")
+	main.settings_sheet.grid_ticks_button.button_pressed = true
+	if not main.tower.grid_ticks_visible():
+		failures.append("turning on Grid ticks did not show them")
+	if SaveFile.read(SETTINGS_PATH).get("grid_ticks") != true:
+		failures.append("Grid ticks were not saved")
+	var reopened = _make_main()
+	root.add_child(reopened)
+	if not reopened.tower.grid_ticks_visible() or not reopened.settings_sheet.grid_ticks_button.button_pressed:
+		failures.append("a fresh screen did not start with Grid ticks on")
+	reopened.queue_free()
+	main.settings_sheet.grid_ticks_button.button_pressed = false
+	if main.tower.grid_ticks_visible():
+		failures.append("turning off Grid ticks did not hide them")
+	SaveFile.remove(SETTINGS_PATH)
 
 
 ## A placement saves the game and camera; a fresh screen picks both up, and

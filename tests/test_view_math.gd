@@ -196,3 +196,29 @@ func test_l_shape_inner_corner_is_an_outer_edge() -> void:
 func test_diagonal_cubes_keep_both_outlines() -> void:
 	var edges := ViewMath.piece_edges([Vector3i(0, 0, 0), Vector3i(1, 1, 0)])
 	check_eq(edges.outer.size(), 23, "both outlines, sharing one vertical edge")
+
+
+func test_border_ticks_count_cells_and_layers() -> void:
+	var ticks := ViewMath.border_ticks(SIZE)
+	# Posts: 4 corners x 11 layers x 2 walls. Rim and lip: 4 edges x 5 marks each.
+	var segments := (4 * 11 * 2) + (4 * 5) * 2
+	check_eq((ticks.minor.size() + ticks.major.size()) / 2, segments)
+	# Majors at layers 3, 6, 9 on the posts and the midline of every edge.
+	check_eq(ticks.major.size() / 2, 4 * 3 * 2 + 4 * 2)
+
+
+func test_border_ticks_stay_on_the_tower() -> void:
+	var ticks := ViewMath.border_ticks(SIZE)
+	for p in ticks.minor + ticks.major:
+		check(absf(p.x) <= 3.5 and absf(p.z) <= 3.5, "tick at %s is off the base" % p)
+		check(p.y >= 0.0 and p.y <= 12.0, "tick at %s is outside the tower's height" % p)
+
+
+func test_major_ticks_are_longer() -> void:
+	var ticks := ViewMath.border_ticks(SIZE)
+	for group in [[ticks.minor, ViewMath.TICK_LENGTH], [ticks.major, ViewMath.MAJOR_TICK_LENGTH]]:
+		var points: Array = group[0]
+		for i in range(0, points.size(), 2):
+			var length: float = (points[i + 1] - points[i]).length()
+			var expected: float = minf(group[1], ViewMath.FLOOR_TICK_MAX) if points[i].y < 0.01 else group[1]
+			check(is_equal_approx(length, expected), "tick %s has length %.2f" % [points[i], length])

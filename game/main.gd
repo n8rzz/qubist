@@ -13,6 +13,7 @@ const PiecePreview := preload("res://game/piece_preview.gd")
 const IconButton := preload("res://game/icon_button.gd")
 const Stats := preload("res://core/stats.gd")
 const SaveFile := preload("res://core/save_file.gd")
+const Settings := preload("res://core/settings.gd")
 const SettingsSheet := preload("res://game/settings_sheet.gd")
 const StatsScreen := preload("res://game/stats_screen.gd")
 
@@ -74,6 +75,9 @@ var game: Game
 var stats: Stats = Stats.new()
 ## Set before the node enters the tree to keep tests off the real save.
 var stats_path := "user://stats.json"
+## Player settings, loaded from and saved to `settings_path`.
+var settings: Settings = Settings.new()
+var settings_path := "user://settings.json"
 ## The in-progress game and camera, saved after every placement and when the
 ## app goes to the background, and resumed on launch (#18).
 var game_save_path := "user://game.json"
@@ -121,6 +125,7 @@ var _pending_game_over := false
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	stats.from_dict(SaveFile.read(stats_path))
+	settings.from_dict(SaveFile.read(settings_path))
 	_build_ui()
 	if not resume_game():
 		new_game()
@@ -542,6 +547,14 @@ func show_settings() -> void:
 	settings_sheet.open()
 
 
+## Turns the grid ticks on the tower's border on or off and saves it (#56).
+func set_grid_ticks(on: bool) -> void:
+	settings.grid_ticks = on
+	tower.set_grid_ticks(on)
+	settings_sheet.set_grid_ticks(on)
+	SaveFile.write(settings_path, settings.to_dict())
+
+
 func show_stats() -> void:
 	settings_sheet.visible = false
 	stats_screen.open(stats)
@@ -647,6 +660,8 @@ func _build_ui() -> void:
 
 	settings_sheet = SettingsSheet.new()
 	settings_sheet.stats_pressed.connect(show_stats)
+	settings_sheet.grid_ticks_toggled.connect(set_grid_ticks)
+	settings_sheet.set_grid_ticks(settings.grid_ticks)
 	add_child(settings_sheet)
 	stats_screen = StatsScreen.new()
 	stats_screen.back_pressed.connect(show_settings)
@@ -679,9 +694,9 @@ func _build_header() -> Control:
 	row.add_child(scores)
 
 	row.add_child(_spacer())
-	var settings := _icon_button("settings", "Settings", 44, 12)
-	settings.pressed.connect(show_settings)
-	row.add_child(settings)
+	var gear := _icon_button("settings", "Settings", 44, 12)
+	gear.pressed.connect(show_settings)
+	row.add_child(gear)
 	return row
 
 
@@ -704,6 +719,7 @@ func _build_tower_area() -> Control:
 	tower = TowerView.new()
 	sub.add_child(tower)
 	tower.setup(config.grid_size)
+	tower.set_grid_ticks(settings.grid_ticks)
 	tower.rig.view_changed.connect(func(_step): _refresh())
 	tower.move_animation_finished.connect(_on_move_animation_finished)
 
