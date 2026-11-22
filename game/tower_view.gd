@@ -9,6 +9,7 @@ const CameraRig := preload("res://game/camera_rig.gd")
 
 const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
+const GhostLinesShader := preload("res://game/shaders/ghost_lines.gdshader")
 
 const CUBE_SIZE := 0.94
 ## Mid-grey stone, so cubes stand apart from the base and the sky.
@@ -18,8 +19,14 @@ const EDGE_COLOR := Color("#5E5E5A")
 ## Faded blocks keep the block colour at low opacity and a faint outline.
 const FADED_COLOR := Color(BLOCK_COLOR, 0.15)
 const FADED_EDGE_COLOR := Color(EDGE_COLOR, 0.45)
-const GHOST_OK_COLOR := Color(0.18, 0.62, 0.36, 0.45)
-const GHOST_BAD_COLOR := Color(0.85, 0.25, 0.2, 0.45)
+## The piece being placed is a wireframe (#62): a strong outline around the
+## whole piece, fainter lines between its cubes and a barely-there fill.
+const GHOST_OK_COLOR := Color(0.18, 0.62, 0.36)
+const GHOST_OK_LINE_COLOR := Color(0.12, 0.44, 0.25)
+const GHOST_BAD_COLOR := Color(0.85, 0.25, 0.2)
+const GHOST_BAD_LINE_COLOR := Color(0.62, 0.17, 0.12)
+const GHOST_FILL_ALPHA := 0.08
+const GHOST_INNER_LINE_ALPHA := 0.35
 const BASE_COLOR := Color("#CFCFCB")
 const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
 const BACKGROUND_COLOR := Color("#F4F4F2")
@@ -65,9 +72,12 @@ var rig: CameraRig
 
 var _solid := MultiMeshInstance3D.new()
 var _faded := MultiMeshInstance3D.new()
-var _ghost := MultiMeshInstance3D.new()
-var _ghost_ok := _material(GHOST_OK_COLOR, true)
-var _ghost_bad := _material(GHOST_BAD_COLOR, true)
+## The ghost's outer shell, drawn faintly. Its depth hides wireframe lines
+## behind the piece.
+var _ghost_fill := MeshInstance3D.new()
+var _ghost_lines := MeshInstance3D.new()
+var _ghost_fill_material := _ghost_shell_material()
+var _ghost_lines_material := ShaderMaterial.new()
 ## Cubes of the piece being placed, drawn apart while they drop in.
 var _landing := MultiMeshInstance3D.new()
 ## Cubes being cleared, drawn apart so the grid can update straight away.
@@ -99,9 +109,17 @@ func setup(size: Vector3i) -> void:
 	_faded.multimesh = _make_multimesh()
 	_faded.material_override = _block_material(FadedShader, FADED_COLOR, FADED_EDGE_COLOR)
 	_faded.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_ghost.multimesh = _make_multimesh()
-	_ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_ghost.visible = false
+	_ghost_fill.mesh = ImmediateMesh.new()
+	_ghost_fill.material_override = _ghost_fill_material
+	_ghost_lines.mesh = ImmediateMesh.new()
+	_ghost_lines_material.shader = GhostLinesShader
+	# Drawn after every other see-through thing, lines last, so the fill's
+	# depth only ever hides the ghost's own back lines.
+	_ghost_lines_material.render_priority = 2
+	_ghost_lines.material_override = _ghost_lines_material
+	for node in [_ghost_fill, _ghost_lines]:
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.visible = false
 	_landing.multimesh = _make_multimesh()
 	_landing.material_override = _solid.material_override
 	_clearing.multimesh = _make_multimesh(true)
@@ -117,7 +135,7 @@ func setup(size: Vector3i) -> void:
 	_dust.multimesh = _make_dust_multimesh()
 	_dust.material_override = _dust_material()
 	_dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	for node in [_solid, _faded, _ghost, _landing, _clearing, _chips, _dust]:
+	for node in [_solid, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust]:
 		add_child(node)
 
 	rig = CameraRig.new()
@@ -139,13 +157,67 @@ func update_blocks(cells: Array, faded: Dictionary) -> void:
 
 
 func show_ghost(cells: Array, legal: bool) -> void:
-	_ghost.material_override = _ghost_ok if legal else _ghost_bad
-	_fill(_ghost, cells)
-	_ghost.visible = true
+	_ghost_fill_material.albedo_color = Color(
+			GHOST_OK_COLOR if legal else GHOST_BAD_COLOR, GHOST_FILL_ALPHA)
+	_ghost_lines_material.set_shader_parameter(
+			"line_color", GHOST_OK_LINE_COLOR if legal else GHOST_BAD_LINE_COLOR)
+	_build_ghost_shell(cells)
+	_build_ghost_lines(cells)
+	_ghost_fill.visible = true
+	_ghost_lines.visible = true
 
 
 func hide_ghost() -> void:
-	_ghost.visible = false
+	_ghost_fill.visible = false
+	_ghost_lines.visible = false
+
+
+## Fills the ghost's outer faces only, so no walls show between its cubes.
+func _build_ghost_shell(cells: Array) -> void:
+	var mesh: ImmediateMesh = _ghost_fill.mesh
+	mesh.clear_surfaces()
+	var faces := ViewMath.exposed_faces(cells)
+	if faces.is_empty():
+		return
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for face in faces:
+		var corners := _face_corners(face[0], face[1])
+		for i in [0, 1, 2, 0, 2, 3]:
+			mesh.surface_add_vertex(corners[i])
+	mesh.surface_end()
+
+
+## The four world-space corners of one cube face, in order around it.
+func _face_corners(c: Vector3i, d: Vector3i) -> Array[Vector3]:
+	var axis := 0 if d.x != 0 else (1 if d.y != 0 else 2)
+	var u := (axis + 1) % 3
+	var v := (axis + 2) % 3
+	var base := c
+	if d[axis] > 0:
+		base[axis] += 1
+	var out: Array[Vector3] = []
+	for o in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1)]:
+		var p := base
+		p[u] += o.x
+		p[v] += o.y
+		out.append(ViewMath.corner_to_world(p, grid_size))
+	return out
+
+
+## Outline in full strength, the edges between cubes fainter.
+func _build_ghost_lines(cells: Array) -> void:
+	var mesh: ImmediateMesh = _ghost_lines.mesh
+	mesh.clear_surfaces()
+	var edges := ViewMath.piece_edges(cells)
+	if edges.outer.is_empty():
+		return
+	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
+	for group in [[edges.inner, GHOST_INNER_LINE_ALPHA], [edges.outer, 1.0]]:
+		for e in group[0]:
+			mesh.surface_set_color(Color(1, 1, 1, group[1]))
+			mesh.surface_add_vertex(ViewMath.corner_to_world(e[0], grid_size))
+			mesh.surface_add_vertex(ViewMath.corner_to_world(e[1], grid_size))
+	mesh.surface_end()
 
 
 ## Plays the move animation: `placed` cubes (minus any in `skip`, such as
@@ -443,6 +515,16 @@ func _block_material(shader: Shader, face: Color, edge: Color) -> ShaderMaterial
 	m.set_shader_parameter("face_color", face)
 	m.set_shader_parameter("edge_color", edge)
 	m.set_shader_parameter("half_size", CUBE_SIZE * 0.5)
+	return m
+
+
+## Faint, unlit, and drawn with a depth prepass so only the face nearest the
+## camera shows and the wireframe behind it is hidden.
+func _ghost_shell_material() -> StandardMaterial3D:
+	var m := _material(Color(GHOST_OK_COLOR, GHOST_FILL_ALPHA), true, true)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.render_priority = 1
 	return m
 
 

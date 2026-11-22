@@ -109,3 +109,75 @@ static func ripple_steps(cleared: Array, placed: Array) -> Dictionary:
 				best = mini(best, absi(d.x) + absi(d.y) + absi(d.z))
 		steps[c] = best
 	return steps
+
+
+## Core-space corner (x, y, h) of the cell grid to world space. Cell c spans
+## corners c to c + (1, 1, 1).
+static func corner_to_world(p: Vector3i, grid_size: Vector3i) -> Vector3:
+	return Vector3(p.x - grid_size.x * 0.5, p.z, p.y - grid_size.y * 0.5)
+
+
+## The six face directions of a cube, in core space.
+const FACE_DIRS: Array[Vector3i] = [
+	Vector3i(1, 0, 0), Vector3i(-1, 0, 0),
+	Vector3i(0, 1, 0), Vector3i(0, -1, 0),
+	Vector3i(0, 0, 1), Vector3i(0, 0, -1)]
+
+
+## Faces of `cells` that don't touch another cell of the same set, as
+## [cell, direction] pairs. Together they form the piece's outer shell.
+static func exposed_faces(cells: Array) -> Array:
+	var occupied := {}
+	for c in cells:
+		occupied[c] = true
+	var faces: Array = []
+	for c in cells:
+		for d in FACE_DIRS:
+			if not occupied.has((c as Vector3i) + d):
+				faces.append([c, d])
+	return faces
+
+
+## The cube edges of `cells`, each listed once as [from, to] core corners.
+## "outer" edges trace the piece's silhouette and creases: one or three of the
+## four cells around the edge are in the set, or two that sit diagonally.
+## "inner" edges split one flat face between two cells. Edges with all four
+## cells around them are buried inside the piece and left out.
+static func piece_edges(cells: Array) -> Dictionary:
+	var occupied := {}
+	for c in cells:
+		occupied[c] = true
+	var outer: Array = []
+	var inner: Array = []
+	var seen := {}
+	# For each axis, the two axes it doesn't run along.
+	var others := [[1, 2], [0, 2], [0, 1]]
+	for c in cells:
+		for axis in range(3):
+			var u: int = others[axis][0]
+			var v: int = others[axis][1]
+			for du in range(2):
+				for dv in range(2):
+					var start: Vector3i = c
+					start[u] += du
+					start[v] += dv
+					var key := [axis, start]
+					if seen.has(key):
+						continue
+					seen[key] = true
+					# The four cells around this edge, in order (-,-) (0,-) (-,0) (0,0).
+					var around: Array[bool] = []
+					for o in [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 0)]:
+						var q := start
+						q[u] += o.x
+						q[v] += o.y
+						around.append(occupied.has(q))
+					var count := around.count(true)
+					var end := start
+					end[axis] += 1
+					var diagonal := count == 2 and around[0] == around[3]
+					if count == 1 or count == 3 or diagonal:
+						outer.append([start, end])
+					elif count == 2:
+						inner.append([start, end])
+	return {"outer": outer, "inner": inner}
