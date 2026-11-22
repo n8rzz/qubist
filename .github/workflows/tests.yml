@@ -7,11 +7,11 @@ on:
 
 jobs:
   core:
-    name: Core tests (Godot ${{ vars.GODOT_VERSION || '4.3' }})
+    name: Core tests (Godot ${{ vars.GODOT_VERSION || '4.7.2' }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      GODOT_VERSION: ${{ vars.GODOT_VERSION || '4.3' }}
+      GODOT_VERSION: ${{ vars.GODOT_VERSION || '4.7.2' }}
     steps:
       - uses: actions/checkout@v4
 
