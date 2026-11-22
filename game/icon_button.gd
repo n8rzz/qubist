@@ -1,7 +1,7 @@
 extends Button
 ## A button that draws a simple line icon instead of text, so the greybox
-## needs no icon assets. Set `kind` to "pause", "settings", "rotate_left" or
-## "rotate_right".
+## needs no icon assets. Set `kind` to "pause", "settings", "back", "close",
+## "rotate_left" or "rotate_right".
 
 var kind := "pause"
 var icon_color := Color("#333333")
@@ -24,6 +24,12 @@ func _draw() -> void:
 			draw_line(c + Vector2(-8, 4), c + Vector2(8, 4), icon_color, 2.0)
 			draw_circle(c + Vector2(3, -4), 3.0, icon_color)
 			draw_circle(c + Vector2(-3, 4), 3.0, icon_color)
+		"back":
+			draw_polyline(PackedVector2Array([c + Vector2(4, -8), c + Vector2(-4, 0), c + Vector2(4, 8)]),
+				icon_color, 2.0, true)
+		"close":
+			draw_line(c + Vector2(-6, -6), c + Vector2(6, 6), icon_color, 2.0, true)
+			draw_line(c + Vector2(6, -6), c + Vector2(-6, 6), icon_color, 2.0, true)
 		"rotate_left", "rotate_right":
 			var dir := -1.0 if kind == "rotate_left" else 1.0
 			var radius := 9.0

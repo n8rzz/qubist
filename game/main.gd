@@ -11,6 +11,10 @@ const ViewMath := preload("res://game/view_math.gd")
 const TowerView := preload("res://game/tower_view.gd")
 const PiecePreview := preload("res://game/piece_preview.gd")
 const IconButton := preload("res://game/icon_button.gd")
+const Stats := preload("res://core/stats.gd")
+const SaveFile := preload("res://core/save_file.gd")
+const SettingsSheet := preload("res://game/settings_sheet.gd")
+const StatsScreen := preload("res://game/stats_screen.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const SAFE_TOP := 54
@@ -60,7 +64,12 @@ const TRAY_FADE_SECONDS := 0.2
 
 var config: Config = Config.new()
 var game: Game
-var best_score := 0
+## Lifetime stats (#32), loaded from and saved to `stats_path`.
+var stats: Stats = Stats.new()
+## Set before the node enters the tree to keep tests off the real save.
+var stats_path := "user://stats.json"
+## The game already added to `stats`, so it is never counted twice.
+var _recorded_game: Game
 ## The score the header shows; trails game.score while the counter ticks up.
 var shown_score := 0
 var _score_tween: Tween
@@ -80,6 +89,8 @@ var axis_buttons: Array[Button] = []
 var axis_labels: Array[Label] = []
 var overlay: Control
 var overlay_panel: VBoxContainer
+var settings_sheet: SettingsSheet
+var stats_screen: StatsScreen
 
 var slice_mode := ViewMath.MODE_X
 var slice_depth := 0
@@ -95,6 +106,7 @@ var _pending_game_over := false
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	stats.from_dict(SaveFile.read(stats_path))
 	_build_ui()
 	new_game()
 
@@ -138,6 +150,8 @@ func _input(event: InputEvent) -> void:
 		elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 			_end_drag(event.position)
 			get_viewport().set_input_as_handled()
+		return
+	if menu_open():
 		return
 	_handle_zoom(event)
 
@@ -186,7 +200,7 @@ func _touch_spread() -> float:
 func _start_drag(index: int, finger: Vector2) -> void:
 	# No new move until the last one has finished animating, so the grid and
 	# the view stay in step.
-	if game.is_over or overlay.visible or tower.is_animating() or game.tray[index] == null:
+	if game.is_over or overlay.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
 		return
 	_drag_index = index
 	drag_preview.set_piece(game.tray[index], tower.rig.view_step())
@@ -398,16 +412,42 @@ func _snap_score() -> void:
 func _set_shown_score(value: int) -> void:
 	shown_score = value
 	score_label.text = _format(value)
-	best_label.text = "Best %s" % _format(maxi(best_score, value))
+	best_label.text = "Best %s" % _format(maxi(stats.best_score, value))
 
 
 func _on_game_over(final_score: int) -> void:
 	if tower.is_animating():
 		_pending_game_over = true
 		return
-	best_score = maxi(best_score, final_score)
-	_show_overlay("No moves left", "Score %s\nBest %s" % [_format(final_score), _format(best_score)],
+	_record_finished_game()
+	_show_overlay("No moves left", "Score %s\nBest %s" % [_format(final_score), _format(stats.best_score)],
 		"Play again", new_game)
+
+
+## Adds the finished game to the lifetime stats and saves them, once per game.
+func _record_finished_game() -> void:
+	if _recorded_game == game or not game.is_over:
+		return
+	_recorded_game = game
+	stats.record_game(game)
+	SaveFile.write(stats_path, stats.to_dict())
+
+
+## True while the Settings sheet or the Stats screen covers the game.
+func menu_open() -> bool:
+	return (settings_sheet != null and settings_sheet.visible) \
+		or (stats_screen != null and stats_screen.visible)
+
+
+func show_settings() -> void:
+	_clear_drag()
+	stats_screen.visible = false
+	settings_sheet.open()
+
+
+func show_stats() -> void:
+	settings_sheet.visible = false
+	stats_screen.open(stats)
 
 
 ## Floating "+points" over the move, and a combo/streak banner when they apply.
@@ -508,6 +548,13 @@ func _build_ui() -> void:
 	overlay = _build_overlay()
 	add_child(overlay)
 
+	settings_sheet = SettingsSheet.new()
+	settings_sheet.stats_pressed.connect(show_stats)
+	add_child(settings_sheet)
+	stats_screen = StatsScreen.new()
+	stats_screen.back_pressed.connect(show_settings)
+	add_child(stats_screen)
+
 
 func _build_header() -> Control:
 	var row := HBoxContainer.new()
@@ -536,7 +583,7 @@ func _build_header() -> Control:
 
 	row.add_child(_spacer())
 	var settings := _icon_button("settings", "Settings", 44, 12)
-	settings.pressed.connect(_show_pause)
+	settings.pressed.connect(show_settings)
 	row.add_child(settings)
 	return row
 

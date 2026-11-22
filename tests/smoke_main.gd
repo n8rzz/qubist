@@ -9,6 +9,9 @@ extends SceneTree
 ## caught separately by CI, which fails on any "SCRIPT ERROR" in the output.
 
 const MOVES := 30
+## Keeps the smoke test's finished games out of the real stats file.
+const STATS_PATH := "user://test_saves/smoke_stats.json"
+const SaveFile := preload("res://core/save_file.gd")
 
 var main
 var frame := 0
@@ -19,7 +22,9 @@ func _initialize() -> void:
 	# Note: headless Godot ignores window size changes, so this runs at the
 	# headless default (wider than a phone). Layout is fluid, so the drag path
 	# is the same; check real sizes on a device.
+	SaveFile.remove(STATS_PATH)
 	main = load("res://scenes/main.tscn").instantiate()
+	main.stats_path = STATS_PATH
 	root.add_child(main)
 
 
@@ -29,6 +34,8 @@ func _process(_delta: float) -> bool:
 		_check_layout()
 	elif frame == 10:
 		_play()
+	elif frame == 15:
+		_check_stats()
 	elif frame == 20:
 		_finish()
 	return false
@@ -89,6 +96,44 @@ func _check_score_tick() -> void:
 	if main.shown_score != start + 1000:
 		failures.append("score counter ended on %d, not %d" % [main.shown_score, start + 1000])
 	main._snap_score()
+
+
+## Finished games are recorded once and saved; gear → Settings → Stats → Back
+## opens and closes the right screens (#32).
+func _check_stats() -> void:
+	main.new_game()
+	var before: int = main.stats.games_played
+	while not main.game.is_over and main.autoplay_one_move():
+		main.finish_animations()
+	if not main.game.is_over:
+		failures.append("autoplay could not finish a game")
+		return
+	main.finish_animations()
+	main._on_game_over(main.game.score)
+	if main.stats.games_played != before + 1:
+		failures.append("finished game counted %d times" % (main.stats.games_played - before))
+	if main.stats.best_score < main.game.score:
+		failures.append("best score %d is below the finished score %d" % [main.stats.best_score, main.game.score])
+	var saved: Dictionary = SaveFile.read(STATS_PATH)
+	if int(saved.get("games_played", -1)) != main.stats.games_played:
+		failures.append("stats file has %s games, expected %d" % [saved.get("games_played"), main.stats.games_played])
+	main.new_game()
+
+	main.show_settings()
+	if not main.settings_sheet.visible or not main.menu_open():
+		failures.append("gear did not open the Settings sheet")
+	main.settings_sheet.stats_button.pressed.emit()
+	if main.settings_sheet.visible or not main.stats_screen.visible:
+		failures.append("Settings › Stats did not open the Stats screen")
+	if main.stats_screen.values.games_played.text != str(main.stats.games_played):
+		failures.append("Stats screen shows %s games, expected %d" % [main.stats_screen.values.games_played.text, main.stats.games_played])
+	main.stats_screen.back_pressed.emit()
+	if main.stats_screen.visible or not main.settings_sheet.visible:
+		failures.append("Back from Stats did not return to Settings")
+	main.settings_sheet.close_sheet()
+	if main.menu_open():
+		failures.append("closing Settings left a menu open")
+	SaveFile.remove(STATS_PATH)
 
 
 func _finish() -> void:
