@@ -64,6 +64,7 @@ Repeat these steps whenever you want a fresh build on the phone.
 | Problem | Fix |
 | --- | --- |
 | Godot: "App Store Team ID not specified" | Do step 4 of the one-time setup. |
+| Xcode: "The project 'Qubist' is damaged and cannot be opened due to a parse error" | The App Store Team ID field holds something other than the 10-character ID, such as your name. Godot writes it into the project without quotes, so spaces break it. Put in the ID from step 3 and export again. |
 | Godot: export templates missing | Do step 1 of the one-time setup. |
 | Xcode: "No profiles for 'com.nacerous.qubist' were found" | Tick **Automatically manage signing** and choose your Personal Team (step 3 above). |
 | Xcode: "Failed to register bundle identifier" | Someone else's account already uses this ID. Change it in Godot's iOS preset (for example add your name) and export again. |
