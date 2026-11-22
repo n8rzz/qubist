@@ -17,9 +17,10 @@ const CUBE_SIZE := 0.97
 const BLOCK_COLOR := Color("#A8A8A3")
 ## Darker line along every cube edge, so cells can be counted.
 const EDGE_COLOR := Color("#5E5E5A")
-## Faded blocks keep the block colour at low opacity and a faint outline.
-const FADED_COLOR := Color(BLOCK_COLOR, 0.15)
-const FADED_EDGE_COLOR := Color(EDGE_COLOR, 0.45)
+## Swept blocks (#67) are paper: background-coloured faces and a faint
+## outline. The edge alpha is how far the line leans toward EDGE_COLOR.
+const FADED_COLOR := Color("#F4F4F2")
+const FADED_EDGE_COLOR := Color(EDGE_COLOR, 0.5)
 ## The piece being placed is a wireframe (#62): a strong outline around the
 ## whole piece, fainter lines between its cubes and a barely-there fill.
 const GHOST_OK_COLOR := Color(0.18, 0.62, 0.36)
@@ -128,13 +129,16 @@ func setup(size: Vector3i) -> void:
 	_solid.material_override = _block_material(SolidShader, BLOCK_COLOR, EDGE_COLOR)
 	_faded.multimesh = _make_multimesh()
 	_faded.material_override = _block_material(FadedShader, FADED_COLOR, FADED_EDGE_COLOR)
+	# After the ghost's fill has marked the stencil, before the sweep pane, so
+	# the pane is hidden behind swept cubes and shows in front of them.
+	_faded.material_override.render_priority = -2
 	_faded.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_ghost_fill.mesh = ImmediateMesh.new()
 	_ghost_fill.material_override = _ghost_fill_material
 	_ghost_lines.mesh = ImmediateMesh.new()
 	_ghost_lines_material.shader = GhostLinesShader
-	# Drawn after every other see-through thing, lines last, so the fill's
-	# depth only ever hides the ghost's own back lines.
+	# Lines are drawn last of the see-through things, so the fill's depth
+	# hides the ghost's own back lines and swept cubes never cover them.
 	_ghost_lines_material.render_priority = 2
 	_ghost_lines.material_override = _ghost_lines_material
 	for node in [_ghost_fill, _ghost_lines]:
@@ -599,12 +603,18 @@ func _block_material(shader: Shader, face: Color, edge: Color) -> ShaderMaterial
 
 
 ## Faint, unlit, and drawn with a depth prepass so only the face nearest the
-## camera shows and the wireframe behind it is hidden.
+## camera shows and the wireframe behind it is hidden. Drawn first of the
+## see-through things and marks the stencil, so swept cubes (#67) leave the
+## ghost uncovered.
 func _ghost_shell_material() -> StandardMaterial3D:
 	var m := _material(Color(GHOST_OK_COLOR, GHOST_FILL_ALPHA), true, true)
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.render_priority = 1
+	m.render_priority = -3
+	m.stencil_mode = BaseMaterial3D.STENCIL_MODE_CUSTOM
+	m.stencil_flags = BaseMaterial3D.STENCIL_FLAG_WRITE
+	m.stencil_compare = BaseMaterial3D.STENCIL_COMPARE_ALWAYS
+	m.stencil_reference = 1
 	return m
 
 
