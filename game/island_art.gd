@@ -10,8 +10,10 @@ extends Control
 ## Cells to draw, as core Vector3i(x, y, h) with h in .z.
 var cells: Array = []
 
-## The design's view box: the art's bounds in its own units.
-const VIEW := Rect2(-146.6, -256.0, 305.1, 423.4)
+## The art's bounds in its own units: the design's view box, extended down
+## past the island's underside (it ends at y 193) so nothing below the art
+## covers it.
+const VIEW := Rect2(-146.6, -256.0, 305.1, 461.0)
 const CELL_X := 17.32
 const CELL_Y := 10.0
 const LAYER := 20.0
@@ -163,19 +165,23 @@ func _draw_outline_front() -> void:
 		draw_dashed_line(line[0], line[1], OUTLINE_FRONT, 0.9, 4.4)
 
 
-func _draw_cube(c: Vector3i) -> void:
+## Draws one cube; `alpha` fades it (the loading view's falling cubes, #69).
+func _draw_cube(c: Vector3i, alpha := 1.0) -> void:
 	var x := c.x
 	var y := c.y
 	var h := c.z
 	_face([iso(x, y, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y + 1, h + 1), iso(x, y + 1, h + 1)],
-		CUBE_TOP, CUBE_TOP_INSET)
+		CUBE_TOP, CUBE_TOP_INSET, alpha)
 	_face([iso(x, y + 1, h + 1), iso(x + 1, y + 1, h + 1), iso(x + 1, y + 1, h), iso(x, y + 1, h)],
-		CUBE_LEFT, CUBE_LEFT_INSET)
+		CUBE_LEFT, CUBE_LEFT_INSET, alpha)
 	_face([iso(x + 1, y + 1, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y, h), iso(x + 1, y + 1, h)],
-		CUBE_RIGHT, CUBE_RIGHT_INSET)
+		CUBE_RIGHT, CUBE_RIGHT_INSET, alpha)
 
 
-func _face(corners: Array, color: Color, inset: Color) -> void:
+func _face(corners: Array, color: Color, inset: Color, alpha := 1.0) -> void:
+	color.a *= alpha
+	inset.a *= alpha
+	var edge := Color(CUBE_EDGE, CUBE_EDGE.a * alpha)
 	var points := PackedVector2Array(corners)
 	var center := (points[0] + points[2]) * 0.5
 	var inner := PackedVector2Array()
@@ -184,7 +190,7 @@ func _face(corners: Array, color: Color, inset: Color) -> void:
 	draw_colored_polygon(points, color)
 	draw_colored_polygon(inner, inset)
 	points.append(points[0])
-	draw_polyline(points, CUBE_EDGE, 0.7, true)
+	draw_polyline(points, edge, 0.7, true)
 
 
 ## A filled polygon from flat [x, y, ...] coordinates, with an optional edge.
