@@ -268,6 +268,8 @@ func _check_sound_switches() -> void:
 		switches[key].button_pressed = false
 		if main.settings.get(key) != false:
 			failures.append("turning off %s did not change the setting" % key)
+	if main.haptics.enabled:
+		failures.append("turning off haptics left the haptics on")
 	var saved: Dictionary = SaveFile.read(saves.settings_path)
 	for key in switches:
 		if saved.get(key) != false:
@@ -276,9 +278,13 @@ func _check_sound_switches() -> void:
 	root.add_child(reopened)
 	if reopened.settings_sheet.music_button.button_pressed or reopened.settings.haptics:
 		failures.append("a fresh screen did not start with the saved sound settings")
+	if reopened.haptics.enabled:
+		failures.append("a fresh screen did not apply the saved haptics setting")
 	reopened.queue_free()
 	for key in switches:
 		switches[key].button_pressed = true
+	if not main.haptics.enabled:
+		failures.append("turning haptics back on left them off")
 	SaveFile.remove(saves.settings_path)
 
 
