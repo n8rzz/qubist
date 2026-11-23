@@ -67,11 +67,3 @@ func restore(step: int, zoom: float) -> void:
 	_turns = posmod(step, 4)
 	rotation.y = ViewMath.yaw_for_step(_turns)
 	camera.size = clampf(zoom, zoom_min, zoom_max)
-
-
-func reset() -> void:
-	if _tween != null and _tween.is_valid():
-		_tween.kill()
-	_turns = 0
-	rotation.y = ViewMath.yaw_for_step(0)
-	camera.size = DEFAULT_ZOOM

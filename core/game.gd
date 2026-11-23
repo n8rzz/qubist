@@ -134,10 +134,6 @@ func check_game_over() -> bool:
 	return true
 
 
-func remaining_pieces() -> Array:
-	return tray.filter(func(p): return p != null)
-
-
 ## JSON-safe snapshot for auto-save. Restore with from_dict().
 func to_dict() -> Dictionary:
 	var ids: Array = []
