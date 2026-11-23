@@ -196,6 +196,54 @@ func test_restore_rejects_other_version() -> void:
 	check(not Game.new(Config.new(), 1).from_dict(saved))
 
 
+## The parts of a game that a rejected restore must leave alone.
+func _state(game) -> Dictionary:
+	return {
+		"score": game.score,
+		"streak": game.streak,
+		"moves": game.moves,
+		"is_over": game.is_over,
+		"grid": game.grid.to_array(),
+		"tray": game.tray.map(func(p): return "" if p == null else p.id),
+	}
+
+
+## Checks that from_dict rejects a save after `spoil` edits it, and that the
+## game it was loaded into keeps its own state.
+func _check_rejected(spoil: Callable, message: String) -> void:
+	var source = _game(["cube2", "bar2_x", "bar4_x"])
+	source.place(0, Vector3i(0, 0, 0))
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(source.to_dict()))
+	spoil.call(saved)
+
+	var game = _game()
+	game.place(1, Vector3i(0, 0, 0))
+	var before := _state(game)
+	check(_state(source) != before, "source and target differ, so a partial restore would show")
+	check(not game.from_dict(saved), message)
+	check_eq(_state(game), before, message + ": game unchanged")
+
+
+func test_restore_rejects_unknown_piece() -> void:
+	_check_rejected(func(saved): saved["tray"][1] = "no_such_piece", "unknown piece id")
+
+
+func test_restore_rejects_other_tray_size() -> void:
+	_check_rejected(func(saved): saved["tray"].append(""), "longer tray")
+	_check_rejected(func(saved): saved["tray"].pop_back(), "shorter tray")
+
+
+func test_restore_rejects_wrong_cell_count() -> void:
+	_check_rejected(func(saved): saved["grid"]["cells"].pop_back(), "too few cells")
+	_check_rejected(func(saved): saved["grid"]["cells"].append(0), "too many cells")
+
+
+func test_rejected_restore_leaves_the_game_unchanged() -> void:
+	_check_rejected(func(saved): saved["version"] = Game.SAVE_VERSION - 1, "other version")
+	_check_rejected(func(saved): saved["config"] = "other", "other config")
+	_check_rejected(func(saved): saved["grid"]["size"] = [4, 4, 8], "other grid size")
+
+
 func test_random_games_play_to_the_end() -> void:
 	# Plays seeded games with random legal moves until each ends, checking
 	# that the rules hold on every move.
