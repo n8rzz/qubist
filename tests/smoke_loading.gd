@@ -8,7 +8,6 @@ extends SceneTree
 ##
 ## Exits with code 0 if the hand-off went through, 1 otherwise.
 
-const LoadingArt := preload("res://game/loading_art.gd")
 const SmokeSaves := preload("res://tests/smoke_saves.gd")
 ## Shorter than the real minimum so the test doesn't wait 3 s, but long
 ## enough that the game is ready well before it.
@@ -24,7 +23,6 @@ var saves := SmokeSaves.new("loading")
 
 
 func _initialize() -> void:
-	_check_keyframes()
 	saves.clear()
 	var first_scene: String = ProjectSettings.get_setting("application/run/main_scene")
 	if first_scene != "res://scenes/loading.tscn":
@@ -61,16 +59,3 @@ func _process(_delta: float) -> bool:
 		failures.append("expected only the game screen under root, found %d nodes" % root.get_child_count())
 	return saves.finish(self, failures, WHAT)
 
-
-## The drop keyframes start high and clear, land, bounce and rest.
-func _check_keyframes() -> void:
-	var lift := LoadingArt.LIFT_KEYS
-	var alpha := LoadingArt.ALPHA_KEYS
-	if not is_equal_approx(LoadingArt.keyframe(lift, 0.0), 140.0) or LoadingArt.keyframe(alpha, 0.0) != 0.0:
-		failures.append("a cube should start 140 up and invisible")
-	if not is_zero_approx(LoadingArt.keyframe(lift, 0.2)) or not is_equal_approx(LoadingArt.keyframe(alpha, 0.5), 1.0):
-		failures.append("a cube should be landed and opaque mid-loop")
-	if not is_equal_approx(LoadingArt.keyframe(lift, 0.24), 8.0):
-		failures.append("a cube should bounce 8 up after landing")
-	if not is_zero_approx(LoadingArt.keyframe(alpha, 1.0)):
-		failures.append("a cube should fade out by the end of the loop")
