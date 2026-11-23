@@ -28,6 +28,16 @@ func test_quarter_turn_moves_to_the_next_corner() -> void:
 	check(ViewMath.toward_camera(4).distance_to(a) < 0.001, "four turns come back around")
 
 
+func test_screen_right_is_perpendicular_to_the_view() -> void:
+	for step in range(4):
+		var right := ViewMath.screen_right(step)
+		var toward := ViewMath.toward_camera(step)
+		check(is_equal_approx(right.length(), 1.0), "step %d: unit length" % step)
+		check(absf(right.dot(toward)) < 0.001, "step %d: at right angles to the view" % step)
+		# Turning keeps right on the same side of the view direction.
+		check(toward.cross(right) < 0.0, "step %d: right is not flipped" % step)
+
+
 func test_swiper_axis_alternates_with_the_view() -> void:
 	check_eq(ViewMath.slice_axis(ViewMath.MODE_X, 0), 1)
 	check_eq(ViewMath.slice_axis(ViewMath.MODE_Y, 0), 0)
@@ -48,6 +58,29 @@ func test_swiper_front_follows_rotation() -> void:
 	# Two quarter turns put the camera at the low corner, so y = 0 is in front.
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 0), ViewMath.MODE_X, 2, SIZE), 0)
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 5, 0), ViewMath.MODE_X, 2, SIZE), 5)
+
+
+func test_y_mode_cuts_from_the_side() -> void:
+	# At the start view Y mode steps along x, and x = 5 is nearest the camera.
+	check_eq(ViewMath.layer_from_viewer(Vector3i(5, 0, 0), ViewMath.MODE_Y, 0, SIZE), 0)
+	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 0), ViewMath.MODE_Y, 0, SIZE), 5)
+	check_eq(ViewMath.layer_from_viewer(Vector3i(3, 5, 7), ViewMath.MODE_Y, 0, SIZE), 2, "y and h don't matter")
+	# Depth 2 hides x = 4, 5.
+	check(ViewMath.is_sliced_away(Vector3i(5, 0, 0), ViewMath.MODE_Y, 0, SIZE, 2))
+	check(ViewMath.is_sliced_away(Vector3i(4, 3, 6), ViewMath.MODE_Y, 0, SIZE, 2))
+	check(not ViewMath.is_sliced_away(Vector3i(3, 0, 0), ViewMath.MODE_Y, 0, SIZE, 2))
+	check(not ViewMath.is_sliced_away(Vector3i(5, 0, 0), ViewMath.MODE_Y, 0, SIZE, 0), "depth 0 shows everything")
+
+
+func test_y_mode_follows_rotation() -> void:
+	# One quarter turn moves Y mode onto y, with y = 0 nearest the camera.
+	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 0), ViewMath.MODE_Y, 1, SIZE), 0)
+	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 5, 0), ViewMath.MODE_Y, 1, SIZE), 5)
+	check_eq(ViewMath.layer_from_viewer(Vector3i(5, 2, 7), ViewMath.MODE_Y, 1, SIZE), 2, "x and h don't matter")
+	# Depth 2 hides y = 0, 1.
+	check(ViewMath.is_sliced_away(Vector3i(0, 0, 0), ViewMath.MODE_Y, 1, SIZE, 2))
+	check(ViewMath.is_sliced_away(Vector3i(5, 1, 6), ViewMath.MODE_Y, 1, SIZE, 2))
+	check(not ViewMath.is_sliced_away(Vector3i(0, 2, 0), ViewMath.MODE_Y, 1, SIZE, 2))
 
 
 func test_slice_plane_sits_between_cut_and_shown_layers() -> void:
