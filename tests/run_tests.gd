@@ -3,8 +3,10 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tests/run_tests.gd
 ##
-## Exits with code 0 when all tests pass and 1 otherwise.
+## Exits with code 0 when all tests pass and 1 otherwise. A script error
+## inside a test fails that test (see tests/suite_runner.gd).
 
+const SuiteRunner := preload("res://tests/suite_runner.gd")
 const TEST_DIR := "res://tests"
 
 
@@ -24,18 +26,12 @@ func _init() -> void:
 			failures.append("%s: could not load (see the script error above)" % file)
 			print("  FAIL could not load")
 			continue
-		var suite = script.new()
-		for method in script.get_script_method_list():
-			var method_name: String = method["name"]
-			if not method_name.begins_with("test_"):
-				continue
-			suite.current = "%s::%s" % [file.get_basename(), method_name]
-			var before: int = suite.failures.size()
-			suite.call(method_name)
+		var run := SuiteRunner.run(script, file.get_basename())
+		for result in run.results:
 			total += 1
-			var passed: bool = suite.failures.size() == before
-			print("  %s %s" % ["ok  " if passed else "FAIL", method_name])
-		failures.append_array(suite.failures)
+			print("  %s %s" % ["ok  " if result[1] else "FAIL", result[0]])
+		failures.append_array(run.failures)
+	SuiteRunner.finish()
 
 	print("")
 	if failures.is_empty():
