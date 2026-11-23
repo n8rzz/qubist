@@ -8,8 +8,24 @@ func test_loads_default_files() -> void:
 	var cfg := Config.new()
 	check_eq(cfg.grid_size, Vector3i(6, 6, 12))
 	check_eq(cfg.tray_size, 3)
-	check_eq(cfg.pieces.size(), 7 + 24 + 12)
 	check_eq(cfg.points_per_cube_cleared, 10)
+
+
+## Every entry in pieces.json is loaded: plain entries as written, and
+## "orientations": "all" entries once per distinct rotation.
+func test_loads_every_piece_in_the_file() -> void:
+	var cfg := Config.new()
+	var expected := 0
+	for entry in Config.load_json(Config.DEFAULT_PIECES_PATH).pieces:
+		if entry.get("orientations", "") == "all":
+			var turns := Piece.orientations(Piece.parse_cells(entry.cells)).size()
+			expected += turns
+			check(cfg.piece_by_id("%s_00" % entry.id) != null, "%s_00 is loaded" % entry.id)
+			check(cfg.piece_by_id("%s_%02d" % [entry.id, turns - 1]) != null, "last %s rotation is loaded" % entry.id)
+		else:
+			expected += 1
+			check(cfg.piece_by_id(entry.id) != null, "%s is loaded" % entry.id)
+	check_eq(cfg.pieces.size(), expected)
 
 
 func test_piece_sizes() -> void:

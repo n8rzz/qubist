@@ -15,11 +15,6 @@ func _piece(id: String):
 	return cfg.piece_by_id(id)
 
 
-func _fill(grid, cells: Array) -> void:
-	for c in cells:
-		grid.set_filled(c, true)
-
-
 # --- Placement ---
 
 func test_floor_placement_is_legal() -> void:
@@ -32,13 +27,13 @@ func test_floating_placement_is_illegal() -> void:
 
 func test_resting_on_a_block_is_legal() -> void:
 	var g = _grid()
-	_fill(g, [Vector3i(0, 0, 0)])
+	fill(g, [Vector3i(0, 0, 0)])
 	check(Rules.can_place(g, _piece("bar2_x"), Vector3i(0, 0, 1)))
 
 
 func test_overhang_is_legal_with_one_supported_cube() -> void:
 	var g = _grid()
-	_fill(g, [Vector3i(0, 0, 0)])
+	fill(g, [Vector3i(0, 0, 0)])
 	check(Rules.can_place(g, _piece("bar4_x"), Vector3i(0, 0, 1)))
 
 
@@ -60,7 +55,7 @@ func _oriented(shape: String, cells: Array) -> Variant:
 func test_corner_fills_a_notch() -> void:
 	var g = _grid()
 	# Floor fill with an L-shaped gap at (0..1, 0..1) minus (1, 1).
-	_fill(g, [Vector3i(1, 1, 0)])
+	fill(g, [Vector3i(1, 1, 0)])
 	var corner = _oriented("corner3", [[0, 0, 0], [1, 0, 0], [0, 1, 0]])
 	check(corner != null, "flat corner orientation exists")
 	check(Rules.can_place(g, corner, Vector3i(0, 0, 0)))
@@ -74,13 +69,13 @@ func test_upside_down_l_rests_on_its_stem() -> void:
 	check(l4 != null, "upside-down L orientation exists")
 	check(Rules.can_place(g, l4, Vector3i(0, 0, 0)))
 	check(not Rules.can_place(g, l4, Vector3i(0, 0, 1)), "nothing under the stem")
-	_fill(g, [Vector3i(0, 0, 0)])
+	fill(g, [Vector3i(0, 0, 0)])
 	check(Rules.can_place(g, l4, Vector3i(0, 0, 1)), "stem on a block")
 
 
 func test_side_contact_alone_is_illegal() -> void:
 	var g = _grid()
-	_fill(g, [Vector3i(0, 0, 0), Vector3i(0, 0, 1)])
+	fill(g, [Vector3i(0, 0, 0), Vector3i(0, 0, 1)])
 	# Touches the column's side at h = 1, but nothing is underneath.
 	check(not Rules.can_place(g, _piece("bar2_x"), Vector3i(1, 0, 1)))
 
@@ -97,7 +92,7 @@ func test_out_of_bounds_is_illegal() -> void:
 
 func test_overlap_is_illegal() -> void:
 	var g = _grid()
-	_fill(g, [Vector3i(1, 0, 0)])
+	fill(g, [Vector3i(1, 0, 0)])
 	check(not Rules.can_place(g, _piece("bar2_x"), Vector3i(0, 0, 0)))
 
 
@@ -127,11 +122,7 @@ func test_no_legal_position_on_full_grid() -> void:
 
 func test_cube_blocked_by_checkerboard() -> void:
 	var g = _grid()
-	for h in range(12):
-		for y in range(6):
-			for x in range(6):
-				if (x + y) % 2 == 0:
-					g.set_filled(Vector3i(x, y, h), true)
+	checkerboard(g)
 	check(not Rules.has_any_legal(g, _piece("cube2")))
 	check(not Rules.has_any_legal(g, _piece("bar2_x")))
 	check(Rules.has_any_legal(g, _piece("bar2_up")), "the empty columns still take an upright bar")

@@ -9,37 +9,31 @@ extends SceneTree
 ## caught separately by CI, which fails on any "SCRIPT ERROR" in the output.
 
 const MOVES := 30
-## Keeps the smoke test's finished games out of the real stats file.
-const STATS_PATH := "user://test_saves/smoke_stats.json"
-## Likewise for the auto-saved game (#18).
-const GAME_PATH := "user://test_saves/smoke_game.json"
-## And for player settings (#56).
-const SETTINGS_PATH := "user://test_saves/smoke_settings.json"
 const SaveFile := preload("res://core/save_file.gd")
+const SmokeSaves := preload("res://tests/smoke_saves.gd")
 const UI := preload("res://game/ui_style.gd")
 const ScoreFeedback := preload("res://game/score_feedback.gd")
 
 var main
 var frame := 0
 var failures: Array[String] = []
+## Keeps the smoke test's stats, auto-saved game (#18) and settings (#56) out
+## of the real save files.
+var saves := SmokeSaves.new("smoke")
 
 
 func _initialize() -> void:
 	# Note: headless Godot ignores window size changes, so this runs at the
 	# headless default (wider than a phone). Layout is fluid, so the drag path
 	# is the same; check real sizes on a device.
-	SaveFile.remove(STATS_PATH)
-	SaveFile.remove(GAME_PATH)
-	SaveFile.remove(SETTINGS_PATH)
+	saves.clear()
 	main = _make_main()
 	root.add_child(main)
 
 
 func _make_main():
 	var screen = load("res://scenes/main.tscn").instantiate()
-	screen.stats_path = STATS_PATH
-	screen.game_save_path = GAME_PATH
-	screen.settings_path = SETTINGS_PATH
+	saves.use_on(screen)
 	return screen
 
 
@@ -56,7 +50,7 @@ func _process(_delta: float) -> bool:
 	elif frame == 18:
 		_check_resume()
 	elif frame == 20:
-		_finish()
+		saves.finish(self, failures, "game screen smoke test")
 	return false
 
 
@@ -147,9 +141,9 @@ func _check_stats() -> void:
 		failures.append("finished game counted %d times" % (main.stats.games_played - before))
 	if main.stats.best_score < main.game.score:
 		failures.append("best score %d is below the finished score %d" % [main.stats.best_score, main.game.score])
-	if FileAccess.file_exists(GAME_PATH):
+	if FileAccess.file_exists(saves.game_path):
 		failures.append("a finished game left its auto-save behind")
-	var saved: Dictionary = SaveFile.read(STATS_PATH)
+	var saved: Dictionary = SaveFile.read(saves.stats_path)
 	if int(saved.get("games_played", -1)) != main.stats.games_played:
 		failures.append("stats file has %s games, expected %d" % [saved.get("games_played"), main.stats.games_played])
 	main.new_game()
@@ -172,7 +166,7 @@ func _check_stats() -> void:
 	if main.menu_open():
 		failures.append("closing Settings left a menu open")
 	_check_home_menus()
-	SaveFile.remove(STATS_PATH)
+	SaveFile.remove(saves.stats_path)
 
 
 ## Home's Stats closes back to Home; Home's Settings has no Home row; and
@@ -205,7 +199,7 @@ func _check_grid_ticks() -> void:
 	main.settings_sheet.grid_ticks_button.button_pressed = true
 	if not main.tower.grid_ticks_visible():
 		failures.append("turning on Grid ticks did not show them")
-	if SaveFile.read(SETTINGS_PATH).get("grid_ticks") != true:
+	if SaveFile.read(saves.settings_path).get("grid_ticks") != true:
 		failures.append("Grid ticks were not saved")
 	var reopened = _make_main()
 	root.add_child(reopened)
@@ -215,7 +209,7 @@ func _check_grid_ticks() -> void:
 	main.settings_sheet.grid_ticks_button.button_pressed = false
 	if main.tower.grid_ticks_visible():
 		failures.append("turning off Grid ticks did not hide them")
-	SaveFile.remove(SETTINGS_PATH)
+	SaveFile.remove(saves.settings_path)
 
 
 ## A placement saves the game and camera; a fresh screen picks both up, and
@@ -249,23 +243,12 @@ func _check_resume() -> void:
 			resumed.tower.rig.view_step(), resumed.tower.rig.camera.size, step, zoom])
 	resumed.queue_free()
 
-	var data := SaveFile.read(GAME_PATH)
+	var data := SaveFile.read(saves.game_path)
 	data.game.config = "other"
-	SaveFile.write(GAME_PATH, data)
+	SaveFile.write(saves.game_path, data)
 	var fresh = _make_main()
 	root.add_child(fresh)
 	if fresh.game.moves != 0:
 		failures.append("a save from another config was resumed")
 	fresh.queue_free()
-	SaveFile.remove(GAME_PATH)
-
-
-func _finish() -> void:
-	if failures.is_empty():
-		print("Smoke test passed.")
-		quit(0)
-	else:
-		print("Smoke test failed:")
-		for f in failures:
-			print("  - " + f)
-		quit(1)
+	SaveFile.remove(saves.game_path)
