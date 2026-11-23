@@ -9,6 +9,7 @@ const CameraRig := preload("res://game/camera_rig.gd")
 
 const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
+const SweptEdgesShader := preload("res://game/shaders/block_swept_edges.gdshader")
 const GhostLinesShader := preload("res://game/shaders/ghost_lines.gdshader")
 
 ## Cubes fill most of their 1-unit cell, leaving a thin gap between blocks.
@@ -17,10 +18,13 @@ const CUBE_SIZE := 0.97
 const BLOCK_COLOR := Color("#A8A8A3")
 ## Darker line along every cube edge, so cells can be counted.
 const EDGE_COLOR := Color("#5E5E5A")
-## Swept blocks (#67) are paper: background-coloured faces and a faint
-## outline. The edge alpha is how far the line leans toward EDGE_COLOR.
-const FADED_COLOR := Color("#F4F4F2")
-const FADED_EDGE_COLOR := Color(EDGE_COLOR, 0.5)
+## Swept blocks (#85) are outlines only, with hidden lines removed, so the
+## floor and empty cells show through them.
+const SWEPT_EDGE_COLOR := Color(EDGE_COLOR, 0.3)
+## While sliced, cubes behind the slice are light stone (#85), so the slice
+## itself is the only full-strength grey.
+const BEHIND_COLOR := Color("#DCDCD8")
+const BEHIND_EDGE_COLOR := Color("#A9A9A4")
 ## The piece being placed is a wireframe (#62): a strong outline around the
 ## whole piece, fainter lines between its cubes and a barely-there fill.
 const GHOST_OK_COLOR := Color(0.18, 0.62, 0.36)
@@ -88,6 +92,8 @@ var rig: CameraRig
 
 var _solid := MultiMeshInstance3D.new()
 var _faded := MultiMeshInstance3D.new()
+## Cubes behind the slice, drawn lighter while the tower is sliced.
+var _behind := MultiMeshInstance3D.new()
 ## The ghost's outer shell, drawn faintly. Its depth hides wireframe lines
 ## behind the piece.
 var _ghost_fill := MeshInstance3D.new()
@@ -127,11 +133,10 @@ func setup(size: Vector3i) -> void:
 
 	_solid.multimesh = _make_multimesh()
 	_solid.material_override = _block_material(SolidShader, BLOCK_COLOR, EDGE_COLOR)
+	_behind.multimesh = _make_multimesh()
+	_behind.material_override = _block_material(SolidShader, BEHIND_COLOR, BEHIND_EDGE_COLOR)
 	_faded.multimesh = _make_multimesh()
-	_faded.material_override = _block_material(FadedShader, FADED_COLOR, FADED_EDGE_COLOR)
-	# After the ghost's fill has marked the stencil, before the sweep pane, so
-	# the pane is hidden behind swept cubes and shows in front of them.
-	_faded.material_override.render_priority = -2
+	_faded.material_override = _swept_material()
 	_faded.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_ghost_fill.mesh = ImmediateMesh.new()
 	_ghost_fill.material_override = _ghost_fill_material
@@ -158,12 +163,15 @@ func setup(size: Vector3i) -> void:
 	_chips.material_override = chip_material
 	_dust.multimesh = _make_dust_multimesh()
 	_dust.material_override = _dust_material()
+	# Before swept cubes, whose invisible faces would otherwise cut holes in
+	# the puffs.
+	_dust.material_override.render_priority = -3
 	_dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sweep.mesh = ImmediateMesh.new()
 	_sweep.material_override = _sweep_material
 	_sweep.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sweep.visible = false
-	for node in [_solid, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust, _sweep]:
+	for node in [_solid, _behind, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust, _sweep]:
 		add_child(node)
 
 	rig = CameraRig.new()
@@ -180,17 +188,24 @@ func grid_ticks_visible() -> bool:
 	return _ticks.visible
 
 
-## Draws `cells`; those in `faded` (a set of Vector3i keys) are see-through.
-func update_blocks(cells: Array, faded: Dictionary) -> void:
+## Draws `cells`; those in `faded` (a set of Vector3i keys) are see-through
+## outlines and those in `behind` (cubes behind the slice) are lighter.
+func update_blocks(cells: Array, faded: Dictionary, behind := {}) -> void:
 	var solid: Array = []
 	var faint: Array = []
+	var light: Array = []
 	for c in cells:
 		if faded.has(c):
 			faint.append(c)
-		elif not _landing_set.has(c):
+		elif _landing_set.has(c):
+			continue
+		elif behind.has(c):
+			light.append(c)
+		else:
 			solid.append(c)
 	_fill(_solid, solid)
 	_fill(_faded, faint)
+	_fill(_behind, light)
 
 
 ## Builds the sweep pane over `plane` (four core corners, from
@@ -603,14 +618,14 @@ func _block_material(shader: Shader, face: Color, edge: Color) -> ShaderMaterial
 
 
 ## Faint, unlit, and drawn with a depth prepass so only the face nearest the
-## camera shows and the wireframe behind it is hidden. Drawn first of the
+## camera shows and the wireframe behind it is hidden. Drawn early among the
 ## see-through things and marks the stencil, so swept cubes (#67) leave the
 ## ghost uncovered.
 func _ghost_shell_material() -> StandardMaterial3D:
 	var m := _material(Color(GHOST_OK_COLOR, GHOST_FILL_ALPHA), true, true)
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.render_priority = -3
+	m.render_priority = -4
 	m.stencil_mode = BaseMaterial3D.STENCIL_MODE_CUSTOM
 	m.stencil_flags = BaseMaterial3D.STENCIL_FLAG_WRITE
 	m.stencil_compare = BaseMaterial3D.STENCIL_COMPARE_ALWAYS
@@ -618,14 +633,35 @@ func _ghost_shell_material() -> StandardMaterial3D:
 	return m
 
 
-## Unlit and tinted per vertex. Drawn before the other see-through things,
-## so cut-away cubes and the ghost stay on top of it.
+## Unlit and tinted per vertex. Drawn after the ghost's fill and before
+## swept cubes, so the pane shows whole and swept outlines draw over it.
 func _sweep_plane_material() -> StandardMaterial3D:
 	var m := _material(Color(1, 1, 1, 0), true, true)
 	m.vertex_color_use_as_albedo = true
 	m.vertex_color_is_srgb = true
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.render_priority = -1
+	m.render_priority = -3
+	return m
+
+
+## Swept cubes (#85): a depth-only pass, then the edges of the nearest swept
+## faces. After the sweep pane and the ghost's fill, so neither is cut by the
+## invisible faces.
+func _swept_material() -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = FadedShader
+	m.render_priority = -2
+	var edges := _block_material(SweptEdgesShader, SWEPT_EDGE_COLOR, SWEPT_EDGE_COLOR)
+	edges.render_priority = -2
+	m.next_pass = edges
+	return m
+
+
+## Guide and tick lines draw before every other see-through thing, so swept
+## cubes' invisible faces (#85) don't hide them.
+func _early_lines_material(color: Color) -> StandardMaterial3D:
+	var m := _material(color, true, true)
+	m.render_priority = -5
 	return m
 
 
@@ -673,7 +709,7 @@ func _add_guides() -> void:
 	var top := float(grid_size.z)
 	var floor_y := 0.005
 	var mesh := ImmediateMesh.new()
-	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _material(GUIDE_COLOR, true, true))
+	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _early_lines_material(GUIDE_COLOR))
 	for i in range(grid_size.x + 1):
 		mesh.surface_add_vertex(Vector3(-hx + i, floor_y, -hz))
 		mesh.surface_add_vertex(Vector3(-hx + i, floor_y, hz))
@@ -704,7 +740,7 @@ func _add_ticks() -> void:
 		var points: Array = group[0]
 		if points.is_empty():
 			continue
-		mesh.surface_begin(Mesh.PRIMITIVE_LINES, _material(group[1], true, true))
+		mesh.surface_begin(Mesh.PRIMITIVE_LINES, _early_lines_material(group[1]))
 		for p in points:
 			mesh.surface_add_vertex(p)
 		mesh.surface_end()

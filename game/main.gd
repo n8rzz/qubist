@@ -437,14 +437,21 @@ func _refresh() -> void:
 func _refresh_blocks() -> void:
 	var filled: Array = game.grid.filled_cells()
 	var faded := _faded_cells()
-	tower.update_blocks(filled, faded)
-
-	# The sweep plane sits on the cut; the shown cubes right behind it light up.
 	var step := tower.rig.view_step()
+	# While sliced, cubes behind the slice are drawn lighter (#85), and the
+	# shown cubes on the cut light up under the sweep plane.
+	var behind := {}
 	var cap: Array = []
 	for c in filled:
-		if not faded.has(c) and ViewMath.layer_from_viewer(c, slice_mode, step, config.grid_size) == slice_depth:
+		if faded.has(c):
+			continue
+		var layer := ViewMath.layer_from_viewer(c, slice_mode, step, config.grid_size)
+		if layer == slice_depth:
 			cap.append(c)
+		elif slice_depth > 0 and layer > slice_depth:
+			behind[c] = true
+	tower.update_blocks(filled, faded, behind)
+
 	tower.set_sweep(
 		ViewMath.slice_plane(slice_mode, step, config.grid_size, slice_depth),
 		ViewMath.slice_toward_viewer(slice_mode, step), cap)
