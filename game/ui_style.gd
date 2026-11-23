@@ -18,6 +18,11 @@ const MUTED := Color("#555555")
 const LINE := Color("#555555")
 const WHITE := Color.WHITE
 
+## Text and accent colours for the screens drawn over the sky (Home, Loading).
+const SKY_INK := Color("#22313F")
+const SKY_MUTED := Color("#3D5568")
+const SKY_ACCENT := Color("#1F5E7A")
+
 ## Points kept clear of the notch and the home indicator (390×844 iPhone).
 const SAFE_TOP := 54
 const SAFE_BOTTOM := 34

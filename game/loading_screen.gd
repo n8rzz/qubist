@@ -24,9 +24,6 @@ const WAITING_PROGRESS := 0.9
 ## Where the bar starts, as in the design.
 const START_PROGRESS := 0.06
 
-const INK := Color("#22313F")
-const MUTED := Color("#3D5568")
-const ACCENT := Color("#1F5E7A")
 const BAR_TRACK := Color(1, 1, 1, 0.75)
 const BAR_SIZE := Vector2(160, 8)
 ## The art box, wordmark and bar sit centered, nudged up by this much.
@@ -160,13 +157,13 @@ func _build() -> void:
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", 14)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var wordmark := UI.label("Qubist", 56, INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var wordmark := UI.label("Qubist", 56, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
 	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	title.add_child(_build_bar())
 	column.add_child(title)
 
-	tip_label = UI.label(TIPS[randi() % TIPS.size()], 14, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	tip_label = UI.label(TIPS[randi() % TIPS.size()], 14, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	tip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tip_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	tip_label.offset_left = 32
@@ -187,6 +184,6 @@ func _build_bar() -> Control:
 	bar_fill = Panel.new()
 	bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar_fill.size = Vector2(BAR_SIZE.x * progress, BAR_SIZE.y)
-	bar_fill.add_theme_stylebox_override("panel", UI.box(ACCENT, Color(0, 0, 0, 0), 4, 0))
+	bar_fill.add_theme_stylebox_override("panel", UI.box(UI.SKY_ACCENT, Color(0, 0, 0, 0), 4, 0))
 	track.add_child(bar_fill)
 	return track
