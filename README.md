@@ -29,6 +29,12 @@ To run it on your iPhone, follow [docs/ios-device-build.md](docs/ios-device-buil
 
 Requires Godot 4.7 or newer on your `PATH`.
 
+On a fresh checkout, import the assets once first (opening the project in the editor does the same):
+
+```sh
+godot --headless --path . --import
+```
+
 ```sh
 godot --headless --path . --script res://tests/run_tests.gd
 ```
