@@ -14,11 +14,6 @@ func _game(tray_ids: Array = ["bar2_x", "bar4_x", "cube2"]):
 	return game
 
 
-func _fill(game, cells: Array) -> void:
-	for c in cells:
-		game.grid.set_filled(c, true)
-
-
 func _row(y: int, h: int, xs: Array) -> Array:
 	return xs.map(func(x): return Vector3i(x, y, h))
 
@@ -62,7 +57,7 @@ func test_empty_slot_cannot_be_placed() -> void:
 
 func test_completing_a_line_clears_and_scores() -> void:
 	var game = _game()
-	_fill(game, _row(0, 0, [0, 1, 2, 3]))
+	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))
 	var result: Dictionary = game.place(0, Vector3i(4, 0, 0))
 	check(result.ok)
 	check_eq(result.lines.size(), 1)
@@ -75,8 +70,8 @@ func test_completing_a_line_clears_and_scores() -> void:
 
 func test_no_gravity_after_clear() -> void:
 	var game = _game()
-	_fill(game, _row(0, 0, [0, 1, 2, 3]))
-	_fill(game, [Vector3i(2, 0, 1)])
+	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))
+	fill(game.grid, [Vector3i(2, 0, 1)])
 	game.place(0, Vector3i(4, 0, 0))
 	check(not game.grid.is_filled(Vector3i(2, 0, 0)))
 	check(game.grid.is_filled(Vector3i(2, 0, 1)), "block above a cleared line stays put")
@@ -84,9 +79,9 @@ func test_no_gravity_after_clear() -> void:
 
 func test_crossing_lines_share_one_cube() -> void:
 	var game = _game(["bar2_up", "bar4_x", "cube2"])
-	_fill(game, _row(0, 0, [1, 2, 3, 4, 5]))
+	fill(game.grid, _row(0, 0, [1, 2, 3, 4, 5]))
 	for y in range(1, 6):
-		_fill(game, [Vector3i(0, y, 0)])
+		fill(game.grid, [Vector3i(0, y, 0)])
 	var result: Dictionary = game.place(0, Vector3i(0, 0, 0))
 	check_eq(result.lines.size(), 2)
 	check_eq(result.cleared.size(), 11, "shared corner cube is removed once")
@@ -97,8 +92,8 @@ func test_crossing_lines_share_one_cube() -> void:
 
 func test_streak_builds_and_resets() -> void:
 	var game = _game(["bar2_x", "bar2_x", "cube2"])
-	_fill(game, _row(0, 0, [0, 1, 2, 3]))
-	_fill(game, _row(1, 0, [0, 1, 2, 3]))
+	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))
+	fill(game.grid, _row(1, 0, [0, 1, 2, 3]))
 	game.place(0, Vector3i(4, 0, 0))
 	check_eq(game.score, 60)
 	var second: Dictionary = game.place(1, Vector3i(4, 1, 0))
@@ -127,12 +122,7 @@ func test_game_over_when_nothing_fits() -> void:
 	var game = _game(["cube2", "cube2", "cube2"])
 	var ended := [false]
 	game.game_over.connect(func(_score): ended[0] = true)
-	# Checkerboard every layer: no 2x2 footprint is ever empty.
-	for h in range(12):
-		for y in range(6):
-			for x in range(6):
-				if (x + y) % 2 == 0:
-					_fill(game, [Vector3i(x, y, h)])
+	checkerboard(game.grid)
 	check(game.check_game_over())
 	check(game.is_over)
 	check(ended[0], "game_over signal fired")
@@ -141,11 +131,7 @@ func test_game_over_when_nothing_fits() -> void:
 
 func test_one_fitting_piece_keeps_the_game_going() -> void:
 	var game = _game(["cube2", "cube2", "bar2_up"])
-	for h in range(12):
-		for y in range(6):
-			for x in range(6):
-				if (x + y) % 2 == 0:
-					_fill(game, [Vector3i(x, y, h)])
+	checkerboard(game.grid)
 	check(not game.check_game_over())
 
 

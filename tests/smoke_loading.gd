@@ -8,35 +8,30 @@ extends SceneTree
 ##
 ## Exits with code 0 if the hand-off went through, 1 otherwise.
 
-const SaveFile := preload("res://core/save_file.gd")
 const LoadingArt := preload("res://game/loading_art.gd")
-const STATS_PATH := "user://test_saves/loading_stats.json"
-const GAME_PATH := "user://test_saves/loading_game.json"
-const SETTINGS_PATH := "user://test_saves/loading_settings.json"
+const SmokeSaves := preload("res://tests/smoke_saves.gd")
 ## Shorter than the real minimum so the test doesn't wait 3 s, but long
 ## enough that the game is ready well before it.
 const MIN_SECONDS := 0.6
 const TIMEOUT_MSEC := 15000
+const WHAT := "loading view hands off to Home after its minimum time"
 
 var loading
 var started_msec := 0
 var ready_before_min := false
 var failures: Array[String] = []
+var saves := SmokeSaves.new("loading")
 
 
 func _initialize() -> void:
 	_check_keyframes()
-	for path in [STATS_PATH, GAME_PATH, SETTINGS_PATH]:
-		SaveFile.remove(path)
+	saves.clear()
 	var first_scene: String = ProjectSettings.get_setting("application/run/main_scene")
 	if first_scene != "res://scenes/loading.tscn":
 		failures.append("the app starts on %s, not the loading view" % first_scene)
 	loading = load("res://scenes/loading.tscn").instantiate()
 	loading.min_seconds = MIN_SECONDS
-	loading.prepare_main = func(screen):
-		screen.stats_path = STATS_PATH
-		screen.game_save_path = GAME_PATH
-		screen.settings_path = SETTINGS_PATH
+	loading.prepare_main = saves.use_on
 	root.add_child(loading)
 	current_scene = loading
 	started_msec = Time.get_ticks_msec()
@@ -51,7 +46,7 @@ func _process(_delta: float) -> bool:
 			failures.append("the loading view started fading before its minimum time")
 		if waited > TIMEOUT_MSEC:
 			failures.append("the loading view never handed off (%d ms)" % waited)
-			return _finish()
+			return saves.finish(self, failures, WHAT)
 		return false
 	if waited < MIN_SECONDS * 1000:
 		failures.append("the loading view left after %d ms, before its %d ms minimum" % [waited, MIN_SECONDS * 1000])
@@ -64,7 +59,7 @@ func _process(_delta: float) -> bool:
 		failures.append("the game screen did not open on Home after loading")
 	if root.get_child_count() != 1:
 		failures.append("expected only the game screen under root, found %d nodes" % root.get_child_count())
-	return _finish()
+	return saves.finish(self, failures, WHAT)
 
 
 ## The drop keyframes start high and clear, land, bounce and rest.
@@ -79,17 +74,3 @@ func _check_keyframes() -> void:
 		failures.append("a cube should bounce 8 up after landing")
 	if not is_zero_approx(LoadingArt.keyframe(alpha, 1.0)):
 		failures.append("a cube should fade out by the end of the loop")
-
-
-func _finish() -> bool:
-	for path in [STATS_PATH, GAME_PATH, SETTINGS_PATH]:
-		SaveFile.remove(path)
-	if failures.is_empty():
-		print("PASS loading view hands off to Home after its minimum time")
-		quit(0)
-	else:
-		print("FAIL loading view:")
-		for f in failures:
-			print("  - " + f)
-		quit(1)
-	return true
