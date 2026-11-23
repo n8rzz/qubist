@@ -10,7 +10,7 @@ const Rules := preload("res://core/rules.gd")
 const ViewMath := preload("res://game/view_math.gd")
 const TowerView := preload("res://game/tower_view.gd")
 const PiecePreview := preload("res://game/piece_preview.gd")
-const IconButton := preload("res://game/icon_button.gd")
+const UI := preload("res://game/ui_style.gd")
 const Stats := preload("res://core/stats.gd")
 const SaveFile := preload("res://core/save_file.gd")
 const Settings := preload("res://core/settings.gd")
@@ -19,9 +19,6 @@ const StatsScreen := preload("res://game/stats_screen.gd")
 const HomeScreen := preload("res://game/home_screen.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
-const SAFE_TOP := 54
-const SAFE_BOTTOM := 34
-const SIDE_MARGIN := 16
 const GAP := 8
 const HEADER_HEIGHT := 56
 const TRAY_HEIGHT := 140
@@ -54,12 +51,9 @@ const SWEEP_FADE_IN_SECONDS := 0.06
 const SWEEP_HOLD_SECONDS := 0.18
 const SWEEP_FADE_OUT_SECONDS := 0.45
 
-const BG := Color("#F4F4F2")
-const INK := Color("#222222")
-const MUTED := Color("#555555")
-const LINE := Color("#555555")
+## Blue for the slice chip's border and the combo banner. The other colours
+## come from game/ui_style.gd.
 const ACCENT := Color("#2559C9")
-const WHITE := Color.WHITE
 
 # Placeholder feedback (#47).
 const SCORE_POP_COLOR := Color("#1B428F")
@@ -413,7 +407,7 @@ func _refresh() -> void:
 		var piece = game.tray[i] if i < game.tray.size() else null
 		tray_previews[i].set_piece(piece, step)
 		tray_slots[i].add_theme_stylebox_override("panel",
-			_box(WHITE, LINE, 16) if piece != null else _box(Color(0, 0, 0, 0), Color("#9A9A9A"), 16))
+			UI.box(UI.WHITE, UI.LINE, 16) if piece != null else UI.box(Color(0, 0, 0, 0), Color("#9A9A9A"), 16))
 
 	var layers := ViewMath.slice_layer_count(slice_mode, step, config.grid_size)
 	# Modes can have different layer counts (Z has 12, X/Y have 6), so keep the
@@ -525,8 +519,8 @@ func _snap_score() -> void:
 
 func _set_shown_score(value: int) -> void:
 	shown_score = value
-	score_label.text = _format(value)
-	best_label.text = "Best %s" % _format(maxi(stats.best_score, value))
+	score_label.text = UI.format_number(value)
+	best_label.text = "Best %s" % UI.format_number(maxi(stats.best_score, value))
 
 
 func _on_game_over(final_score: int) -> void:
@@ -534,8 +528,8 @@ func _on_game_over(final_score: int) -> void:
 		_pending_game_over = true
 		return
 	_record_finished_game()
-	_show_overlay("No moves left", "Score %s\nBest %s" % [_format(final_score), _format(stats.best_score)],
-		"Play again", new_game, "Home", show_home)
+	var body := "Score %s\nBest %s" % [UI.format_number(final_score), UI.format_number(stats.best_score)]
+	_show_overlay("No moves left", body, "Play again", new_game, "Home", show_home)
 
 
 ## Adds the finished game to the lifetime stats and saves them, once per game.
@@ -628,7 +622,8 @@ func _show_score_gain(result: Dictionary) -> void:
 		return
 	var at := viewport_box.get_global_rect().position \
 		+ tower.project_point(ViewMath.cells_center(result.cleared, config.grid_size))
-	var pop := _label("+%s" % _format(int(result.score.total)), 24, SCORE_POP_COLOR)
+	var pop := UI.label("+%s" % UI.format_number(int(result.score.total)), 24, SCORE_POP_COLOR,
+		HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(pop)
 	pop.reset_size()
 	pop.position = at - pop.size * 0.5
@@ -645,8 +640,8 @@ func _show_score_gain(result: Dictionary) -> void:
 		parts.append("Streak %d" % int(result.score.streak))
 	if parts.is_empty():
 		return
-	var banner := _label("  ·  ".join(parts), 18, WHITE)
-	banner.add_theme_stylebox_override("normal", _box(ACCENT, ACCENT, 18, 0, Vector2(16, 8)))
+	var banner := UI.label("  ·  ".join(parts), 18, UI.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	banner.add_theme_stylebox_override("normal", UI.box(ACCENT, ACCENT, 18, 0, Vector2(16, 8)))
 	add_child(banner)
 	banner.reset_size()
 	var rect := viewport_box.get_global_rect()
@@ -674,20 +669,11 @@ func _show_pause() -> void:
 	_show_overlay("Paused", "", "Resume", _hide_overlay, "New game", new_game)
 
 
-func _format(n: int) -> String:
-	var digits := str(absi(n))
-	var out := ""
-	while digits.length() > 3:
-		out = "," + digits.substr(digits.length() - 3) + out
-		digits = digits.substr(0, digits.length() - 3)
-	return ("-" if n < 0 else "") + digits + out
-
-
 # --- Building the UI ---
 
 func _build_ui() -> void:
 	var bg := ColorRect.new()
-	bg.color = BG
+	bg.color = UI.BG
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
@@ -695,10 +681,10 @@ func _build_ui() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_theme_constant_override("margin_left", SIDE_MARGIN)
-	margin.add_theme_constant_override("margin_right", SIDE_MARGIN)
-	margin.add_theme_constant_override("margin_top", SAFE_TOP)
-	margin.add_theme_constant_override("margin_bottom", SAFE_BOTTOM)
+	margin.add_theme_constant_override("margin_left", UI.SIDE_MARGIN)
+	margin.add_theme_constant_override("margin_right", UI.SIDE_MARGIN)
+	margin.add_theme_constant_override("margin_top", UI.SAFE_TOP)
+	margin.add_theme_constant_override("margin_bottom", UI.SAFE_BOTTOM)
 	add_child(margin)
 
 	var column := VBoxContainer.new()
@@ -742,7 +728,7 @@ func _build_header() -> Control:
 	row.custom_minimum_size.y = HEADER_HEIGHT
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	var pause := _icon_button("pause", "Pause", 44, 12)
+	var pause := UI.icon_button("pause", "Pause", 44, 12)
 	pause.pressed.connect(_show_pause)
 	if not SHOW_PAUSE_BUTTON:
 		# Keep the slot so the score stays centered, but make it inert.
@@ -751,19 +737,19 @@ func _build_header() -> Control:
 		pause.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pause.focus_mode = Control.FOCUS_NONE
 	row.add_child(pause)
-	row.add_child(_spacer())
+	row.add_child(UI.spacer())
 
 	var scores := VBoxContainer.new()
 	scores.alignment = BoxContainer.ALIGNMENT_CENTER
 	scores.add_theme_constant_override("separation", 0)
-	score_label = _label("0", 28, INK)
-	best_label = _label("Best 0", 12, MUTED)
+	score_label = UI.label("0", 28, UI.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	best_label = UI.label("Best 0", 12, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	scores.add_child(score_label)
 	scores.add_child(best_label)
 	row.add_child(scores)
 
-	row.add_child(_spacer())
-	var gear := _icon_button("settings", "Settings", 44, 12)
+	row.add_child(UI.spacer())
+	var gear := UI.icon_button("settings", "Settings", 44, 12)
 	gear.pressed.connect(show_settings)
 	row.add_child(gear)
 	return row
@@ -793,17 +779,17 @@ func _build_tower_area() -> Control:
 	tower.move_animation_finished.connect(_on_move_animation_finished)
 
 	for axis_name in AXIS_NAMES:
-		var axis_label := _label(axis_name, AXIS_LABEL_SIZE, AXIS_LABEL_COLOR)
+		var axis_label := UI.label(axis_name, AXIS_LABEL_SIZE, AXIS_LABEL_COLOR, HORIZONTAL_ALIGNMENT_CENTER)
 		area.add_child(axis_label)
 		axis_labels.append(axis_label)
 
-	slice_chip = _label("", 13, Color("#1B428F"))
-	slice_chip.add_theme_stylebox_override("normal", _box(WHITE, ACCENT, 16, 2, Vector2(10, 4)))
+	slice_chip = UI.label("", 13, Color("#1B428F"), HORIZONTAL_ALIGNMENT_CENTER)
+	slice_chip.add_theme_stylebox_override("normal", UI.box(UI.WHITE, ACCENT, 16, 2, Vector2(10, 4)))
 	slice_chip.position = Vector2(12, 12)
 	slice_chip.visible = false
 	area.add_child(slice_chip)
 
-	show_all_button = _text_button("Show all", 13)
+	show_all_button = UI.text_button("Show all", 13)
 	show_all_button.custom_minimum_size = Vector2(96, 44)
 	show_all_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	show_all_button.offset_left = -108
@@ -817,7 +803,7 @@ func _build_tower_area() -> Control:
 	# Rotate buttons sit in the bottom corners beside the base, so the swiper
 	# can use the whole controls row.
 	for dir in [-1, 1]:
-		var b := _icon_button("rotate_left" if dir < 0 else "rotate_right",
+		var b := UI.icon_button("rotate_left" if dir < 0 else "rotate_right",
 			"Rotate tower left" if dir < 0 else "Rotate tower right", 52, 26)
 		b.set_anchors_preset(Control.PRESET_BOTTOM_LEFT if dir < 0 else Control.PRESET_BOTTOM_RIGHT)
 		b.offset_left = 4 if dir < 0 else -56
@@ -837,7 +823,7 @@ func _build_tray() -> Control:
 		var slot := PanelContainer.new()
 		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slot.mouse_filter = Control.MOUSE_FILTER_STOP
-		slot.add_theme_stylebox_override("panel", _box(WHITE, LINE, 16))
+		slot.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 16))
 		slot.gui_input.connect(_on_slot_input.bind(i))
 		var preview := PiecePreview.new()
 		preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -859,7 +845,7 @@ func _build_controls() -> Control:
 	swiper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	swiper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	swiper.custom_minimum_size.y = 56
-	swiper.add_theme_stylebox_override("panel", _box(WHITE, LINE, 28, 2, Vector2(6, 6)))
+	swiper.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 28, 2, Vector2(6, 6)))
 	var inner := HBoxContainer.new()
 	inner.add_theme_constant_override("separation", 10)
 	swiper.add_child(inner)
@@ -868,15 +854,15 @@ func _build_controls() -> Control:
 	axes.add_theme_constant_override("separation", 0)
 	var group := ButtonGroup.new()
 	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
-		var b := _text_button(AXIS_NAMES[mode], 14)
+		var b := UI.text_button(AXIS_NAMES[mode], 14)
 		b.toggle_mode = true
 		b.button_group = group
 		b.custom_minimum_size = Vector2(44, 40)
-		b.add_theme_stylebox_override("normal", _box(Color("#ECECEA"), Color(0, 0, 0, 0), 20, 0))
-		b.add_theme_stylebox_override("hover", _box(Color("#E2E2E0"), Color(0, 0, 0, 0), 20, 0))
-		b.add_theme_stylebox_override("pressed", _box(Color("#333333"), Color(0, 0, 0, 0), 20, 0))
-		b.add_theme_color_override("font_pressed_color", WHITE)
-		b.add_theme_color_override("font_hover_pressed_color", WHITE)
+		b.add_theme_stylebox_override("normal", UI.box(Color("#ECECEA"), Color(0, 0, 0, 0), 20, 0))
+		b.add_theme_stylebox_override("hover", UI.box(Color("#E2E2E0"), Color(0, 0, 0, 0), 20, 0))
+		b.add_theme_stylebox_override("pressed", UI.box(Color("#333333"), Color(0, 0, 0, 0), 20, 0))
+		b.add_theme_color_override("font_pressed_color", UI.WHITE)
+		b.add_theme_color_override("font_hover_pressed_color", UI.WHITE)
 		b.pressed.connect(_set_slice_mode.bind(mode))
 		b.pressed.connect(_bump_sweep)
 		axes.add_child(b)
@@ -893,12 +879,12 @@ func _build_controls() -> Control:
 	slice_slider.step = 1
 	slice_slider.focus_mode = Control.FOCUS_NONE
 	slice_slider.custom_minimum_size.y = 40
-	var grabber := _grabber_texture(26)
+	var grabber := UI.grabber_texture(26)
 	slice_slider.add_theme_icon_override("grabber", grabber)
 	slice_slider.add_theme_icon_override("grabber_highlight", grabber)
-	slice_slider.add_theme_stylebox_override("slider", _track(Color("#D6D6D3")))
-	slice_slider.add_theme_stylebox_override("grabber_area", _track(Color("#333333")))
-	slice_slider.add_theme_stylebox_override("grabber_area_highlight", _track(Color("#333333")))
+	slice_slider.add_theme_stylebox_override("slider", UI.slider_track(Color("#D6D6D3")))
+	slice_slider.add_theme_stylebox_override("grabber_area", UI.slider_track(Color("#333333")))
+	slice_slider.add_theme_stylebox_override("grabber_area_highlight", UI.slider_track(Color("#333333")))
 	slice_slider.value_changed.connect(func(v: float):
 		_bump_sweep()
 		_set_slice_depth(int(v)))
@@ -925,7 +911,7 @@ func _build_overlay() -> Control:
 	root.add_child(center)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.x = 310
-	panel.add_theme_stylebox_override("panel", _box(WHITE, LINE, 24, 2, Vector2(24, 24)))
+	panel.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 24, 2, Vector2(24, 24)))
 	center.add_child(panel)
 	overlay_panel = VBoxContainer.new()
 	overlay_panel.add_theme_constant_override("separation", 14)
@@ -937,15 +923,15 @@ func _show_overlay(title: String, body: String, primary: String, on_primary: Cal
 		secondary: String = "", on_secondary: Callable = Callable()) -> void:
 	for child in overlay_panel.get_children():
 		child.queue_free()
-	overlay_panel.add_child(_label(title, 22, INK))
+	overlay_panel.add_child(UI.label(title, 22, UI.INK, HORIZONTAL_ALIGNMENT_CENTER))
 	if body != "":
-		overlay_panel.add_child(_label(body, 16, MUTED))
-	var first := _text_button(primary, 16, true)
+		overlay_panel.add_child(UI.label(body, 16, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	var first := UI.text_button(primary, 16, true)
 	first.custom_minimum_size.y = 52
 	first.pressed.connect(on_primary)
 	overlay_panel.add_child(first)
 	if secondary != "":
-		var second := _text_button(secondary, 14)
+		var second := UI.text_button(secondary, 14)
 		second.custom_minimum_size.y = 44
 		second.pressed.connect(on_secondary)
 		overlay_panel.add_child(second)
@@ -955,86 +941,6 @@ func _show_overlay(title: String, body: String, primary: String, on_primary: Cal
 func _hide_overlay() -> void:
 	if overlay != null:
 		overlay.visible = false
-
-
-# --- Widgets ---
-
-func _box(bg: Color, border: Color, radius: int, width: int = 2, padding := Vector2.ZERO) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = bg
-	box.border_color = border
-	box.set_border_width_all(width)
-	box.set_corner_radius_all(radius)
-	box.content_margin_left = padding.x
-	box.content_margin_right = padding.x
-	box.content_margin_top = padding.y
-	box.content_margin_bottom = padding.y
-	box.anti_aliasing = true
-	return box
-
-
-## Slider track: a rounded bar 8 px thick.
-func _track(color: Color) -> StyleBoxFlat:
-	var box := _box(color, Color(0, 0, 0, 0), 4, 0)
-	box.content_margin_top = 4
-	box.content_margin_bottom = 4
-	return box
-
-
-## A round slider grabber: white with a dark ring, drawn in code so the
-## greybox needs no image assets.
-func _grabber_texture(diameter: int) -> ImageTexture:
-	var img := Image.create(diameter, diameter, false, Image.FORMAT_RGBA8)
-	var r := diameter * 0.5
-	for y in range(diameter):
-		for x in range(diameter):
-			var d := Vector2(x + 0.5 - r, y + 0.5 - r).length()
-			var ring := clampf(r - d, 0.0, 1.0)
-			var fill := clampf(r - 2.5 - d, 0.0, 1.0)
-			img.set_pixel(x, y, Color("#333333").lerp(WHITE, fill) * Color(1, 1, 1, ring))
-	return ImageTexture.create_from_image(img)
-
-
-func _label(text: String, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
-
-
-func _text_button(text: String, font_size: int, primary := false) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_size_override("font_size", font_size)
-	var bg := INK if primary else WHITE
-	var fg := WHITE if primary else INK
-	b.add_theme_color_override("font_color", fg)
-	b.add_theme_color_override("font_hover_color", fg)
-	b.add_theme_color_override("font_pressed_color", fg)
-	b.add_theme_stylebox_override("normal", _box(bg, LINE, 22))
-	b.add_theme_stylebox_override("hover", _box(bg.darkened(0.05), LINE, 22))
-	b.add_theme_stylebox_override("pressed", _box(bg.darkened(0.12), LINE, 22))
-	return b
-
-
-func _icon_button(kind: String, label: String, side: int, radius: int) -> IconButton:
-	var b := IconButton.new(kind, label)
-	b.custom_minimum_size = Vector2(side, side)
-	b.add_theme_stylebox_override("normal", _box(WHITE, LINE, radius))
-	b.add_theme_stylebox_override("hover", _box(Color("#F0F0EE"), LINE, radius))
-	b.add_theme_stylebox_override("pressed", _box(Color("#E2E2E0"), LINE, radius))
-	return b
-
-
-func _spacer() -> Control:
-	var c := Control.new()
-	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return c
 
 
 # --- Test hooks ---

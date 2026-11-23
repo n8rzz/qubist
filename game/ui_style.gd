@@ -1,7 +1,6 @@
 extends RefCounted
-## Greybox colors and widget builders shared by the Settings sheet and the
-## Stats screen. Matches the placeholder look in game/main.gd until the final
-## screen styling (#28).
+## Greybox colors and widget builders shared by the game screen, the Settings
+## sheet and the Stats screen, until the final screen styling (#28).
 
 const IconButton := preload("res://game/icon_button.gd")
 
@@ -49,6 +48,46 @@ static func icon_button(kind: String, tooltip: String, side: int = 44, radius: i
 	b.add_theme_stylebox_override("hover", box(Color("#F0F0EE"), LINE, radius))
 	b.add_theme_stylebox_override("pressed", box(Color("#E2E2E0"), LINE, radius))
 	return b
+
+
+## A text button: white with dark text, or dark with white text when
+## `primary`.
+static func text_button(text: String, font_size: int, primary := false) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", font_size)
+	var bg := INK if primary else WHITE
+	var fg := WHITE if primary else INK
+	b.add_theme_color_override("font_color", fg)
+	b.add_theme_color_override("font_hover_color", fg)
+	b.add_theme_color_override("font_pressed_color", fg)
+	b.add_theme_stylebox_override("normal", box(bg, LINE, 22))
+	b.add_theme_stylebox_override("hover", box(bg.darkened(0.05), LINE, 22))
+	b.add_theme_stylebox_override("pressed", box(bg.darkened(0.12), LINE, 22))
+	return b
+
+
+## Slider track: a rounded bar 8 px thick.
+static func slider_track(color: Color) -> StyleBoxFlat:
+	var b := box(color, Color(0, 0, 0, 0), 4, 0)
+	b.content_margin_top = 4
+	b.content_margin_bottom = 4
+	return b
+
+
+## A round slider grabber: white with a dark ring, drawn in code so the
+## greybox needs no image assets.
+static func grabber_texture(diameter: int) -> ImageTexture:
+	var img := Image.create(diameter, diameter, false, Image.FORMAT_RGBA8)
+	var r := diameter * 0.5
+	for y in range(diameter):
+		for x in range(diameter):
+			var d := Vector2(x + 0.5 - r, y + 0.5 - r).length()
+			var ring := clampf(r - d, 0.0, 1.0)
+			var fill := clampf(r - 2.5 - d, 0.0, 1.0)
+			img.set_pixel(x, y, Color("#333333").lerp(WHITE, fill) * Color(1, 1, 1, ring))
+	return ImageTexture.create_from_image(img)
 
 
 static func spacer() -> Control:
