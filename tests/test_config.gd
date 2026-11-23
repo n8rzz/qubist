@@ -109,3 +109,44 @@ func test_plain_entries_are_not_expanded() -> void:
 	var cfg := Config.new({}, {"pieces": [{"id": "dot", "cells": [[0, 0, 0]]}]})
 	check_eq(cfg.pieces.size(), 1)
 	check(cfg.piece_by_id("dot") != null)
+
+
+## A repeated id logs a push_error and is skipped, so the first entry wins.
+func test_duplicate_piece_id_keeps_the_first() -> void:
+	var cfg := Config.new({}, {"pieces": [
+		{"id": "dot", "cells": [[0, 0, 0]]},
+		{"id": "dot", "cells": [[0, 0, 0], [1, 0, 0]]},
+		{"id": "bar", "cells": [[0, 0, 0], [0, 1, 0]]},
+	]})
+	check_eq(cfg.pieces.size(), 2)
+	check_eq(cfg.piece_by_id("dot").cube_count(), 1)
+	check(cfg.piece_by_id("bar") != null, "pieces after the duplicate still load")
+
+
+func test_signature_is_stable_for_the_same_data() -> void:
+	var game := {"grid": {"width": 5, "depth": 4, "height": 8}, "tray_size": 2}
+	var pieces := {"pieces": [{"id": "dot", "cells": [[0, 0, 0]]}]}
+	check_eq(Config.new(game, pieces).signature(), Config.new(game, pieces).signature())
+
+
+func test_signature_changes_with_tray_and_grid_size() -> void:
+	var pieces := {"pieces": [{"id": "dot", "cells": [[0, 0, 0]]}]}
+	var base := Config.new({"tray_size": 3}, pieces).signature()
+	check(Config.new({"tray_size": 4}, pieces).signature() != base, "tray_size changes it")
+	for axis in ["width", "depth", "height"]:
+		var other := Config.new({"tray_size": 3, "grid": {axis: 20}}, pieces).signature()
+		check(other != base, "grid %s changes it" % axis)
+
+
+## An entry with no cells logs a push_error and is skipped, "all" or not.
+func test_entry_with_no_cells_is_skipped() -> void:
+	var cfg := Config.new({}, {"pieces": [
+		{"id": "empty_all", "orientations": "all", "cells": []},
+		{"id": "empty", "cells": []},
+		{"id": "dot", "cells": [[0, 0, 0]]},
+	]})
+	check_eq(cfg.pieces.size(), 1)
+	check(cfg.piece_by_id("empty_all") == null, "the \"all\" entry is skipped")
+	check(cfg.piece_by_id("empty_all_00") == null, "the \"all\" entry isn't expanded")
+	check(cfg.piece_by_id("empty") == null, "the plain entry is skipped")
+	check(cfg.piece_by_id("dot") != null, "later pieces still load")
