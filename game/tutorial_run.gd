@@ -203,7 +203,7 @@ func update() -> void:
 ## piece floats DragController.LIFT above the finger.
 func target_finger() -> Vector2:
 	var data := Tutorial.step(step)
-	var piece = host.game.tray[0] if host.game.tray[0] != null else host.config.piece_by_id(data.piece)
+	var piece = host.game.tray[0] if host.game.tray[0] != null else host.config.piece_by_size(data.piece_size)
 	var center := ViewMath.cells_center(piece.cells_at(data.target), host.config.grid_size)
 	return host.viewport_box.get_global_rect().position + host.tower.project_point(center) \
 		+ Vector2(0, DragController.LIFT)

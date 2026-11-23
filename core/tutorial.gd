@@ -12,7 +12,8 @@ const Game := preload("res://core/game.gd")
 ## Move 3: the gap is in the back row, behind a low wall, so the player has
 ## to rotate the tower (or slice it) to see it.
 ##
-## `target` is where the hand shows the piece going. With `only_target`, the
+## `piece_size` picks the piece by its size (x, y, h), so 4x1x1 is a bar
+## lying along x. `target` is where the hand shows the piece going. With `only_target`, the
 ## piece snaps to nowhere else. With `hidden`, it snaps nowhere at all until
 ## the player has turned or sliced the tower, and the card shows the
 ## `found_*` text from then on.
@@ -20,7 +21,7 @@ const STEPS := [
 	{
 		"title": "Drag a piece onto the tower",
 		"body": "Press the bar in the tray and drop it anywhere on the floor.",
-		"piece": "bar4_x",
+		"piece_size": Vector3i(4, 1, 1),
 		"cells": [],
 		"target": Vector3i(1, 3, 0),
 		"only_target": false,
@@ -29,7 +30,7 @@ const STEPS := [
 	{
 		"title": "Fill a row to clear it",
 		"body": "Drop the bar in the gap. A row that runs edge to edge breaks away for points.",
-		"piece": "bar2_x",
+		"piece_size": Vector3i(2, 1, 1),
 		"cells": [
 			Vector3i(0, 5, 0), Vector3i(1, 5, 0), Vector3i(2, 5, 0), Vector3i(3, 5, 0),
 			Vector3i(0, 4, 0), Vector3i(1, 4, 0),
@@ -43,7 +44,7 @@ const STEPS := [
 		"body": "Rotate the tower to see the hidden spot, then drag your piece in.",
 		"found_title": "There it is",
 		"found_body": "Drag the bar into the gap to finish the back row.",
-		"piece": "bar2_x",
+		"piece_size": Vector3i(2, 1, 1),
 		"cells": [
 			Vector3i(2, 0, 0), Vector3i(3, 0, 0), Vector3i(4, 0, 0), Vector3i(5, 0, 0),
 			Vector3i(0, 1, 0), Vector3i(1, 1, 0), Vector3i(2, 1, 0), Vector3i(3, 1, 0), Vector3i(4, 1, 0),
@@ -75,7 +76,7 @@ static func make_game(config, index: int) -> Game:
 		game.grid.set_filled(c, true)
 	var tray: Array = []
 	tray.resize(config.tray_size)
-	tray[0] = config.piece_by_id(data.piece)
+	tray[0] = config.piece_by_size(data.piece_size)
 	game.tray = tray
 	return game
 

@@ -32,13 +32,32 @@ func test_piece_sizes() -> void:
 	var cfg := Config.new()
 	check_eq(cfg.piece_by_id("cube2").size, Vector3i(2, 2, 2))
 	check_eq(cfg.piece_by_id("cube2").cube_count(), 8)
-	check_eq(cfg.piece_by_id("bar4_x").size, Vector3i(4, 1, 1))
-	check_eq(cfg.piece_by_id("bar4_up").size, Vector3i(1, 1, 4))
-	check_eq(cfg.piece_by_id("bar2_y").size, Vector3i(1, 2, 1))
+	check_eq(cfg.piece_by_id("bar4_00").size, Vector3i(4, 1, 1), "the first bar is the one written")
+	for size in [BAR2_X, BAR2_Y, BAR2_UP, BAR4_X, BAR4_Y, BAR4_UP]:
+		var bar = cfg.piece_by_size(size)
+		check(bar != null, "a bar of size %s is dealt" % size)
+		if bar != null:
+			check_eq(bar.size, size)
 
 
 func test_unknown_piece_is_null() -> void:
 	check(Config.new().piece_by_id("nope") == null)
+	check(Config.new().piece_by_size(Vector3i(5, 5, 5)) == null)
+
+
+## Each bar is dealt in three orientations whose weights add up to the
+## cube's, so the cube is picked as often as either bar shape.
+func test_bars_weigh_the_same_as_the_cube() -> void:
+	var cfg := Config.new()
+	for bar in ["bar2", "bar4"]:
+		var total := 0.0
+		var count := 0
+		for p in cfg.pieces:
+			if p.id.begins_with(bar + "_"):
+				total += p.weight
+				count += 1
+		check_eq(count, 3, "%s lies along x, along y or upright" % bar)
+		check(is_equal_approx(total, cfg.piece_by_id("cube2").weight), "%s weighs as much as cube2" % bar)
 
 
 func test_piece_cells_are_normalized() -> void:

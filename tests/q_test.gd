@@ -17,6 +17,21 @@ func check_eq(actual, expected, message: String = "") -> void:
 		failures.append("%s: expected %s, got %s%s" % [current, var_to_str(expected), var_to_str(actual), note])
 
 
+## The bars in config/pieces.json, by size (x, y, h). They're dealt with
+## "orientations": "all", so look them up with `find_piece()`, not by id.
+const BAR2_X := Vector3i(2, 1, 1)
+const BAR2_Y := Vector3i(1, 2, 1)
+const BAR2_UP := Vector3i(1, 1, 2)
+const BAR4_X := Vector3i(4, 1, 1)
+const BAR4_Y := Vector3i(1, 4, 1)
+const BAR4_UP := Vector3i(1, 1, 4)
+
+
+## The piece in `cfg` with this id (a String) or size (a Vector3i), or null.
+static func find_piece(cfg, key):
+	return cfg.piece_by_size(key) if key is Vector3i else cfg.piece_by_id(key)
+
+
 ## Fills each cell in `cells`.
 static func fill(grid, cells: Array) -> void:
 	for c in cells:
