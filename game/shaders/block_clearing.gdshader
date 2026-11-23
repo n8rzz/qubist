@@ -12,8 +12,9 @@ uniform vec4 flash_face_color : source_color = vec4(1.0, 0.82, 0.25, 1.0);
 uniform vec4 flash_edge_color : source_color = vec4(0.72, 0.53, 0.04, 1.0);
 
 void fragment() {
-	float e = edge_amount();
-	vec3 stone = mix(face_color.rgb, edge_color.rgb, e);
-	vec3 lit = mix(flash_face_color.rgb, flash_edge_color.rgb, e);
-	ALBEDO = mix(stone, lit, clamp(COLOR.r, 0.0, 1.0));
+	vec3 n;
+	vec3 rock = stone(face_color.rgb, edge_color.rgb, n);
+	vec3 lit = stone(flash_face_color.rgb, flash_edge_color.rgb, n);
+	ALBEDO = mix(rock, lit, clamp(COLOR.r, 0.0, 1.0));
+	NORMAL = n;
 }
