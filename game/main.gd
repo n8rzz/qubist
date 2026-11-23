@@ -9,6 +9,7 @@ const Game := preload("res://core/game.gd")
 const Rules := preload("res://core/rules.gd")
 const ViewMath := preload("res://game/view_math.gd")
 const TowerView := preload("res://game/tower_view.gd")
+const SkyBackdrop := preload("res://game/sky_backdrop.gd")
 const PiecePreview := preload("res://game/piece_preview.gd")
 const UI := preload("res://game/ui_style.gd")
 const Stats := preload("res://core/stats.gd")
@@ -41,7 +42,8 @@ const AXIS_NAMES := ["X", "Y", "Z"]
 ## Axis labels around the tower's base (#53): small and quiet, so they don't
 ## compete with the blocks. They fade out while the tower turns.
 const AXIS_LABEL_SIZE := 11
-const AXIS_LABEL_COLOR := Color("#8A8A86")
+## White, to read on the island's brick rim and earth underside (#23).
+const AXIS_LABEL_COLOR := Color(1, 1, 1, 0.92)
 const AXIS_LABEL_GAP := 10.0
 const AXIS_LABEL_FADE_SECONDS := 0.1
 
@@ -672,11 +674,8 @@ func _show_pause() -> void:
 # --- Building the UI ---
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = UI.BG
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	# The sky shows through the tower's viewport, behind the island (#23).
+	add_child(SkyBackdrop.new())
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -770,6 +769,7 @@ func _build_tower_area() -> Control:
 	var sub := SubViewport.new()
 	sub.own_world_3d = true
 	sub.msaa_3d = Viewport.MSAA_4X
+	sub.transparent_bg = true
 	viewport_box.add_child(sub)
 	tower = TowerView.new()
 	sub.add_child(tower)

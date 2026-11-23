@@ -1,11 +1,13 @@
 extends Node3D
-## Greybox 3D view of the tower: placed blocks, faded blocks, the ghost
-## preview, a base under the footprint and guides for the grid and height.
+## 3D view of the tower: placed blocks, faded blocks, the ghost preview, the
+## floating island under the footprint and guides for the grid and height.
+## The background is left clear so the sky behind the viewport shows (#23).
 ##
 ## Knows nothing about rules; main.gd tells it which cells to draw how.
 
 const ViewMath := preload("res://game/view_math.gd")
 const CameraRig := preload("res://game/camera_rig.gd")
+const FloatingIsland := preload("res://game/floating_island.gd")
 
 const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
@@ -33,14 +35,20 @@ const GHOST_BAD_COLOR := Color(0.85, 0.25, 0.2)
 const GHOST_BAD_LINE_COLOR := Color(0.62, 0.17, 0.12)
 const GHOST_FILL_ALPHA := 0.08
 const GHOST_INNER_LINE_ALPHA := 0.35
-const BASE_COLOR := Color("#CFCFCB")
 const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
-const BACKGROUND_COLOR := Color("#F4F4F2")
+## Floor grid lines, white on the green floor as on Home.
+const FLOOR_LINE_COLOR := Color(1, 1, 1, 0.55)
 ## Grid ticks on the tower's border (#56), off unless the player turns them on.
 ## Major ticks are darker as well as longer.
 const TICK_COLOR := Color(0.4, 0.4, 0.4, 0.7)
 const MAJOR_TICK_COLOR := Color(0.25, 0.25, 0.25, 0.9)
-const BASE_THICKNESS := 0.4
+## The sun keeps this angle to the view as the tower turns, so the lit sides
+## and the shadows look the same from every corner.
+const SUN_PITCH_DEG := -55.0
+const SUN_YAW_FROM_VIEW_DEG := -10.0
+## Soft shadows (#23): blurred and only partly dark.
+const SHADOW_OPACITY := 0.6
+const SHADOW_BLUR := 2.5
 
 # Sweep plane (#51): while the swiper moves, a bright pane marks the cut and
 # the cube faces sitting on it light up. main.gd fades it in and out.
@@ -122,12 +130,15 @@ var _move_tween: Tween
 var _sweep := MeshInstance3D.new()
 var _sweep_material := _sweep_plane_material()
 var _ticks := MeshInstance3D.new()
+var _sun := DirectionalLight3D.new()
 
 
 func setup(size: Vector3i) -> void:
 	grid_size = size
 	_add_environment()
-	_add_base()
+	var island := FloatingIsland.new()
+	island.setup(size)
+	add_child(island)
 	_add_guides()
 	_add_ticks()
 
@@ -177,6 +188,17 @@ func setup(size: Vector3i) -> void:
 	rig = CameraRig.new()
 	rig.position = Vector3(0, size.z * 0.42, 0)
 	add_child(rig)
+	_follow_view()
+
+
+func _process(_delta: float) -> void:
+	_follow_view()
+
+
+func _follow_view() -> void:
+	if rig != null:
+		_sun.rotation = Vector3(deg_to_rad(SUN_PITCH_DEG),
+			rig.rotation.y + deg_to_rad(SUN_YAW_FROM_VIEW_DEG), 0)
 
 
 ## Shows or hides the grid ticks on the tower's border (#56).
@@ -528,13 +550,14 @@ func depth_of(c: Vector3i) -> float:
 
 
 ## Where to put the axis labels, in viewport pixels: [x, y, z]. X and Y sit
-## `gap` pixels outside the middle of the base's right-front and left-front
+## `gap` pixels outside the middle of the island's right-front and left-front
 ## edges, the edges the swiper's X and Y modes cut along. Z sits `gap` pixels
-## below the base's front corner.
+## below the island's front corner.
 func axis_label_points(gap: float) -> Array[Vector2]:
-	var hx := grid_size.x * 0.5 + 0.5
-	var hz := grid_size.y * 0.5 + 0.5
-	var y := -BASE_THICKNESS
+	var half := FloatingIsland.rim_half(grid_size)
+	var hx := half.x
+	var hz := half.y
+	var y := FloatingIsland.rim_bottom()
 	var corners: Array[Vector2] = []
 	for c in [Vector3(hx, y, hz), Vector3(-hx, y, hz), Vector3(-hx, y, -hz), Vector3(hx, y, -hz)]:
 		corners.append(project_point(c))
@@ -677,8 +700,7 @@ func _material(color: Color, transparent := false, unshaded := false) -> Standar
 
 func _add_environment() -> void:
 	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = BACKGROUND_COLOR
+	env.background_mode = Environment.BG_CLEAR_COLOR
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color.WHITE
 	env.ambient_light_energy = 0.55
@@ -686,40 +708,39 @@ func _add_environment() -> void:
 	world_env.environment = env
 	add_child(world_env)
 
-	var sun := DirectionalLight3D.new()
-	sun.rotation = Vector3(deg_to_rad(-55), deg_to_rad(35), 0)
-	sun.light_energy = 0.9
-	add_child(sun)
+	_sun.light_energy = 0.9
+	_sun.shadow_enabled = true
+	_sun.shadow_opacity = SHADOW_OPACITY
+	_sun.shadow_blur = SHADOW_BLUR
+	# One orthogonal map covers the whole tower; the camera sits 50 units out.
+	_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	_sun.directional_shadow_max_distance = 80.0
+	add_child(_sun)
 
 
-func _add_base() -> void:
-	var slab := BoxMesh.new()
-	slab.size = Vector3(grid_size.x + 1, BASE_THICKNESS, grid_size.y + 1)
-	var base := MeshInstance3D.new()
-	base.mesh = slab
-	base.material_override = _material(BASE_COLOR)
-	base.position = Vector3(0, -BASE_THICKNESS * 0.5, 0)
-	add_child(base)
-
-
-## Floor grid lines and the outline of the full-height bounding box.
+## Floor grid lines (white) and the outline of the floor and the full-height
+## bounding box (grey).
 func _add_guides() -> void:
 	var hx := grid_size.x * 0.5
 	var hz := grid_size.y * 0.5
 	var top := float(grid_size.z)
 	var floor_y := 0.005
 	var mesh := ImmediateMesh.new()
-	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _early_lines_material(GUIDE_COLOR))
-	for i in range(grid_size.x + 1):
+	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _early_lines_material(FLOOR_LINE_COLOR))
+	for i in range(1, grid_size.x):
 		mesh.surface_add_vertex(Vector3(-hx + i, floor_y, -hz))
 		mesh.surface_add_vertex(Vector3(-hx + i, floor_y, hz))
-	for i in range(grid_size.y + 1):
+	for i in range(1, grid_size.y):
 		mesh.surface_add_vertex(Vector3(-hx, floor_y, -hz + i))
 		mesh.surface_add_vertex(Vector3(hx, floor_y, -hz + i))
+	mesh.surface_end()
+	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _early_lines_material(GUIDE_COLOR))
 	var corners := [Vector2(-hx, -hz), Vector2(hx, -hz), Vector2(hx, hz), Vector2(-hx, hz)]
 	for i in range(4):
 		var a: Vector2 = corners[i]
 		var b: Vector2 = corners[(i + 1) % 4]
+		mesh.surface_add_vertex(Vector3(a.x, floor_y, a.y))
+		mesh.surface_add_vertex(Vector3(b.x, floor_y, b.y))
 		mesh.surface_add_vertex(Vector3(a.x, 0, a.y))
 		mesh.surface_add_vertex(Vector3(a.x, top, a.y))
 		mesh.surface_add_vertex(Vector3(a.x, top, a.y))
