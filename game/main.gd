@@ -20,6 +20,7 @@ const StatsScreen := preload("res://game/stats_screen.gd")
 const HomeScreen := preload("res://game/home_screen.gd")
 const Swiper := preload("res://game/swiper.gd")
 const DragController := preload("res://game/drag_controller.gd")
+const ScoreFeedback := preload("res://game/score_feedback.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -41,13 +42,6 @@ const AXIS_LABEL_FADE_SECONDS := 0.1
 ## come from game/ui_style.gd.
 const ACCENT := Color("#2559C9")
 
-# Placeholder feedback (#47).
-const SCORE_POP_COLOR := Color("#1B428F")
-const SCORE_POP_RISE := 56.0
-const SCORE_POP_SECONDS := 0.9
-const BANNER_SECONDS := 1.2
-## The score counter counts up to the new total over this long (#25).
-const SCORE_TICK_SECONDS := 0.5
 const TRAY_FADE_SECONDS := 0.2
 
 var config: Config = Config.new()
@@ -64,9 +58,12 @@ var settings_path := "user://settings.json"
 var game_save_path := "user://game.json"
 ## The game already added to `stats`, so it is never counted twice.
 var _recorded_game: Game
+## The "+points" pop, the combo/streak banner and the header count-up.
+var score_feedback := ScoreFeedback.new(self)
 ## The score the header shows; trails game.score while the counter ticks up.
-var shown_score := 0
-var _score_tween: Tween
+var shown_score: int:
+	get:
+		return score_feedback.shown_score
 
 var tower: TowerView
 var viewport_box: SubViewportContainer
@@ -171,7 +168,7 @@ func _use_game(next: Game) -> void:
 	game.game_over.connect(_on_game_over)
 	game.tray_refilled.connect(_on_tray_refilled)
 	_hide_overlay()
-	_snap_score()
+	score_feedback.snap()
 
 
 func _process(delta: float) -> void:
@@ -265,7 +262,7 @@ func _place(index: int, origin: Vector3i) -> void:
 		Input.vibrate_handheld(15)
 		# Sliced-away cubes stay faded instead of animating.
 		tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
-		_show_score_gain(result)
+		score_feedback.show_gain(result)
 		save_game()
 
 
@@ -293,7 +290,7 @@ func _set_slice_depth(depth: int) -> void:
 func _refresh() -> void:
 	if game == null:
 		return
-	_tick_score_to(game.score)
+	score_feedback.tick_to(game.score)
 
 	var step := tower.rig.view_step()
 	for i in range(tray_slots.size()):
@@ -342,35 +339,7 @@ func _on_move_animation_finished() -> void:
 ## Skips any running animation. Used by the smoke test.
 func finish_animations() -> void:
 	tower.finish_move_animation()
-	_snap_score()
-
-
-## Counts the header score up to `target`. A new gain mid-tick carries on from
-## the number on screen, so the counter never jumps back.
-func _tick_score_to(target: int) -> void:
-	if target == shown_score:
-		_set_shown_score(target)
-		return
-	if _score_tween != null:
-		_score_tween.kill()
-	_score_tween = create_tween()
-	_score_tween.tween_method(func(v: float) -> void: _set_shown_score(roundi(v)),
-		float(shown_score), float(target), SCORE_TICK_SECONDS) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-
-
-## Stops any tick and shows the current score at once.
-func _snap_score() -> void:
-	if _score_tween != null:
-		_score_tween.kill()
-		_score_tween = null
-	_set_shown_score(game.score if game != null else 0)
-
-
-func _set_shown_score(value: int) -> void:
-	shown_score = value
-	score_label.text = UI.format_number(value)
-	best_label.text = "Best %s" % UI.format_number(maxi(stats.best_score, value))
+	score_feedback.snap()
 
 
 func _on_game_over(final_score: int) -> void:
@@ -463,46 +432,6 @@ func _on_stats_back() -> void:
 		show_settings()
 	else:
 		stats_screen.visible = false
-
-
-## Floating "+points" over the move, and a combo/streak banner when they apply.
-## Only line clears score, so a move that clears nothing shows nothing.
-func _show_score_gain(result: Dictionary) -> void:
-	if int(result.score.total) <= 0:
-		return
-	var at := viewport_box.get_global_rect().position \
-		+ tower.project_point(ViewMath.cells_center(result.cleared, config.grid_size))
-	var pop := UI.label("+%s" % UI.format_number(int(result.score.total)), 24, SCORE_POP_COLOR,
-		HORIZONTAL_ALIGNMENT_CENTER)
-	add_child(pop)
-	pop.reset_size()
-	pop.position = at - pop.size * 0.5
-	var tween := pop.create_tween().set_parallel()
-	tween.tween_property(pop, "position:y", pop.position.y - SCORE_POP_RISE, SCORE_POP_SECONDS) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.tween_property(pop, "modulate:a", 0.0, SCORE_POP_SECONDS).set_ease(Tween.EASE_IN)
-	tween.chain().tween_callback(pop.queue_free)
-
-	var parts: Array[String] = []
-	if int(result.score.combo) > 1:
-		parts.append("Combo ×%d" % int(result.score.combo))
-	if result.lines.size() > 0 and int(result.score.streak) > 1:
-		parts.append("Streak %d" % int(result.score.streak))
-	if parts.is_empty():
-		return
-	var banner := UI.label("  ·  ".join(parts), 18, UI.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
-	banner.add_theme_stylebox_override("normal", UI.box(ACCENT, ACCENT, 18, 0, Vector2(16, 8)))
-	add_child(banner)
-	banner.reset_size()
-	var rect := viewport_box.get_global_rect()
-	banner.position = Vector2(rect.get_center().x - banner.size.x * 0.5, rect.position.y + 56)
-	banner.pivot_offset = banner.size * 0.5
-	banner.scale = Vector2(0.6, 0.6)
-	var bt := banner.create_tween()
-	bt.tween_property(banner, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	bt.tween_interval(BANNER_SECONDS)
-	bt.tween_property(banner, "modulate:a", 0.0, 0.3)
-	bt.tween_callback(banner.queue_free)
 
 
 ## New pieces fade into their slots, one after another.
