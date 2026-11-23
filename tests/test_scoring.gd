@@ -1,6 +1,7 @@
 extends "res://tests/q_test.gd"
 ## The examples from the PRD's scoring table, plus streaks.
 
+const Config := preload("res://core/config.gd")
 const Scoring := preload("res://core/scoring.gd")
 
 var scoring := Scoring.new()
@@ -43,3 +44,11 @@ func test_streak_bonus_grows() -> void:
 
 func test_streak_bonus_needs_a_clear() -> void:
 	check_eq(scoring.score_placement([], 3).streak_bonus, 0)
+
+
+func test_uses_the_config_numbers() -> void:
+	var cfg := Config.new({"scoring": {"points_per_cube_cleared": 7, "streak_bonus": 20}})
+	var s := Scoring.new(cfg).score_placement([6, 6], 3)
+	check_eq(s.line_points, 7 * 12 * 2)
+	check_eq(s.streak_bonus, 20 * 2)
+	check_eq(s.total, 168 + 40)
