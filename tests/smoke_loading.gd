@@ -18,6 +18,8 @@ const WHAT := "loading view hands off to Home after its minimum time"
 var loading
 var started_msec := 0
 var ready_before_min := false
+## The checks have run; waiting for the screen to free before quitting.
+var finishing := false
 var failures: Array[String] = []
 var saves := SmokeSaves.new("loading")
 
@@ -36,6 +38,8 @@ func _initialize() -> void:
 
 
 func _process(_delta: float) -> bool:
+	if finishing:
+		return false
 	var waited := Time.get_ticks_msec() - started_msec
 	if is_instance_valid(loading) and not loading.is_queued_for_deletion():
 		if loading.is_ready() and loading.elapsed < MIN_SECONDS:
@@ -57,5 +61,11 @@ func _process(_delta: float) -> bool:
 		failures.append("the game screen did not open on Home after loading")
 	if root.get_child_count() != 1:
 		failures.append("expected only the game screen under root, found %d nodes" % root.get_child_count())
-	return saves.finish(self, failures, WHAT)
+	# Free the screen and give the audio thread a moment to drop its sounds
+	# (#26) before quitting, or they show up as leaks at exit.
+	finishing = true
+	if main != null:
+		main.queue_free()
+	create_timer(0.25).timeout.connect(saves.finish.bind(self, failures, WHAT))
+	return false
 

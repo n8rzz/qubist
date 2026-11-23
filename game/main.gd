@@ -22,6 +22,7 @@ const DragController := preload("res://game/drag_controller.gd")
 const ScoreFeedback := preload("res://game/score_feedback.gd")
 const GameOverCard := preload("res://game/game_over_card.gd")
 const Haptics := preload("res://game/haptics.gd")
+const Audio := preload("res://game/audio.gd")
 const Onboarding := preload("res://core/onboarding.gd")
 const TutorialRun := preload("res://game/tutorial_run.gd")
 const TutorialOverlay := preload("res://game/tutorial_overlay.gd")
@@ -63,6 +64,8 @@ var onboarding: Onboarding = Onboarding.new()
 var onboarding_path := "user://onboarding.json"
 ## Taps and pulses on placements and clears (#27), off with the setting.
 var haptics: Haptics = Haptics.new()
+## Clacks, crumbles, the combo chime and the music (#26), off with the settings.
+var audio: Audio = Audio.new()
 ## The in-progress game and camera, saved after every placement and when the
 ## app goes to the background, and resumed on launch (#18).
 var game_save_path := "user://game.json"
@@ -126,6 +129,9 @@ func _ready() -> void:
 	settings.from_dict(SaveFile.read(settings_path))
 	onboarding.from_dict(SaveFile.read(onboarding_path))
 	haptics.enabled = settings.haptics
+	audio.sound_effects = settings.sound_effects
+	audio.music = settings.music
+	add_child(audio)
 	drag.target_changed.connect(_refresh_blocks)
 	drag.dropped.connect(_place)
 	_build_ui()
@@ -297,10 +303,13 @@ func _place(index: int, origin: Vector3i) -> void:
 	_placing = false
 	if result.ok:
 		haptics.tap()
+		audio.land()
 		if not result.lines.is_empty():
-			# Pulse again as the cleared cubes start to break, after they land.
-			get_tree().create_timer(TowerView.LAND_SECONDS).timeout.connect(
-				haptics.clear.bind(result.lines.size()))
+			# Pulse and crumble as the cleared cubes start to break, after they land.
+			var lines: int = result.lines.size()
+			var cubes_break := get_tree().create_timer(TowerView.LAND_SECONDS).timeout
+			cubes_break.connect(haptics.clear.bind(lines))
+			cubes_break.connect(audio.clear.bind(lines))
 		# Sliced-away cubes stay faded instead of animating.
 		tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
 		score_feedback.show_gain(result)
@@ -538,6 +547,10 @@ func set_setting(key: String, on: bool) -> void:
 		tower.set_grid_ticks(on)
 	elif key == "haptics":
 		haptics.enabled = on
+	elif key == "sound_effects":
+		audio.sound_effects = on
+	elif key == "music":
+		audio.music = on
 	SaveFile.write(settings_path, settings.to_dict())
 
 

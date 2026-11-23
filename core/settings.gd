@@ -2,8 +2,8 @@ extends RefCounted
 ## Player settings kept on the device (#20): the Sound and feel switches and
 ## the grid ticks switch (#56).
 ##
-## Music and sound effects are only stored for now; the game has no audio
-## yet, so nothing reads them. Haptics drives game/haptics.gd (#27).
+## Music and sound effects drive game/audio.gd (#26); haptics drives
+## game/haptics.gd (#27).
 
 const SAVE_VERSION := 1
 

@@ -52,7 +52,11 @@ func _process(_delta: float) -> bool:
 	elif frame == 18:
 		_check_resume()
 	elif frame == 20:
-		saves.finish(self, failures, "game screen smoke test")
+		# Free the screen and give the audio thread a moment to drop its
+		# sounds (#26) before quitting, or they show up as leaks at exit.
+		main.queue_free()
+		create_timer(0.25).timeout.connect(
+			saves.finish.bind(self, failures, "game screen smoke test"))
 	return false
 
 
@@ -399,6 +403,8 @@ func _check_sound_switches() -> void:
 		"sound_effects": sheet.sound_effects_button,
 		"haptics": sheet.haptics_button,
 	}
+	if not main.audio.is_music_playing():
+		failures.append("the music did not start on")
 	for key in switches:
 		if not switches[key].button_pressed:
 			failures.append("%s switch did not start on" % key)
@@ -407,6 +413,10 @@ func _check_sound_switches() -> void:
 			failures.append("turning off %s did not change the setting" % key)
 	if main.haptics.enabled:
 		failures.append("turning off haptics left the haptics on")
+	if main.audio.sound_effects:
+		failures.append("turning off sound effects left them on")
+	if main.audio.is_music_playing():
+		failures.append("turning off music left it playing")
 	var saved: Dictionary = SaveFile.read(saves.settings_path)
 	for key in switches:
 		if saved.get(key) != false:
@@ -417,6 +427,8 @@ func _check_sound_switches() -> void:
 		failures.append("a fresh screen did not start with the saved sound settings")
 	if reopened.haptics.enabled:
 		failures.append("a fresh screen did not apply the saved haptics setting")
+	if reopened.audio.sound_effects or reopened.audio.is_music_playing():
+		failures.append("a fresh screen did not apply the saved sound settings")
 	reopened.queue_free()
 	main.new_game()
 	if main.tower.has_crumbled() or main.tower._rubble.multimesh.instance_count != 0:
@@ -425,6 +437,8 @@ func _check_sound_switches() -> void:
 		switches[key].button_pressed = true
 	if not main.haptics.enabled:
 		failures.append("turning haptics back on left them off")
+	if not main.audio.sound_effects or not main.audio.is_music_playing():
+		failures.append("turning sound back on left it off")
 	SaveFile.remove(saves.settings_path)
 
 
