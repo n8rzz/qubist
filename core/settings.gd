@@ -1,21 +1,36 @@
 extends RefCounted
-## Player settings kept on the device. Holds the grid ticks switch (#56) for
-## now; sound and haptics join it with #20.
+## Player settings kept on the device (#20): the Sound and feel switches and
+## the grid ticks switch (#56).
+##
+## Music, sound effects and haptics are only stored for now; the game has no
+## audio or haptics yet, so nothing reads them.
 
 const SAVE_VERSION := 1
 
+## Every on/off setting with its default.
+const DEFAULTS := {
+	"music": true,
+	"sound_effects": true,
+	"haptics": true,
+	"grid_ticks": false,
+}
+
+var music := true
+var sound_effects := true
+var haptics := true
 ## Show tick marks on the tower's border, to make distances easier to count.
 var grid_ticks := false
 
 
 func to_dict() -> Dictionary:
-	return {
-		"version": SAVE_VERSION,
-		"grid_ticks": grid_ticks,
-	}
+	var data := {"version": SAVE_VERSION}
+	for key in DEFAULTS:
+		data[key] = get(key)
+	return data
 
 
 ## Restores from to_dict(). A missing or malformed value keeps the default.
 func from_dict(data: Dictionary) -> void:
-	var ticks = data.get("grid_ticks", false)
-	grid_ticks = ticks if ticks is bool else false
+	for key in DEFAULTS:
+		var value = data.get(key)
+		set(key, value if value is bool else DEFAULTS[key])

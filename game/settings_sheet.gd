@@ -1,24 +1,52 @@
 extends Control
-## Settings bottom sheet, opened from the header gear (#20).
+## Settings bottom sheet (#20), opened from the header gear and from Home.
 ##
-## Holds the Game › Stats row (#32), Game › Home (#72) and the Display ›
-## Grid ticks switch (#56). The sound and haptics toggles and Replay tutorial come with #20
-## and #29.
+## Sound and feel: Music, Sound effects and Haptics switches. Game: Stats
+## (#32), Replay tutorial (#29, hidden until the tutorial exists) and Home
+## (#72, only when opened from a game). Display: the Grid ticks switch (#56),
+## which the design doesn't show yet. Pause stays a separate menu (#42).
 
 const UI := preload("res://game/ui_style.gd")
+const IconButton := preload("res://game/icon_button.gd")
 
 signal stats_pressed
+signal tutorial_pressed
 signal home_pressed
-signal grid_ticks_toggled(on: bool)
+## A switch was flipped by the player. `key` is a Settings field name.
+signal setting_toggled(key: String, on: bool)
 signal closed
 
-const SHEET_RADIUS := 28
-const ROW_HEIGHT := 52
-const SWITCH_OFF_COLOR := Color("#CFCFCB")
+## Replay tutorial opens the tutorial, which comes with #29; hidden until then.
+const SHOW_REPLAY_TUTORIAL := false
 
+## Colours from the Qubist Settings design.
+const SHEET_BG := Color("#F3F8FA")
+const HANDLE := Color("#C9D5DC")
+const TILE := Color("#EEF5F8")
+const DIVIDER := Color("#E6EEF2")
+const CHEVRON := Color("#8AA0B0")
+const ROW_PRESSED := Color("#F4F8FA")
+const SWITCH_OFF := Color("#C9D5DC")
+const DIM := Color(16 / 255.0, 32 / 255.0, 44 / 255.0, 0.45)
+const CLOSE_SHADOW := Color(36 / 255.0, 72 / 255.0, 96 / 255.0, 0.16)
+
+const SHEET_RADIUS := 30
+const ROW_HEIGHT := 56
+const ROW_GAP := 14
+const TILE_SIDE := 36
+
+var music_button: Button
+var sound_effects_button: Button
+var haptics_button: Button
+var grid_ticks_button: Button
 var stats_button: Button
+var tutorial_button: Button
 var home_button: Button
-var grid_ticks_button: CheckButton
+
+## Settings key -> its switch row.
+var _switches := {}
+## Each card's rows, so dividers can follow which rows are visible.
+var _cards: Array[VBoxContainer] = []
 
 
 func _init() -> void:
@@ -27,7 +55,7 @@ func _init() -> void:
 
 	# Tapping the dimmed game behind the sheet closes it.
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.3)
+	dim.color = DIM
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.gui_input.connect(_on_dim_input)
 	add_child(dim)
@@ -35,59 +63,75 @@ func _init() -> void:
 	var sheet := PanelContainer.new()
 	sheet.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	sheet.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var style := UI.box(UI.BG, UI.LINE, SHEET_RADIUS, 2,
-		Vector2(UI.SIDE_MARGIN + 4, 20))
+	var style := UI.box(SHEET_BG, Color(0, 0, 0, 0), SHEET_RADIUS, 0, Vector2(UI.SIDE_MARGIN, 0))
 	style.corner_radius_bottom_left = 0
 	style.corner_radius_bottom_right = 0
-	style.border_width_bottom = 0
-	style.content_margin_bottom = UI.SAFE_BOTTOM + 12
+	style.content_margin_top = 10
+	style.content_margin_bottom = UI.SAFE_BOTTOM
+	style.shadow_color = Color(0, 0, 0, 0.2)
+	style.shadow_size = 15
+	style.shadow_offset = Vector2(0, -10)
 	sheet.add_theme_stylebox_override("panel", style)
 	add_child(sheet)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
+	column.add_theme_constant_override("separation", 20)
 	sheet.add_child(column)
 
+	var handle := Panel.new()
+	handle.custom_minimum_size = Vector2(40, 5)
+	handle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	handle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	handle.add_theme_stylebox_override("panel", UI.box(HANDLE, Color(0, 0, 0, 0), 3, 0))
+	column.add_child(handle)
+
 	var header := HBoxContainer.new()
-	var heading := UI.label("Settings", 24, UI.INK)
+	var heading := UI.label("Settings", 30, UI.SKY_INK)
 	heading.add_theme_font_override("font", UI.title_font(600))
 	header.add_child(heading)
 	header.add_child(UI.spacer())
-	var close := UI.icon_button("close", "Close settings")
-	close.pressed.connect(close_sheet)
-	header.add_child(close)
+	header.add_child(_close_button())
 	column.add_child(header)
 
-	column.add_child(UI.label("GAME", 12, UI.MUTED))
-	stats_button = _row("Stats")
+	var sound := _card(column, "SOUND AND FEEL")
+	music_button = _switch_row(sound, "music", "Music", "music")
+	sound_effects_button = _switch_row(sound, "sound_effects", "Sound effects", "sound")
+	haptics_button = _switch_row(sound, "haptics", "Haptics", "haptics")
+
+	var game := _card(column, "GAME")
+	stats_button = _link_row(game, "Stats", "stats")
 	stats_button.pressed.connect(func(): stats_pressed.emit())
-	column.add_child(stats_button)
-	home_button = _row("Home")
+	tutorial_button = _link_row(game, "Replay tutorial", "replay")
+	tutorial_button.visible = SHOW_REPLAY_TUTORIAL
+	tutorial_button.pressed.connect(func(): tutorial_pressed.emit())
+	home_button = _link_row(game, "Home", "home")
 	home_button.tooltip_text = "Back to the home screen; your game is saved"
 	home_button.pressed.connect(func(): home_pressed.emit())
-	column.add_child(home_button)
 
-	column.add_child(UI.label("DISPLAY", 12, UI.MUTED))
-	grid_ticks_button = CheckButton.new()
-	_style_row(grid_ticks_button, "Grid ticks")
-	# A switch that is on stays white; only the switch itself shows it.
-	var padding := Vector2(16, 0)
-	grid_ticks_button.add_theme_stylebox_override("pressed", UI.box(UI.WHITE, UI.LINE, 16, 2, padding))
-	grid_ticks_button.add_theme_icon_override("checked", _switch(true))
-	grid_ticks_button.add_theme_icon_override("unchecked", _switch(false))
+	var display := _card(column, "DISPLAY")
+	grid_ticks_button = _switch_row(display, "grid_ticks", "Grid ticks", "grid")
 	grid_ticks_button.tooltip_text = "Marks each cell along the tower's edges"
-	grid_ticks_button.toggled.connect(func(on): grid_ticks_toggled.emit(on))
-	column.add_child(grid_ticks_button)
+
+	_update_dividers()
 
 
-## Shows `on` without emitting grid_ticks_toggled.
-func set_grid_ticks(on: bool) -> void:
-	grid_ticks_button.set_pressed_no_signal(on)
+## Shows every switch as `settings` has it, without emitting setting_toggled.
+func show_settings(settings) -> void:
+	for key in _switches:
+		set_switch(key, settings.get(key))
+
+
+## Shows one switch as `on`, without emitting setting_toggled.
+func set_switch(key: String, on: bool) -> void:
+	var row: Button = _switches[key]
+	row.set_pressed_no_signal(on)
+	row.queue_redraw()
 
 
 ## `in_game`: opened from the game screen, so the Home row shows.
 func open(in_game := true) -> void:
 	home_button.visible = in_game
+	_update_dividers()
 	visible = true
 
 
@@ -102,64 +146,227 @@ func _on_dim_input(event: InputEvent) -> void:
 		accept_event()
 
 
-## A full-width list row: name on the left, a chevron on the right.
-func _row(text: String) -> Button:
-	var b := Button.new()
-	_style_row(b, text)
-	b.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	b.icon = _chevron()
+func _close_button() -> IconButton:
+	var b := IconButton.new("close", "Close settings")
+	b.icon_color = UI.SKY_INK
+	b.custom_minimum_size = Vector2(44, 44)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for state in ["normal", "hover", "pressed"]:
+		var face := UI.WHITE if state != "pressed" else Color("#E6EEF2")
+		var box := UI.box(face, Color(0, 0, 0, 0), 22, 0)
+		box.shadow_color = CLOSE_SHADOW
+		box.shadow_size = 1
+		box.shadow_offset = Vector2(0, 3 if state != "pressed" else 1)
+		b.add_theme_stylebox_override(state, box)
+	b.pressed.connect(close_sheet)
 	return b
 
 
-## The look shared by every row: white, outlined, name on the left.
-func _style_row(b: Button, text: String) -> void:
-	b.text = text
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+## A captioned white card. Returns the column its rows go in.
+func _card(column: VBoxContainer, caption: String) -> VBoxContainer:
+	var group := VBoxContainer.new()
+	group.add_theme_constant_override("separation", 4)
+	var title := UI.label(caption, 12, UI.SKY_MUTED)
+	title.add_theme_font_override("font", UI.body_font(700, 1))
+	var title_margin := MarginContainer.new()
+	title_margin.add_theme_constant_override("margin_left", 2)
+	title_margin.add_child(title)
+	group.add_child(title_margin)
+
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UI.box(UI.WHITE, Color(0, 0, 0, 0), 20, 0, Vector2(16, 4)))
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 0)
+	card.add_child(rows)
+	group.add_child(card)
+	column.add_child(group)
+	_cards.append(rows)
+	return rows
+
+
+## A row that opens something: icon, name and a chevron.
+func _link_row(rows: VBoxContainer, text: String, icon: String) -> Button:
+	var row := _row(rows, text, icon)
+	var chevron := Icon.new("chevron", CHEVRON)
+	chevron.custom_minimum_size = Vector2(20, 20)
+	row.get_child(0).add_child(chevron)
+	return row
+
+
+## A row with an on/off switch; tapping anywhere on it flips the switch.
+func _switch_row(rows: VBoxContainer, key: String, text: String, icon: String) -> Button:
+	var row := _row(rows, text, icon)
+	row.toggle_mode = true
+	# A switch that is on counts as pressed; only the switch shows it.
+	row.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
+	row.get_child(0).add_child(Switch.new(row))
+	row.toggled.connect(func(on): setting_toggled.emit(key, on))
+	_switches[key] = row
+	return row
+
+
+## The parts every row shares: a tinted icon tile and the name. The trailing
+## chevron or switch goes at the end of the returned button's first child.
+func _row(rows: VBoxContainer, text: String, icon: String) -> Button:
+	if rows.get_child_count() > 0:
+		rows.add_child(_divider())
+	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size.y = ROW_HEIGHT
-	b.add_theme_font_size_override("font_size", 17)
-	for state in ["font_color", "font_hover_color", "font_pressed_color"]:
-		b.add_theme_color_override(state, UI.INK)
-	var padding := Vector2(16, 0)
-	b.add_theme_stylebox_override("normal", UI.box(UI.WHITE, UI.LINE, 16, 2, padding))
-	b.add_theme_stylebox_override("hover", UI.box(Color("#F0F0EE"), UI.LINE, 16, 2, padding))
-	b.add_theme_stylebox_override("pressed", UI.box(Color("#E2E2E0"), UI.LINE, 16, 2, padding))
-	b.add_theme_stylebox_override("hover_pressed", UI.box(Color("#F0F0EE"), UI.LINE, 16, 2, padding))
-	for state in ["font_hover_pressed_color", "font_focus_color"]:
-		b.add_theme_color_override(state, UI.INK)
+	b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	b.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	b.add_theme_stylebox_override("hover_pressed", StyleBoxEmpty.new())
+	var pressed := UI.box(ROW_PRESSED, Color(0, 0, 0, 0), 12, 0)
+	pressed.expand_margin_left = 8
+	pressed.expand_margin_right = 8
+	b.add_theme_stylebox_override("pressed", pressed)
+	rows.add_child(b)
+
+	var line := HBoxContainer.new()
+	line.set_anchors_preset(Control.PRESET_FULL_RECT)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_theme_constant_override("separation", ROW_GAP)
+	b.add_child(line)
+
+	var tile := PanelContainer.new()
+	tile.custom_minimum_size = Vector2(TILE_SIDE, TILE_SIDE)
+	tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tile.add_theme_stylebox_override("panel", UI.box(TILE, Color(0, 0, 0, 0), 10, 0))
+	tile.add_child(Icon.new(icon, UI.SKY_ACCENT))
+	line.add_child(tile)
+
+	var name_label := UI.label(text, 17, UI.SKY_INK)
+	name_label.add_theme_font_override("font", UI.body_font(500))
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.size_flags_vertical = Control.SIZE_FILL
+	line.add_child(name_label)
+	return b
 
 
-static func _chevron() -> ImageTexture:
-	var size := 16
-	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
-	for y in range(size):
-		for x in range(size):
-			# Distance to the two strokes of a ">" centered in the image.
-			var p := Vector2(x + 0.5, y + 0.5)
-			var d := minf(_segment_distance(p, Vector2(5, 3), Vector2(11, 8)),
-				_segment_distance(p, Vector2(11, 8), Vector2(5, 13)))
-			img.set_pixel(x, y, UI.MUTED * Color(1, 1, 1, clampf(1.5 - d, 0.0, 1.0)))
-	return ImageTexture.create_from_image(img)
+func _divider() -> Control:
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", TILE_SIDE + ROW_GAP)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var line := ColorRect.new()
+	line.color = DIVIDER
+	line.custom_minimum_size.y = 1
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_child(line)
+	return margin
 
 
-## An on/off switch: a pill with a white knob, dark when on.
-static func _switch(on: bool) -> ImageTexture:
-	var w := 44
-	var h := 26
-	var r := h * 0.5
-	var knob_x := w - r if on else r
-	var track := UI.INK if on else SWITCH_OFF_COLOR
-	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
-	for y in range(h):
-		for x in range(w):
-			var p := Vector2(x + 0.5, y + 0.5)
-			var d_track := _segment_distance(p, Vector2(r, r), Vector2(w - r, r)) - r
-			var d_knob := p.distance_to(Vector2(knob_x, r)) - (r - 3.0)
-			var c := track * Color(1, 1, 1, clampf(0.5 - d_track, 0.0, 1.0))
-			c = c.blend(UI.WHITE * Color(1, 1, 1, clampf(0.5 - d_knob, 0.0, 1.0)))
-			img.set_pixel(x, y, c)
-	return ImageTexture.create_from_image(img)
+## A divider shows only between two visible rows.
+func _update_dividers() -> void:
+	for rows in _cards:
+		var seen_row := false
+		var pending_divider: Control = null
+		for child in rows.get_children():
+			if child is Button:
+				if pending_divider != null:
+					pending_divider.visible = seen_row and child.visible
+				if child.visible:
+					seen_row = true
+				pending_divider = null
+			else:
+				pending_divider = child
+				child.visible = false
 
 
-static func _segment_distance(p: Vector2, a: Vector2, b: Vector2) -> float:
-	return p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b))
+## The on/off pill at the end of a switch row, drawn from its row's state.
+class Switch:
+	extends Control
+
+	const ON := Color("#1F5E7A")
+	const OFF := Color("#C9D5DC")
+
+	var row: Button
+
+	func _init(p_row: Button) -> void:
+		row = p_row
+		custom_minimum_size = Vector2(52, 32)
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.toggled.connect(func(_on): queue_redraw())
+		row.draw.connect(queue_redraw)
+
+	func _draw() -> void:
+		var on := row.button_pressed
+		var track := StyleBoxFlat.new()
+		track.bg_color = ON if on else OFF
+		track.set_corner_radius_all(16)
+		track.anti_aliasing = true
+		draw_style_box(track, Rect2(Vector2.ZERO, size))
+		var knob := Vector2(22.0 if on else 3.0, 3.0) + Vector2(13, 13)
+		draw_circle(knob + Vector2(0, 2), 13.5, Color(0, 0, 0, 0.12), true, -1.0, true)
+		draw_circle(knob, 13.0, Color.WHITE, true, -1.0, true)
+
+
+## A stroked line icon from the Settings design, drawn on a 24-unit grid and
+## centered in its box at 20 points.
+class Icon:
+	extends Control
+
+	var kind: String
+	var color: Color
+
+	func _init(p_kind: String, p_color: Color) -> void:
+		kind = p_kind
+		color = p_color
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var s := 20.0 / 24.0
+		var o := (size - Vector2(20, 20)) * 0.5
+		var w := 2.0
+		var pts := func(list: Array) -> PackedVector2Array:
+			var out := PackedVector2Array()
+			for p in list:
+				out.append(o + p * s)
+			return out
+		var line := func(list: Array) -> void:
+			draw_polyline(pts.call(list), color, w, true)
+		var arc := func(center: Vector2, radius: float, from: float, to: float) -> void:
+			draw_arc(o + center * s, radius * s, from, to, 24, color, w, true)
+		match kind:
+			"music":
+				line.call([Vector2(9, 18), Vector2(9, 6), Vector2(19, 4), Vector2(19, 16)])
+				arc.call(Vector2(6.5, 18), 2.5, 0.0, TAU)
+				arc.call(Vector2(16.5, 16), 2.5, 0.0, TAU)
+			"sound":
+				line.call([Vector2(4, 10), Vector2(4, 14), Vector2(8, 14), Vector2(13, 18),
+					Vector2(13, 6), Vector2(8, 10), Vector2(4, 10)])
+				arc.call(Vector2(13.85, 12), 4.0, -0.85, 0.85)
+				arc.call(Vector2(13.9, 12), 7.5, -0.82, 0.82)
+			"haptics":
+				var r := 2.0
+				arc.call(Vector2(10, 5), r, PI, PI * 1.5)
+				arc.call(Vector2(14, 5), r, PI * 1.5, TAU)
+				arc.call(Vector2(14, 19), r, 0.0, PI * 0.5)
+				arc.call(Vector2(10, 19), r, PI * 0.5, PI)
+				line.call([Vector2(10, 3), Vector2(14, 3)])
+				line.call([Vector2(16, 5), Vector2(16, 19)])
+				line.call([Vector2(14, 21), Vector2(10, 21)])
+				line.call([Vector2(8, 19), Vector2(8, 5)])
+				line.call([Vector2(4, 8), Vector2(4, 16)])
+				line.call([Vector2(20, 8), Vector2(20, 16)])
+			"stats":
+				line.call([Vector2(5, 20), Vector2(5, 10)])
+				line.call([Vector2(12, 20), Vector2(12, 4)])
+				line.call([Vector2(19, 20), Vector2(19, 13)])
+			"replay":
+				arc.call(Vector2(12, 12), 8.0, PI, -2.4)
+				line.call([Vector2(4, 4), Vector2(4, 9), Vector2(9, 9)])
+				line.call([Vector2(10.5, 9.5), Vector2(14.5, 12), Vector2(10.5, 14.5), Vector2(10.5, 9.5)])
+			"home":
+				line.call([Vector2(4, 11), Vector2(12, 4), Vector2(20, 11)])
+				line.call([Vector2(6, 9.5), Vector2(6, 20), Vector2(18, 20), Vector2(18, 9.5)])
+			"grid":
+				line.call([Vector2(4, 4), Vector2(4, 20), Vector2(20, 20)])
+				for t in [8.0, 12.0, 16.0]:
+					var tick := 5.0 if t == 12.0 else 3.0
+					line.call([Vector2(t, 20), Vector2(t, 20 - tick)])
+					line.call([Vector2(4, t), Vector2(4 + tick, t)])
+			"chevron":
+				line.call([Vector2(9, 5), Vector2(16, 12), Vector2(9, 19)])

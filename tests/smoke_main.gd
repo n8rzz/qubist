@@ -199,6 +199,7 @@ func _check_stats() -> void:
 	if main.stats_screen.visible or not main.settings_sheet.visible:
 		failures.append("Back from Stats did not return to Settings")
 	_check_grid_ticks()
+	_check_sound_switches()
 	main.settings_sheet.close_sheet()
 	if main.menu_open():
 		failures.append("closing Settings left a menu open")
@@ -246,6 +247,38 @@ func _check_grid_ticks() -> void:
 	main.settings_sheet.grid_ticks_button.button_pressed = false
 	if main.tower.grid_ticks_visible():
 		failures.append("turning off Grid ticks did not hide them")
+	SaveFile.remove(saves.settings_path)
+
+
+## Settings › Sound and feel: each switch starts on, saves when flipped and
+## a fresh screen shows the saved state (#20). Replay tutorial stays hidden
+## until the tutorial exists (#29).
+func _check_sound_switches() -> void:
+	var sheet = main.settings_sheet
+	if sheet.tutorial_button.visible:
+		failures.append("Replay tutorial showed before the tutorial exists")
+	var switches := {
+		"music": sheet.music_button,
+		"sound_effects": sheet.sound_effects_button,
+		"haptics": sheet.haptics_button,
+	}
+	for key in switches:
+		if not switches[key].button_pressed:
+			failures.append("%s switch did not start on" % key)
+		switches[key].button_pressed = false
+		if main.settings.get(key) != false:
+			failures.append("turning off %s did not change the setting" % key)
+	var saved: Dictionary = SaveFile.read(saves.settings_path)
+	for key in switches:
+		if saved.get(key) != false:
+			failures.append("%s was not saved" % key)
+	var reopened = _make_main()
+	root.add_child(reopened)
+	if reopened.settings_sheet.music_button.button_pressed or reopened.settings.haptics:
+		failures.append("a fresh screen did not start with the saved sound settings")
+	reopened.queue_free()
+	for key in switches:
+		switches[key].button_pressed = true
 	SaveFile.remove(saves.settings_path)
 
 

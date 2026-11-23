@@ -419,11 +419,13 @@ func show_settings() -> void:
 	settings_sheet.open(not home.visible)
 
 
-## Turns the grid ticks on the tower's border on or off and saves it (#56).
-func set_grid_ticks(on: bool) -> void:
-	settings.grid_ticks = on
-	tower.set_grid_ticks(on)
-	settings_sheet.set_grid_ticks(on)
+## Changes one on/off setting (#20), applies it and saves the settings.
+## `key` is a Settings field name.
+func set_setting(key: String, on: bool) -> void:
+	settings.set(key, on)
+	settings_sheet.set_switch(key, on)
+	if key == "grid_ticks":
+		tower.set_grid_ticks(on)
 	SaveFile.write(settings_path, settings.to_dict())
 
 
@@ -500,8 +502,8 @@ func _build_ui() -> void:
 	settings_sheet = SettingsSheet.new()
 	settings_sheet.stats_pressed.connect(show_stats)
 	settings_sheet.home_pressed.connect(show_home)
-	settings_sheet.grid_ticks_toggled.connect(set_grid_ticks)
-	settings_sheet.set_grid_ticks(settings.grid_ticks)
+	settings_sheet.setting_toggled.connect(set_setting)
+	settings_sheet.show_settings(settings)
 	add_child(settings_sheet)
 	stats_screen = StatsScreen.new()
 	stats_screen.back_pressed.connect(_on_stats_back)
