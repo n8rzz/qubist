@@ -107,6 +107,38 @@ func test_z_mode_steps_through_layers() -> void:
 		check_eq(ViewMath.slice_layer_count(ViewMath.MODE_Z, step, SIZE), 12)
 
 
+func test_slice_number_counts_x_and_y_from_the_front() -> void:
+	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y]:
+		for step in range(4):
+			check_eq(ViewMath.slice_number(mode, step, SIZE, 0), 1, "front slice is 1")
+			check_eq(ViewMath.slice_number(mode, step, SIZE, 2), 3)
+			check_eq(ViewMath.slice_number(mode, step, SIZE, 5), 6, "back slice is the last")
+
+
+func test_slice_number_counts_z_from_the_floor() -> void:
+	# Depth counts down from the top, so the top layer is 12 and the floor is 1.
+	for step in range(4):
+		check_eq(ViewMath.slice_number(ViewMath.MODE_Z, step, SIZE, 0), 12)
+		check_eq(ViewMath.slice_number(ViewMath.MODE_Z, step, SIZE, 2), 10)
+		check_eq(ViewMath.slice_number(ViewMath.MODE_Z, step, SIZE, 11), 1)
+
+
+func test_clamp_depth_keeps_depth_in_the_mode_range() -> void:
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_Z, 0, SIZE, 11), 11, "Z has 12 layers")
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_X, 0, SIZE, 11), 5, "X has 6 layers")
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_Y, 1, SIZE, 11), 5, "Y has 6 layers")
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_X, 0, SIZE, 3), 3, "in-range depth is kept")
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_Z, 0, SIZE, -2), 0, "never below 0")
+
+
+func test_clamp_depth_follows_the_axis_on_an_uneven_footprint() -> void:
+	# 4 wide (x) by 8 deep (y). X mode cuts along y at even steps, x at odd.
+	var size := Vector3i(4, 8, 12)
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_X, 0, size, 7), 7)
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_X, 1, size, 7), 3)
+	check_eq(ViewMath.clamp_depth(ViewMath.MODE_Y, 0, size, 7), 3)
+
+
 func test_z_mode_fades_layers_above_the_slice_at_every_rotation() -> void:
 	# Depth 3 cuts away the top three layers (h = 9, 10, 11); the slice at
 	# h = 8 and everything below stay solid, whichever way the tower faces.

@@ -66,6 +66,22 @@ static func slice_layer_count(mode: int, step: int, grid_size: Vector3i) -> int:
 	return grid_size[slice_axis(mode, step)]
 
 
+## The slice number the chip shows at `depth`, counting from 1. X and Y count
+## from the front of the tower. Z counts from the floor, so the number matches
+## the layer the player sees on top.
+static func slice_number(mode: int, step: int, grid_size: Vector3i, depth: int) -> int:
+	if mode == MODE_Z:
+		return slice_layer_count(mode, step, grid_size) - depth
+	return depth + 1
+
+
+## `depth` kept inside the mode's range, 0 to one less than its layer count.
+## Modes can have different layer counts (Z has 12, X and Y have 6), so clamp
+## the depth again after the mode changes.
+static func clamp_depth(mode: int, step: int, grid_size: Vector3i, depth: int) -> int:
+	return clampi(depth, 0, slice_layer_count(mode, step, grid_size) - 1)
+
+
 ## 0 for the layer nearest the viewer along the swiper's axis, counting back.
 ## In Z mode the viewer is above the tower, so 0 is the top layer.
 static func layer_from_viewer(c: Vector3i, mode: int, step: int, grid_size: Vector3i) -> int:

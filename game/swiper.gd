@@ -42,18 +42,15 @@ func layer_count(step: int) -> int:
 	return ViewMath.slice_layer_count(mode, step, grid_size)
 
 
-## Keeps the depth inside the current mode's range. Modes can have different
-## layer counts (Z has 12, X/Y have 6), so call this after the mode changes.
+## Keeps the depth inside the current mode's range (ViewMath.clamp_depth).
+## Call this after the mode changes.
 func fit(step: int) -> void:
-	depth = clampi(depth, 0, layer_count(step) - 1)
+	depth = ViewMath.clamp_depth(mode, step, grid_size, depth)
 
 
 func chip_text(step: int) -> String:
-	var layers := layer_count(step)
-	# X/Y number slices from the front. Z numbers them from the floor, so the
-	# label matches the layer the player sees on top.
-	var number := layers - depth if mode == ViewMath.MODE_Z else depth + 1
-	return "Slice %d of %d · %s" % [number, layers, AXIS_NAMES[mode]]
+	var number := ViewMath.slice_number(mode, step, grid_size, depth)
+	return "Slice %d of %d · %s" % [number, layer_count(step), AXIS_NAMES[mode]]
 
 
 ## The cells of `cells` the swiper has cut away, as a set.
