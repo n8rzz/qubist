@@ -76,7 +76,7 @@ func _init() -> void:
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", 6)
 	var wordmark := UI.label("Qubist", 68, INK, HORIZONTAL_ALIGNMENT_CENTER)
-	wordmark.add_theme_font_override("font", _bold(0.9))
+	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	title.add_child(_best_pill())
 	column.add_child(title)
@@ -91,7 +91,7 @@ func _init() -> void:
 	new_game_button = _button(62, 22, ACCENT, ACCENT_SHADOW, 4)
 	new_game_button.text = "New game"
 	new_game_button.add_theme_font_size_override("font_size", 22)
-	new_game_button.add_theme_font_override("font", _bold(0.6))
+	new_game_button.add_theme_font_override("font", UI.title_font(600))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		new_game_button.add_theme_color_override(state, Color.WHITE)
 	new_game_button.pressed.connect(func(): new_game_pressed.emit())
@@ -105,9 +105,10 @@ func _init() -> void:
 	parts.add_theme_constant_override("separation", 8)
 	parts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var continue_text := UI.label("Continue", 17, ACCENT)
-	continue_text.add_theme_font_override("font", _bold(0.5))
+	continue_text.add_theme_font_override("font", UI.body_font(600))
 	parts.add_child(continue_text)
 	continue_score = UI.label("· 0", 17, MUTED)
+	continue_score.add_theme_font_override("font", UI.body_font(500))
 	parts.add_child(continue_score)
 	continue_button.add_child(parts)
 	continue_button.pressed.connect(func(): continue_pressed.emit())
@@ -120,7 +121,7 @@ func _init() -> void:
 	how_to_play_button.custom_minimum_size.y = 44
 	how_to_play_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	how_to_play_button.add_theme_font_size_override("font_size", 15)
-	how_to_play_button.add_theme_font_override("font", _bold(0.5))
+	how_to_play_button.add_theme_font_override("font", UI.body_font(600))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		how_to_play_button.add_theme_color_override(state, ACCENT)
 	how_to_play_button.pressed.connect(func(): how_to_play_pressed.emit())
@@ -154,9 +155,7 @@ func _best_pill() -> Control:
 	crown.draw.connect(_draw_crown.bind(crown))
 	row.add_child(crown)
 	best_label = UI.label("BEST 0", 13, MUTED)
-	var font := _bold(0.7)
-	font.spacing_glyph = 1
-	best_label.add_theme_font_override("font", font)
+	best_label.add_theme_font_override("font", UI.body_font(700, 1))
 	row.add_child(best_label)
 	pill.add_child(row)
 	return pill
@@ -202,11 +201,3 @@ static func _card(color: Color, radius: int, shadow: Color, drop: int) -> StyleB
 	b.shadow_offset = Vector2(0, drop)
 	return b
 
-
-## The default font, thickened; stands in for Fredoka and Inter until the
-## fonts are added with the final styling (#28).
-static func _bold(strength: float) -> FontVariation:
-	var font := FontVariation.new()
-	font.base_font = ThemeDB.fallback_font
-	font.variation_embolden = strength
-	return font

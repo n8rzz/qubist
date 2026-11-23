@@ -347,8 +347,8 @@ func _on_game_over(final_score: int) -> void:
 		_pending_game_over = true
 		return
 	_record_finished_game()
-	var body := "Score %s\nBest %s" % [UI.format_number(final_score), UI.format_number(stats.best_score)]
-	_show_overlay("No moves left", body, "Play again", new_game, "Home", show_home)
+	_show_overlay("No moves left", "Best %s" % UI.format_number(stats.best_score),
+		"Play again", new_game, "Home", show_home, UI.format_number(final_score))
 
 
 ## Adds the finished game to the lifetime stats and saves them, once per game.
@@ -519,7 +519,9 @@ func _build_header() -> Control:
 	scores.alignment = BoxContainer.ALIGNMENT_CENTER
 	scores.add_theme_constant_override("separation", 0)
 	score_label = UI.label("0", 28, UI.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	score_label.add_theme_font_override("font", UI.title_font(600))
 	best_label = UI.label("Best 0", 12, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	best_label.add_theme_font_override("font", UI.body_font(700))
 	scores.add_child(score_label)
 	scores.add_child(best_label)
 	row.add_child(scores)
@@ -632,6 +634,7 @@ func _build_controls() -> Control:
 	var group := ButtonGroup.new()
 	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
 		var b := UI.text_button(Swiper.AXIS_NAMES[mode], 14)
+		b.add_theme_font_override("font", UI.title_font(600))
 		b.toggle_mode = true
 		b.button_group = group
 		b.custom_minimum_size = Vector2(44, 40)
@@ -695,10 +698,16 @@ func _build_overlay() -> Control:
 
 
 func _show_overlay(title: String, body: String, primary: String, on_primary: Callable,
-		secondary: String = "", on_secondary: Callable = Callable()) -> void:
+		secondary: String = "", on_secondary: Callable = Callable(), score: String = "") -> void:
 	for child in overlay_panel.get_children():
 		child.queue_free()
-	overlay_panel.add_child(UI.label(title, 22, UI.INK, HORIZONTAL_ALIGNMENT_CENTER))
+	var heading := UI.label(title, 22, UI.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	heading.add_theme_font_override("font", UI.title_font(600))
+	overlay_panel.add_child(heading)
+	if score != "":
+		var big := UI.label(score, 48, UI.INK, HORIZONTAL_ALIGNMENT_CENTER)
+		big.add_theme_font_override("font", UI.title_font(600))
+		overlay_panel.add_child(big)
 	if body != "":
 		overlay_panel.add_child(UI.label(body, 16, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	var first := UI.text_button(primary, 16, true)

@@ -71,6 +71,7 @@ func show_gain(result: Dictionary) -> void:
 		+ host.tower.project_point(ViewMath.cells_center(result.cleared, host.config.grid_size))
 	var pop := UI.label("+%s" % UI.format_number(int(result.score.total)), 24, SCORE_POP_COLOR,
 		HORIZONTAL_ALIGNMENT_CENTER)
+	pop.add_theme_font_override("font", UI.title_font(600))
 	host.add_child(pop)
 	pop.reset_size()
 	pop.position = at - pop.size * 0.5

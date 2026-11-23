@@ -4,6 +4,14 @@ extends RefCounted
 
 const IconButton := preload("res://game/icon_button.gd")
 
+## Fredoka for titles and numbers, Inter for UI text. Both are variable fonts,
+## so each weight is a FontVariation on the one file. Inter at 400 is also the
+## project's default font, set in assets/ui_theme.tres.
+const FREDOKA: FontFile = preload("res://assets/fonts/Fredoka-Variable.ttf")
+const INTER: FontFile = preload("res://assets/fonts/Inter-Variable.ttf")
+
+static var _fonts := {}
+
 const BG := Color("#F4F4F2")
 const INK := Color("#222222")
 const MUTED := Color("#555555")
@@ -14,6 +22,30 @@ const WHITE := Color.WHITE
 const SAFE_TOP := 54
 const SAFE_BOTTOM := 34
 const SIDE_MARGIN := 16
+
+
+## Fredoka at `weight` (300–700), for titles, the wordmark and scores.
+## `spacing` adds that many pixels between glyphs.
+static func title_font(weight: int = 600, spacing: int = 0) -> FontVariation:
+	return _font(FREDOKA, weight, spacing)
+
+
+## Inter at `weight` (100–900), for everything else.
+static func body_font(weight: int = 400, spacing: int = 0) -> FontVariation:
+	return _font(INTER, weight, spacing)
+
+
+## One shared FontVariation per family, weight and spacing, so screens that
+## ask for the same font reuse its glyph cache.
+static func _font(base: FontFile, weight: int, spacing: int) -> FontVariation:
+	var key := "%s:%d:%d" % [base.resource_path, weight, spacing]
+	if not _fonts.has(key):
+		var font := FontVariation.new()
+		font.base_font = base
+		font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+		font.spacing_glyph = spacing
+		_fonts[key] = font
+	return _fonts[key]
 
 
 static func box(bg: Color, border: Color, radius: int, width: int = 2, padding := Vector2.ZERO) -> StyleBoxFlat:

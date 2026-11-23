@@ -25,6 +25,11 @@ jobs:
           chmod +x godot
           ./godot --version
 
+      # A fresh checkout has no .godot/ import cache, so resources that
+      # scripts preload (the fonts) can't load until the project is imported.
+      - name: Import assets
+        run: timeout 300 ./godot --headless --path . --import
+
       - name: Run tests
         run: |
           set -o pipefail
