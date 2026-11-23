@@ -32,6 +32,15 @@ func cube_count() -> int:
 	return cells.size()
 
 
+## The grid cells this piece covers when its origin is at `origin`, in the same
+## order as `cells`.
+func cells_at(origin: Vector3i) -> Array[Vector3i]:
+	var out: Array[Vector3i] = []
+	for offset in cells:
+		out.append(origin + offset)
+	return out
+
+
 ## Every distinct 3D rotation of `raw` (up to 24), each shifted so its smallest
 ## x, y and h are 0 and its cells sorted. The order is fixed: the input's own
 ## orientation comes first, then the rest in the order the turns reach them.

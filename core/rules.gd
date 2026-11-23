@@ -19,8 +19,7 @@ const _DOWN := Vector3i(0, 0, -1)
 
 static func can_place(grid, piece, origin: Vector3i) -> bool:
 	var supported := false
-	for offset in piece.cells:
-		var c: Vector3i = origin + offset
+	for c in piece.cells_at(origin):
 		if not grid.in_bounds(c) or grid.is_filled(c):
 			return false
 		if c.z == 0 or grid.is_filled(c + _DOWN):

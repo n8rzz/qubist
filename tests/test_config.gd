@@ -48,6 +48,13 @@ func test_piece_cells_are_normalized() -> void:
 	check_eq(piece.size, Vector3i(2, 1, 1))
 
 
+func test_piece_cells_at_offsets_every_cell_by_the_origin() -> void:
+	var piece := Piece.new({"id": "ell", "cells": [[0, 0, 0], [1, 0, 0], [0, 1, 1]]})
+	var expected: Array[Vector3i] = [Vector3i(2, 3, 4), Vector3i(3, 3, 4), Vector3i(2, 4, 5)]
+	check_eq(piece.cells_at(Vector3i(2, 3, 4)), expected)
+	check_eq(piece.cells_at(Vector3i.ZERO), piece.cells)
+
+
 func test_overrides_fall_back_to_defaults() -> void:
 	var cfg := Config.new({"grid": {"width": 4}}, {"pieces": [{"id": "dot", "cells": [[0, 0, 0]]}]})
 	check_eq(cfg.grid_size, Vector3i(4, 6, 12))
