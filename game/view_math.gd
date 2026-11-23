@@ -294,3 +294,51 @@ static func _edge_point(axis: int, along: float, across: float, height: float) -
 	if axis == 0:
 		return Vector3(along, height, across)
 	return Vector3(across, height, along)
+
+
+# --- Tower crumble (#132) ---
+
+## Seconds after the shake that each cube breaks when the tower crumbles:
+## the top layer goes first and each layer below follows `layer_seconds`
+## later. `jitter` (one value in 0..1 per cube, in the same order as
+## `cells`) staggers cubes within a layer by up to `jitter_seconds`.
+static func crumble_starts(cells: Array, jitter: Array, layer_seconds: float, jitter_seconds: float) -> Array[float]:
+	var top := 0
+	for c in cells:
+		top = maxi(top, (c as Vector3i).z)
+	var out: Array[float] = []
+	for i in range(cells.size()):
+		var c: Vector3i = cells[i]
+		out.append((top - c.z) * layer_seconds + float(jitter[i]) * jitter_seconds)
+	return out
+
+
+## Height of the rubble pile's peak for `cube_count` broken cubes, each
+## leaving `fill` cubic units of rubble, heaped in a cone of `radius`.
+## Clamped to `low`..`high` so a few cubes still make a visible heap and a
+## full tower doesn't bury the camera.
+static func rubble_peak(cube_count: int, radius: float, fill: float, low: float, high: float) -> float:
+	if cube_count <= 0 or radius <= 0.0:
+		return 0.0
+	var volume := cube_count * fill
+	return clampf(3.0 * volume / (PI * radius * radius), low, high)
+
+
+## Height of a cone-shaped pile of `peak` and `radius` at distance `r` from
+## its middle, with a rounded top.
+static func rubble_height(r: float, peak: float, radius: float) -> float:
+	if radius <= 0.0:
+		return 0.0
+	var t := clampf(r / radius, 0.0, 1.0)
+	return peak * (1.0 - smoothstep(0.0, 1.0, t))
+
+
+## Seconds for something at height `drop` above where it lands, thrown up at
+## `up_speed`, to come down under `gravity`. `drop` may be negative (landing
+## above the start), in which case it must be thrown up hard enough to get
+## there; returns the time it reaches its peak if it can't.
+static func fall_seconds(drop: float, up_speed: float, gravity: float) -> float:
+	var disc := up_speed * up_speed + 2.0 * gravity * drop
+	if disc < 0.0:
+		return up_speed / gravity
+	return (up_speed + sqrt(disc)) / gravity

@@ -159,17 +159,45 @@ func _check_game_over_card() -> void:
 		failures.append("a piece could be dragged under the game-over card")
 
 
+## On a loss the last move lands, then the tower shakes and crumbles into
+## rubble before the game-over card comes up (#132).
+func _check_crumble() -> void:
+	var tower = main.tower
+	var cubes: int = main.game.grid.filled_cells().size()
+	if main.game_over_card.visible:
+		failures.append("game-over card opened before the last move landed")
+	tower.finish_move_animation()
+	if not tower.is_crumbling():
+		failures.append("game over did not start the crumble")
+	if main.game_over_card.visible:
+		failures.append("game-over card opened before the tower crumbled")
+	if tower._solid.multimesh.instance_count != 0:
+		failures.append("placed blocks still drawn while the tower crumbles")
+	main.finish_animations()
+	if tower.is_crumbling() or not tower.has_crumbled():
+		failures.append("crumble did not finish into rubble")
+	if tower._rubble.multimesh.instance_count != cubes * tower.RUBBLE_PER_CUBE:
+		failures.append("rubble has %d pieces, expected %d" % [tower._rubble.multimesh.instance_count, cubes * tower.RUBBLE_PER_CUBE])
+	if tower._crumbling.multimesh.instance_count != 0:
+		failures.append("whole cubes left standing after the crumble")
+	for piece in tower._rubble_list:
+		if piece.rest.y < 0.0 or Vector2(piece.rest.x, piece.rest.z).length() > 4.0:
+			failures.append("rubble came to rest off the island at %s" % piece.rest)
+			break
+
+
 ## Finished games are recorded once and saved; gear → Settings → Stats → Back
 ## opens and closes the right screens (#32).
 func _check_stats() -> void:
 	main.new_game()
 	var before: int = main.stats.games_played
 	while not main.game.is_over and main.autoplay_one_move():
-		main.finish_animations()
+		if not main.game.is_over:
+			main.finish_animations()
 	if not main.game.is_over:
 		failures.append("autoplay could not finish a game")
 		return
-	main.finish_animations()
+	_check_crumble()
 	main._on_game_over(main.game.score)
 	_check_game_over_card()
 	if main.stats.games_played != before + 1:
@@ -277,6 +305,9 @@ func _check_sound_switches() -> void:
 	if reopened.settings_sheet.music_button.button_pressed or reopened.settings.haptics:
 		failures.append("a fresh screen did not start with the saved sound settings")
 	reopened.queue_free()
+	main.new_game()
+	if main.tower.has_crumbled() or main.tower._rubble.multimesh.instance_count != 0:
+		failures.append("a new game kept the last game's rubble")
 	for key in switches:
 		switches[key].button_pressed = true
 	SaveFile.remove(saves.settings_path)
