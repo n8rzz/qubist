@@ -13,28 +13,29 @@ const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
 const SweptEdgesShader := preload("res://game/shaders/block_swept_edges.gdshader")
 const GhostLinesShader := preload("res://game/shaders/ghost_lines.gdshader")
+const GhostShellShader := preload("res://game/shaders/ghost_shell.gdshader")
 
 ## Cubes fill most of their 1-unit cell, leaving a thin gap between blocks.
 const CUBE_SIZE := 0.97
-## Mid-grey stone, so cubes stand apart from the base and the sky.
-const BLOCK_COLOR := Color("#A8A8A3")
+## Light grey stone (#22), one material for every placed cube. Lit, it lands
+## near the designs' #ECE7DD tops and #B7AD9D / #D3CABB sides; the shader adds
+## the bevel and chipped corners.
+const BLOCK_COLOR := Color("#D9D3C8")
 ## Darker line along every cube edge, so cells can be counted.
-const EDGE_COLOR := Color("#5E5E5A")
+const EDGE_COLOR := Color("#857B6D")
 ## Swept blocks (#85) are outlines only, with hidden lines removed, so the
 ## floor and empty cells show through them.
 const SWEPT_EDGE_COLOR := Color(EDGE_COLOR, 0.3)
 ## While sliced, cubes behind the slice are light stone (#85), so the slice
 ## itself is the only full-strength grey.
-const BEHIND_COLOR := Color("#DCDCD8")
-const BEHIND_EDGE_COLOR := Color("#A9A9A4")
-## The piece being placed is a wireframe (#62): a strong outline around the
-## whole piece, fainter lines between its cubes and a barely-there fill.
-const GHOST_OK_COLOR := Color(0.18, 0.62, 0.36)
-const GHOST_OK_LINE_COLOR := Color(0.12, 0.44, 0.25)
-const GHOST_BAD_COLOR := Color(0.85, 0.25, 0.2)
-const GHOST_BAD_LINE_COLOR := Color(0.62, 0.17, 0.12)
-const GHOST_FILL_ALPHA := 0.08
-const GHOST_INNER_LINE_ALPHA := 0.35
+const BEHIND_COLOR := Color("#F3F0EA")
+const BEHIND_EDGE_COLOR := Color("#C4BCB0")
+## The piece being placed (#22): the cubes' shape in translucent green, with a
+## strong outline round the whole piece and fainter lines between its cubes.
+## It only ever shows on legal spots, so it has no blocked look.
+const GHOST_COLOR := Color(64 / 255.0, 201 / 255.0, 135 / 255.0, 0.35)
+const GHOST_LINE_COLOR := Color("#2FAE72")
+const GHOST_INNER_LINE_ALPHA := 0.55
 const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
 ## Floor grid lines, white on the green floor as on Home.
 const FLOOR_LINE_COLOR := Color(1, 1, 1, 0.55)
@@ -102,12 +103,12 @@ var _solid := MultiMeshInstance3D.new()
 var _faded := MultiMeshInstance3D.new()
 ## Cubes behind the slice, drawn lighter while the tower is sliced.
 var _behind := MultiMeshInstance3D.new()
-## The ghost's outer shell, drawn faintly. Its depth hides wireframe lines
-## behind the piece.
+## The ghost's outer shell. Its depth hides the ghost's lines behind the
+## piece.
 var _ghost_fill := MeshInstance3D.new()
 var _ghost_lines := MeshInstance3D.new()
 var _ghost_fill_material := _ghost_shell_material()
-var _ghost_lines_material := ShaderMaterial.new()
+var _ghost_lines_material := _ghost_line_material()
 ## Cubes of the piece being placed, drawn apart while they drop in.
 var _landing := MultiMeshInstance3D.new()
 ## Cubes being cleared, drawn apart so the grid can update straight away.
@@ -152,10 +153,6 @@ func setup(size: Vector3i) -> void:
 	_ghost_fill.mesh = ImmediateMesh.new()
 	_ghost_fill.material_override = _ghost_fill_material
 	_ghost_lines.mesh = ImmediateMesh.new()
-	_ghost_lines_material.shader = GhostLinesShader
-	# Lines are drawn last of the see-through things, so the fill's depth
-	# hides the ghost's own back lines and swept cubes never cover them.
-	_ghost_lines_material.render_priority = 2
 	_ghost_lines.material_override = _ghost_lines_material
 	for node in [_ghost_fill, _ghost_lines]:
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -277,11 +274,8 @@ func _add_quad(mesh: ImmediateMesh, corners: Array, color: Color) -> void:
 		mesh.surface_add_vertex(corners[i])
 
 
-func show_ghost(cells: Array, legal: bool) -> void:
-	_ghost_fill_material.albedo_color = Color(
-			GHOST_OK_COLOR if legal else GHOST_BAD_COLOR, GHOST_FILL_ALPHA)
-	_ghost_lines_material.set_shader_parameter(
-			"line_color", GHOST_OK_LINE_COLOR if legal else GHOST_BAD_LINE_COLOR)
+## Shows the ghost over `cells`. Only call it for a legal spot (#22).
+func show_ghost(cells: Array) -> void:
 	_build_ghost_shell(cells)
 	_build_ghost_lines(cells)
 	_ghost_fill.visible = true
@@ -301,9 +295,11 @@ func _build_ghost_shell(cells: Array) -> void:
 	if faces.is_empty():
 		return
 	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	var uvs := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
 	for face in faces:
 		var corners := _face_corners(face[0], face[1])
 		for i in [0, 1, 2, 0, 2, 3]:
+			mesh.surface_set_uv(uvs[i])
 			mesh.surface_add_vertex(corners[i])
 	mesh.surface_end()
 
@@ -640,19 +636,23 @@ func _block_material(shader: Shader, face: Color, edge: Color) -> ShaderMaterial
 	return m
 
 
-## Faint, unlit, and drawn with a depth prepass so only the face nearest the
-## camera shows and the wireframe behind it is hidden. Drawn early among the
-## see-through things and marks the stencil, so swept cubes (#67) leave the
-## ghost uncovered.
-func _ghost_shell_material() -> StandardMaterial3D:
-	var m := _material(Color(GHOST_OK_COLOR, GHOST_FILL_ALPHA), true, true)
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+## Translucent green faces (ghost_shell.gdshader). Drawn early among the
+## see-through things, so swept cubes come after it and leave it uncovered.
+func _ghost_shell_material() -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = GhostShellShader
+	m.set_shader_parameter("fill_color", GHOST_COLOR)
 	m.render_priority = -4
-	m.stencil_mode = BaseMaterial3D.STENCIL_MODE_CUSTOM
-	m.stencil_flags = BaseMaterial3D.STENCIL_FLAG_WRITE
-	m.stencil_compare = BaseMaterial3D.STENCIL_COMPARE_ALWAYS
-	m.stencil_reference = 1
+	return m
+
+
+## Lines are drawn last of the see-through things, so the fill's depth hides
+## the ghost's own back lines and swept cubes never cover them.
+func _ghost_line_material() -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = GhostLinesShader
+	m.set_shader_parameter("line_color", GHOST_LINE_COLOR)
+	m.render_priority = 2
 	return m
 
 

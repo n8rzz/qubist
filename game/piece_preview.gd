@@ -5,16 +5,22 @@ extends Control
 
 const ViewMath := preload("res://game/view_math.gd")
 
-const TOP_COLOR := Color("#EBEBEB")
-const LIGHT_SIDE := Color("#D2D2D2")
-const DARK_SIDE := Color("#BDBDBD")
-const EDGE_COLOR := Color("#555555")
+## The same stone as the tower's cubes (#22), with the lighter panel inside
+## each face that stands for the bevel.
+const TOP_COLOR := Color("#ECE7DD")
+const TOP_INSET := Color("#F6F2EA")
+const LIGHT_SIDE := Color("#D3CABB")
+const LIGHT_INSET := Color("#DCD4C6")
+const DARK_SIDE := Color("#B7AD9D")
+const DARK_INSET := Color("#C2B9AA")
+const EDGE_COLOR := Color("#857B6D")
+## The panel's size as a share of the face, as on the Home art.
+const INSET := 0.78
 
 var piece = null
 var step := 0
 ## Size of one cube edge in pixels; shrinks if the piece would not fit.
 var unit := 16.0
-var tint := Color.WHITE
 
 
 func _init() -> void:
@@ -49,11 +55,11 @@ func _draw() -> void:
 		var fx: int = c.x + 1 if toward.x > 0.0 else c.x
 		var fy: int = c.y + 1 if toward.y > 0.0 else c.y
 		faces.append([[Vector3(fx, c.y, c.z), Vector3(fx, c.y + 1, c.z), Vector3(fx, c.y + 1, c.z + 1), Vector3(fx, c.y, c.z + 1)],
-			DARK_SIDE if x_face_on_left else LIGHT_SIDE])
+			[DARK_SIDE, DARK_INSET] if x_face_on_left else [LIGHT_SIDE, LIGHT_INSET]])
 		faces.append([[Vector3(c.x, fy, c.z), Vector3(c.x + 1, fy, c.z), Vector3(c.x + 1, fy, c.z + 1), Vector3(c.x, fy, c.z + 1)],
-			LIGHT_SIDE if x_face_on_left else DARK_SIDE])
+			[LIGHT_SIDE, LIGHT_INSET] if x_face_on_left else [DARK_SIDE, DARK_INSET]])
 		faces.append([[Vector3(c.x, c.y, c.z + 1), Vector3(c.x + 1, c.y, c.z + 1), Vector3(c.x + 1, c.y + 1, c.z + 1), Vector3(c.x, c.y + 1, c.z + 1)],
-			TOP_COLOR])
+			[TOP_COLOR, TOP_INSET]])
 
 	var polys: Array = []
 	var lo := Vector2(INF, INF)
@@ -76,6 +82,12 @@ func _draw() -> void:
 		var pts := PackedVector2Array()
 		for q in src:
 			pts.append(q * s + offset)
-		draw_colored_polygon(pts, poly[1] * tint)
+		var colors: Array = poly[1]
+		draw_colored_polygon(pts, colors[0])
+		var center := (pts[0] + pts[2]) * 0.5
+		var inner := PackedVector2Array()
+		for q in pts:
+			inner.append(center + (q - center) * INSET)
+		draw_colored_polygon(inner, colors[1])
 		pts.append(pts[0])
-		draw_polyline(pts, EDGE_COLOR * tint, 1.0, true)
+		draw_polyline(pts, EDGE_COLOR, 1.0, true)

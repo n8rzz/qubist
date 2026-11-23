@@ -1,7 +1,6 @@
 extends RefCounted
 ## Dragging a piece from the tray onto the tower: the floating preview, snapping
-## to the nearest legal spot, the red tint when there is nowhere to snap, and
-## which blocks to fade so they don't hide the ghost.
+## to the nearest legal spot and which blocks to fade so they don't hide the ghost.
 ##
 ## The game screen routes input here and does the placing itself, when
 ## `dropped` fires. Reads the screen's game, tower and widgets through `host`,
@@ -19,8 +18,6 @@ const SNAP_RADIUS := 72.0
 ## Screen distance, in cubes, within which a nearer block counts as hiding
 ## the ghost.
 const OCCLUDE_RADIUS := 1.1
-## Tint for the floating piece over the tower with nowhere to snap.
-const NO_SNAP_TINT := Color(1.0, 0.55, 0.5)
 
 ## The ghost moved, appeared or went away, so the blocks need redrawing.
 signal target_changed
@@ -68,12 +65,11 @@ func update(finger: Vector2) -> void:
 		_has_target = found
 		_target = origin
 		if found:
-			host.tower.show_ghost(cells_at(host.game.tray[_index], origin), true)
+			host.tower.show_ghost(cells_at(host.game.tray[_index], origin))
 		else:
 			host.tower.hide_ghost()
 		target_changed.emit()
 
-	preview.tint = NO_SNAP_TINT if over_tower and not found else Color.WHITE
 	preview.modulate.a = 0.55 if found else 1.0
 	preview.queue_redraw()
 
