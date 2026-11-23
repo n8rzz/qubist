@@ -125,6 +125,40 @@ func _check_score_tick() -> void:
 	main.score_feedback.snap()
 
 
+## The game-over card (#19) shows this game's score and stats over one
+## Play again button, and hides the Game Center line until #30 sends a score.
+func _check_game_over_card() -> void:
+	var card = main.game_over_card
+	card.finish_animation()
+	if not card.visible:
+		failures.append("game over did not show the game-over card")
+		return
+	if card.slider.position.y != 0.0:
+		failures.append("game-over card did not finish sliding up")
+	var g = main.game
+	var expected := {
+		"score": UI.format_number(g.score),
+		"best": "Best %s" % UI.format_number(main.stats.best_score),
+		"lines": UI.format_number(g.lines_cleared_total),
+		"streak": str(g.longest_streak),
+	}
+	var shown := {
+		"score": card.score_label.text,
+		"best": card.best_label.text,
+		"lines": card.lines_label.text,
+		"streak": card.streak_label.text,
+	}
+	if shown != expected:
+		failures.append("game-over card shows %s, expected %s" % [shown, expected])
+	if card.score_saved_row.visible:
+		failures.append("game-over card claims a Game Center save with Game Center off")
+	if main.overlay.visible:
+		failures.append("game over also opened the old overlay")
+	main._start_drag(0, Vector2.ZERO)
+	if main.drag.is_dragging():
+		failures.append("a piece could be dragged under the game-over card")
+
+
 ## Finished games are recorded once and saved; gear → Settings → Stats → Back
 ## opens and closes the right screens (#32).
 func _check_stats() -> void:
@@ -137,6 +171,7 @@ func _check_stats() -> void:
 		return
 	main.finish_animations()
 	main._on_game_over(main.game.score)
+	_check_game_over_card()
 	if main.stats.games_played != before + 1:
 		failures.append("finished game counted %d times" % (main.stats.games_played - before))
 	if main.stats.best_score < main.game.score:
@@ -146,7 +181,9 @@ func _check_stats() -> void:
 	var saved: Dictionary = SaveFile.read(saves.stats_path)
 	if int(saved.get("games_played", -1)) != main.stats.games_played:
 		failures.append("stats file has %s games, expected %d" % [saved.get("games_played"), main.stats.games_played])
-	main.new_game()
+	main.game_over_card.play_again_button.pressed.emit()
+	if main.game_over_card.visible or main.game.is_over or main.game.moves != 0:
+		failures.append("Play again did not close the card and start a fresh game")
 
 	main.show_settings()
 	if not main.settings_sheet.visible or not main.menu_open():

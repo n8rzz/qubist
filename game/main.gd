@@ -21,6 +21,7 @@ const HomeScreen := preload("res://game/home_screen.gd")
 const Swiper := preload("res://game/swiper.gd")
 const DragController := preload("res://game/drag_controller.gd")
 const ScoreFeedback := preload("res://game/score_feedback.gd")
+const GameOverCard := preload("res://game/game_over_card.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -80,6 +81,7 @@ var axis_buttons: Array[Button] = []
 var axis_labels: Array[Label] = []
 var overlay: Control
 var overlay_panel: VBoxContainer
+var game_over_card: GameOverCard
 var settings_sheet: SettingsSheet
 var stats_screen: StatsScreen
 var home: HomeScreen
@@ -168,6 +170,7 @@ func _use_game(next: Game) -> void:
 	game.game_over.connect(_on_game_over)
 	game.tray_refilled.connect(_on_tray_refilled)
 	_hide_overlay()
+	game_over_card.close()
 	score_feedback.snap()
 
 
@@ -250,7 +253,7 @@ func _touch_spread() -> float:
 func _start_drag(index: int, finger: Vector2) -> void:
 	# No new move until the last one has finished animating, so the grid and
 	# the view stay in step.
-	if game.is_over or overlay.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
+	if game.is_over or overlay.visible or game_over_card.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
 		return
 	drag.start(index, finger)
 
@@ -342,13 +345,15 @@ func finish_animations() -> void:
 	score_feedback.snap()
 
 
-func _on_game_over(final_score: int) -> void:
+func _on_game_over(_final_score: int) -> void:
 	if tower.is_animating():
 		_pending_game_over = true
 		return
 	_record_finished_game()
-	_show_overlay("No moves left", "Best %s" % UI.format_number(stats.best_score),
-		"Play again", new_game, "Home", show_home, UI.format_number(final_score))
+	# Above the last move's score pop and banner. Menus can't open while the
+	# card is up, so it never covers them.
+	game_over_card.move_to_front()
+	game_over_card.open(game, stats.best_score)
 
 
 ## Adds the finished game to the lifetime stats and saves them, once per game.
@@ -378,6 +383,7 @@ func show_home() -> void:
 	drag.clear()
 	save_game()
 	_hide_overlay()
+	game_over_card.close()
 	settings_sheet.visible = false
 	stats_screen.visible = false
 	var resume := can_continue()
@@ -480,6 +486,9 @@ func _build_ui() -> void:
 
 	overlay = _build_overlay()
 	add_child(overlay)
+	game_over_card = GameOverCard.new()
+	game_over_card.play_again_pressed.connect(new_game)
+	add_child(game_over_card)
 
 	home = HomeScreen.new()
 	home.new_game_pressed.connect(_on_home_new_game)
