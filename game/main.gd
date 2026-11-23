@@ -9,6 +9,7 @@ const Game := preload("res://core/game.gd")
 const Rules := preload("res://core/rules.gd")
 const ViewMath := preload("res://game/view_math.gd")
 const TowerView := preload("res://game/tower_view.gd")
+const SkyBackdrop := preload("res://game/sky_backdrop.gd")
 const PiecePreview := preload("res://game/piece_preview.gd")
 const UI := preload("res://game/ui_style.gd")
 const Stats := preload("res://core/stats.gd")
@@ -18,6 +19,7 @@ const SettingsSheet := preload("res://game/settings_sheet.gd")
 const StatsScreen := preload("res://game/stats_screen.gd")
 const HomeScreen := preload("res://game/home_screen.gd")
 const Swiper := preload("res://game/swiper.gd")
+const DragController := preload("res://game/drag_controller.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -27,20 +29,11 @@ const CONTROLS_HEIGHT := 72
 ## Pause is hidden for MVP (#42); re-enable for the post-MVP timed mode.
 const SHOW_PAUSE_BUTTON := false
 
-## A dragged piece floats this far above the finger so the finger doesn't
-## cover it.
-const LIFT := 64.0
-## How close, in points, the finger must be to a legal spot for the ghost to
-## snap to it.
-const SNAP_RADIUS := 72.0
-## Screen distance, in cubes, within which a nearer block counts as hiding
-## the ghost.
-const OCCLUDE_RADIUS := 1.1
-
 ## Axis labels around the tower's base (#53): small and quiet, so they don't
 ## compete with the blocks. They fade out while the tower turns.
 const AXIS_LABEL_SIZE := 11
-const AXIS_LABEL_COLOR := Color("#8A8A86")
+## White, to read on the island's brick rim and earth underside (#23).
+const AXIS_LABEL_COLOR := Color(1, 1, 1, 0.92)
 const AXIS_LABEL_GAP := 10.0
 const AXIS_LABEL_FADE_SECONDS := 0.1
 
@@ -100,9 +93,8 @@ var _stats_from_settings := false
 ## Slice mode, depth and the sweep plane's fade.
 var swiper: Swiper = Swiper.new(config.grid_size)
 
-var _drag_index := -1
-var _has_target := false
-var _target := Vector3i.ZERO
+## Dragging a piece from the tray onto the tower.
+var drag := DragController.new(self)
 var _touches := {}
 var _pinch_distance := 0.0
 ## Game over arrived while the move animation was playing; show it after.
@@ -113,6 +105,8 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	stats.from_dict(SaveFile.read(stats_path))
 	settings.from_dict(SaveFile.read(settings_path))
+	drag.target_changed.connect(_refresh_blocks)
+	drag.dropped.connect(_place)
 	_build_ui()
 	if not resume_game():
 		new_game()
@@ -170,7 +164,7 @@ func save_game() -> void:
 
 
 func _use_game(next: Game) -> void:
-	_clear_drag()
+	drag.clear()
 	tower.cancel_move_animation()
 	_pending_game_over = false
 	game = next
@@ -201,12 +195,13 @@ func _update_axis_labels(delta: float) -> void:
 # --- Input ---
 
 func _input(event: InputEvent) -> void:
-	if _drag_index >= 0:
+	if drag.is_dragging():
 		if event is InputEventMouseMotion:
-			_update_drag(event.position)
+			drag.update(event.position)
 			get_viewport().set_input_as_handled()
 		elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-			_end_drag(event.position)
+			drag.end(event.position)
+			_refresh()
 			get_viewport().set_input_as_handled()
 		return
 	if menu_open():
@@ -260,90 +255,18 @@ func _start_drag(index: int, finger: Vector2) -> void:
 	# the view stay in step.
 	if game.is_over or overlay.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
 		return
-	_drag_index = index
-	drag_preview.set_piece(game.tray[index], tower.rig.view_step())
-	drag_preview.visible = true
-	tray_previews[index].modulate.a = 0.25
-	_update_drag(finger)
+	drag.start(index, finger)
 
 
-func _update_drag(finger: Vector2) -> void:
-	var lifted := finger - Vector2(0, LIFT)
-	drag_preview.position = lifted - drag_preview.size * 0.5
-
-	var rect := viewport_box.get_global_rect()
-	var over_tower := rect.has_point(lifted)
-	var found := false
-	var origin := Vector3i.ZERO
-	if over_tower:
-		var snap: Array = _find_snap(game.tray[_drag_index], lifted - rect.position)
-		found = snap[0]
-		origin = snap[1]
-
-	if found != _has_target or origin != _target:
-		_has_target = found
-		_target = origin
-		if found:
-			tower.show_ghost(_cells_at(game.tray[_drag_index], origin), true)
-		else:
-			tower.hide_ghost()
-		_refresh_blocks()
-
-	# Over the tower with nowhere to snap: tint the floating piece red.
-	drag_preview.tint = Color(1.0, 0.55, 0.5) if over_tower and not found else Color.WHITE
-	drag_preview.modulate.a = 0.55 if found else 1.0
-	drag_preview.queue_redraw()
-
-
-func _end_drag(finger: Vector2) -> void:
-	_update_drag(finger)
-	var index := _drag_index
-	var place := _has_target
-	var origin := _target
-	_clear_drag()
-	if place:
-		var result: Dictionary = game.place(index, origin)
-		if result.ok:
-			Input.vibrate_handheld(15)
-			# Sliced-away cubes stay faded instead of animating.
-			tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
-			_show_score_gain(result)
-			save_game()
-	_refresh()
-
-
-func _clear_drag() -> void:
-	if _drag_index >= 0 and _drag_index < tray_previews.size():
-		tray_previews[_drag_index].modulate.a = 1.0
-	_drag_index = -1
-	_has_target = false
-	if drag_preview != null:
-		drag_preview.visible = false
-	if tower != null:
-		tower.hide_ghost()
-
-
-## Nearest legal origin whose piece center projects within SNAP_RADIUS of
-## `point` (in the tower viewport). Returns [found: bool, origin: Vector3i].
-func _find_snap(piece, point: Vector2) -> Array:
-	var best_distance := SNAP_RADIUS
-	var best := Vector3i.ZERO
-	var found := false
-	for origin in Rules.legal_positions(game.grid, piece):
-		var center := ViewMath.cells_center(_cells_at(piece, origin), config.grid_size)
-		var d := tower.project_point(center).distance_to(point)
-		if d < best_distance:
-			best_distance = d
-			best = origin
-			found = true
-	return [found, best]
-
-
-func _cells_at(piece, origin: Vector3i) -> Array:
-	var out: Array = []
-	for offset in piece.cells:
-		out.append(origin + offset)
-	return out
+## The dragged piece was let go over a legal spot.
+func _place(index: int, origin: Vector3i) -> void:
+	var result: Dictionary = game.place(index, origin)
+	if result.ok:
+		Input.vibrate_handheld(15)
+		# Sliced-away cubes stay faded instead of animating.
+		tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
+		_show_score_gain(result)
+		save_game()
 
 
 # --- View controls ---
@@ -405,25 +328,7 @@ func _refresh_blocks() -> void:
 func _faded_cells() -> Dictionary:
 	var filled: Array = game.grid.filled_cells()
 	var faded := swiper.faded_cells(filled, tower.rig.view_step())
-	if _drag_index < 0 or not _has_target:
-		return faded
-
-	var ghost := _cells_at(game.tray[_drag_index], _target)
-	var radius := tower.cube_pixels() * OCCLUDE_RADIUS
-	var ghost_points: Array = []
-	var ghost_depths: Array = []
-	for q in ghost:
-		ghost_points.append(tower.project_cell(q))
-		ghost_depths.append(tower.depth_of(q))
-	for c in filled:
-		if faded.has(c):
-			continue
-		var p := tower.project_cell(c)
-		var depth := tower.depth_of(c)
-		for i in range(ghost.size()):
-			if depth < ghost_depths[i] and p.distance_to(ghost_points[i]) < radius:
-				faded[c] = true
-				break
+	drag.fade_occluders(faded, filled)
 	return faded
 
 
@@ -501,7 +406,7 @@ func can_continue() -> bool:
 
 ## Shows Home over the game (#72). The game stays saved, ready for Continue.
 func show_home() -> void:
-	_clear_drag()
+	drag.clear()
 	save_game()
 	_hide_overlay()
 	settings_sheet.visible = false
@@ -534,7 +439,7 @@ func _on_home_stats() -> void:
 
 
 func show_settings() -> void:
-	_clear_drag()
+	drag.clear()
 	stats_screen.visible = false
 	settings_sheet.open(not home.visible)
 
@@ -617,11 +522,8 @@ func _show_pause() -> void:
 # --- Building the UI ---
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = UI.BG
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	# The sky shows through the tower's viewport, behind the island (#23).
+	add_child(SkyBackdrop.new())
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -715,6 +617,7 @@ func _build_tower_area() -> Control:
 	var sub := SubViewport.new()
 	sub.own_world_3d = true
 	sub.msaa_3d = Viewport.MSAA_4X
+	sub.transparent_bg = true
 	viewport_box.add_child(sub)
 	tower = TowerView.new()
 	sub.add_child(tower)
@@ -900,11 +803,15 @@ func autoplay_one_move() -> bool:
 		if options.is_empty():
 			continue
 		var origin: Vector3i = options[options.size() >> 1]
-		var center := ViewMath.cells_center(_cells_at(piece, origin), config.grid_size)
-		var finger := viewport_box.get_global_rect().position + tower.project_point(center) + Vector2(0, LIFT)
+		var center := ViewMath.cells_center(DragController.cells_at(piece, origin), config.grid_size)
+		var finger := viewport_box.get_global_rect().position + tower.project_point(center) \
+			+ Vector2(0, DragController.LIFT)
 		var before := game.moves
 		_start_drag(i, finger)
-		_update_drag(finger)
-		_end_drag(finger)
+		if not drag.is_dragging():
+			return false
+		drag.update(finger)
+		drag.end(finger)
+		_refresh()
 		return game.moves == before + 1
 	return false
