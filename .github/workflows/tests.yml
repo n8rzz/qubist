@@ -45,23 +45,42 @@ jobs:
           set -o pipefail
           timeout 120 ./godot --headless --path . --script res://tests/smoke_loading.gd 2>&1 | tee loading-output.txt
 
+      - name: Collect the output
+        if: always()
+        run: |
+          # tests/fixtures/ holds a suite that crashes on purpose, so
+          # tests/test_suite_runner.gd can check the runner fails a test on a
+          # script error. Drop those deliberate errors (the SCRIPT ERROR line
+          # and the "at:" line under it); every other one still counts.
+          cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | awk '
+            /SCRIPT ERROR/ { held = $0; next }
+            held != "" {
+              if ($0 !~ /res:\/\/tests\/fixtures\//) { print held; print }
+              held = ""
+              next
+            }
+            { print }
+            END { if (held != "") print held }
+          ' > all-output.txt
+
       - name: Report failures as annotations
         if: always()
         run: |
           # Surface each failed check and script error on the pull request.
-          cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | grep -E "^  - " | sed 's/^  - //' | head -50 | while IFS= read -r line; do
+          grep -E "^  - " all-output.txt | sed 's/^  - //' | head -50 | while IFS= read -r line; do
             echo "::error title=Test failed::$line"
           done || true
-          cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | grep -E -A2 "SCRIPT ERROR|Parse Error" | head -60 | paste -sd' ' | sed 's/--/\n/g' | while IFS= read -r line; do
+          grep -E -A2 "SCRIPT ERROR|Parse Error" all-output.txt | head -60 | paste -sd' ' | sed 's/--/\n/g' | while IFS= read -r line; do
             [ -n "$line" ] && echo "::error title=Script error::$line"
           done || true
 
       - name: Fail on script errors
         if: always()
         run: |
-          # A runtime error inside a test is printed but doesn't stop the run,
-          # so treat any script or parse error in the output as a failure.
-          if cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | grep -E "SCRIPT ERROR|Parse Error|Failed to load script"; then
+          # The unit test runner already fails a test on a script error, but
+          # the smoke tests and errors outside a test method still rely on
+          # this, so treat any script or parse error in the output as a failure.
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" all-output.txt; then
             echo "::error::Godot reported script errors (see above)."
             exit 1
           fi
