@@ -17,6 +17,7 @@ const GAME_PATH := "user://test_saves/smoke_game.json"
 const SETTINGS_PATH := "user://test_saves/smoke_settings.json"
 const SaveFile := preload("res://core/save_file.gd")
 const UI := preload("res://game/ui_style.gd")
+const ScoreFeedback := preload("res://game/score_feedback.gd")
 
 var main
 var frame := 0
@@ -116,18 +117,18 @@ func _play() -> void:
 
 ## The header counts up to a new score instead of jumping (#25).
 func _check_score_tick() -> void:
-	main._snap_score()
+	main.score_feedback.snap()
 	var start: int = main.shown_score
-	main._tick_score_to(start + 1000)
+	main.score_feedback.tick_to(start + 1000)
 	if main.shown_score != start:
 		failures.append("score counter jumped instead of ticking")
-	main._score_tween.custom_step(main.SCORE_TICK_SECONDS * 0.5)
+	main.score_feedback.tween().custom_step(ScoreFeedback.SCORE_TICK_SECONDS * 0.5)
 	if main.shown_score <= start or main.shown_score >= start + 1000:
 		failures.append("score counter mid-tick shows %d" % main.shown_score)
-	main._score_tween.custom_step(main.SCORE_TICK_SECONDS)
+	main.score_feedback.tween().custom_step(ScoreFeedback.SCORE_TICK_SECONDS)
 	if main.shown_score != start + 1000:
 		failures.append("score counter ended on %d, not %d" % [main.shown_score, start + 1000])
-	main._snap_score()
+	main.score_feedback.snap()
 
 
 ## Finished games are recorded once and saved; gear → Settings → Stats → Back
