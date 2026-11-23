@@ -13,6 +13,8 @@ const SaveFile := preload("res://core/save_file.gd")
 const SmokeSaves := preload("res://tests/smoke_saves.gd")
 const UI := preload("res://game/ui_style.gd")
 const ScoreFeedback := preload("res://game/score_feedback.gd")
+const Tutorial := preload("res://core/tutorial.gd")
+const HintToast := preload("res://game/hint_toast.gd")
 
 var main
 var frame := 0
@@ -64,7 +66,8 @@ func _check_layout() -> void:
 
 
 ## Launch opens Home with no Continue (nothing saved yet); New game leaves
-## it for the game (#72).
+## it for the game (#72). For a new player, New game runs the tutorial first
+## (#29).
 func _check_home() -> void:
 	if not main.home.visible or not main.menu_open():
 		failures.append("launch did not open Home")
@@ -75,6 +78,90 @@ func _check_home() -> void:
 		failures.append("New game did not leave Home")
 	if main.game == null or main.game.moves != 0:
 		failures.append("New game did not start a fresh game")
+	_check_tutorial()
+	_check_hints()
+
+
+## The tutorial's three moves play through the real drag path: a bar
+## anywhere on the floor, a bar that finishes a row, and a bar into a gap
+## that only snaps once the tower has been turned (#29).
+func _check_tutorial() -> void:
+	var tutorial = main.tutorial
+	# The new game, set aside while the tutorial plays.
+	var fresh = tutorial._saved_game
+	if not tutorial.is_active() or not main.tutorial_overlay.visible:
+		failures.append("New game for a new player did not start the tutorial")
+		return
+	if main.tutorial_overlay.step_label.text != "Step 1 of 3":
+		failures.append("tutorial bar shows '%s'" % main.tutorial_overlay.step_label.text)
+	for i in range(Tutorial.step_count()):
+		if tutorial.step != i:
+			failures.append("tutorial is on step %d, expected %d" % [tutorial.step, i])
+			return
+		if main.game.tray[0] == null or main.game.tray[0].id != Tutorial.step(i).piece:
+			failures.append("tutorial step %d has the wrong piece" % i)
+		if Tutorial.step(i).hidden:
+			if main.autoplay_one_move():
+				failures.append("the hidden gap took the piece before the tower was turned")
+			if not main.tutorial_overlay.ring.target.has_area():
+				failures.append("the hidden step does not ring the rotate button")
+			main._turn(1)
+			main.tower.rig._tween.custom_step(1.0)
+			if not tutorial.found:
+				failures.append("turning the tower did not find the hidden gap")
+		var lines: int = main.game.lines_cleared_total
+		if not main.autoplay_one_move():
+			failures.append("tutorial step %d move did not go through" % i)
+			return
+		if i > 0 and main.game.lines_cleared_total != lines + 1:
+			failures.append("tutorial step %d did not clear its row" % i)
+		if main.game.tray.any(func(p): return p != null):
+			failures.append("tutorial step %d refilled the tray" % i)
+		main.finish_animations()
+		tutorial.advance()
+	if tutorial.is_active() or main.tutorial_overlay.visible:
+		failures.append("the tutorial did not end after its last move")
+	if main.game != fresh or main.game.moves != 0:
+		failures.append("the tutorial did not hand back the new game")
+	if main.tower.rig.view_step() != 0:
+		failures.append("the tutorial left the camera turned")
+	if main.drag.allowed_origins != null:
+		failures.append("the tutorial left the drag limited to its target")
+	if not main.hint_toast.visible or main.hint_toast.label.text != HintToast.TEXT.tutorial_done:
+		failures.append("finishing the tutorial did not say so")
+	if SaveFile.read(saves.onboarding_path).get("tutorial_done") != true:
+		failures.append("finishing the tutorial was not saved")
+	if int(SaveFile.read(saves.game_path).get("game", {}).get("moves", -1)) != 0:
+		failures.append("the tutorial's moves were saved over the player's game")
+	main.show_home()
+	main.home.new_game_button.pressed.emit()
+	if tutorial.is_active():
+		failures.append("the tutorial started on its own a second time")
+
+
+## Each one-time hint shows the first time its control is used, and never
+## again (#29).
+func _check_hints() -> void:
+	main.hint_toast.dismiss()
+	main._turn(1)
+	main.tower.rig._tween.custom_step(1.0)
+	if not main.hint_toast.visible or main.hint_toast.label.text != HintToast.TEXT.rotate:
+		failures.append("the first turn did not show the rotate hint")
+	main.hint_toast.dismiss()
+	main._turn(-1)
+	main.tower.rig._tween.custom_step(1.0)
+	if main.hint_toast.visible:
+		failures.append("the rotate hint showed twice")
+	main.slice_slider.value = 2
+	if not main.hint_toast.visible or main.hint_toast.label.text != HintToast.TEXT.swiper:
+		failures.append("the first slice did not show the swiper hint")
+	main._set_slice_depth(0)
+	main.hint_toast.dismiss()
+	if not main.onboarding.has_seen("rotate") or not main.onboarding.has_seen("swiper"):
+		failures.append("hints seen were not recorded")
+	var saved: Dictionary = SaveFile.read(saves.onboarding_path)
+	if not "swiper" in saved.get("hints_seen", []):
+		failures.append("hints seen were not saved")
 
 
 func _play() -> void:
@@ -248,8 +335,30 @@ func _check_home_menus() -> void:
 	main.home.settings_button.pressed.emit()
 	if not main.settings_sheet.visible or main.settings_sheet.home_button.visible:
 		failures.append("Home › Settings should open Settings without a Home row")
-	main.settings_sheet.close_sheet()
+	# Replay tutorial from Home's Settings, then Skip, lands back on Home.
+	main.settings_sheet.tutorial_button.pressed.emit()
+	if not main.tutorial.is_active() or main.settings_sheet.visible or main.home.visible:
+		failures.append("Replay tutorial did not start the tutorial")
+	main.tutorial_overlay.skip_button.pressed.emit()
+	if main.tutorial.is_active() or not main.home.visible:
+		failures.append("Skip from a tutorial started on Home did not return to Home")
+	main.home.how_to_play_button.pressed.emit()
+	if not main.tutorial.is_active():
+		failures.append("How to play did not start the tutorial")
+	main.tutorial_overlay.skip_button.pressed.emit()
+	if not main.home.visible:
+		failures.append("Skip from How to play did not return to Home")
 	main.home.new_game_button.pressed.emit()
+	# Replay tutorial from a game, then Skip, returns to that game.
+	main.autoplay_one_move()
+	main.finish_animations()
+	var playing = main.game
+	var moves: int = playing.moves
+	main.show_settings()
+	main.settings_sheet.tutorial_button.pressed.emit()
+	main.tutorial_overlay.skip_button.pressed.emit()
+	if main.game != playing or main.game.moves != moves or main.menu_open():
+		failures.append("Skip from Replay tutorial did not return to the game")
 	main.show_settings()
 	main.settings_sheet.home_button.pressed.emit()
 	if not main.home.visible or main.settings_sheet.visible:
@@ -283,8 +392,8 @@ func _check_grid_ticks() -> void:
 ## until the tutorial exists (#29).
 func _check_sound_switches() -> void:
 	var sheet = main.settings_sheet
-	if sheet.tutorial_button.visible:
-		failures.append("Replay tutorial showed before the tutorial exists")
+	if not sheet.tutorial_button.visible:
+		failures.append("Settings has no Replay tutorial row")
 	var switches := {
 		"music": sheet.music_button,
 		"sound_effects": sheet.sound_effects_button,

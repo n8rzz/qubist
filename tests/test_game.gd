@@ -118,6 +118,20 @@ func test_tray_refills_after_three_placements() -> void:
 	check(game.tray.all(func(p): return p != null))
 
 
+## With auto_refill off (the tutorial, #29), an emptied tray stays empty
+## and the game goes on.
+func test_no_refill_leaves_the_tray_empty() -> void:
+	var game = _game()
+	game.tray = [game.tray[0], null, null]
+	game.auto_refill = false
+	var refills := [0]
+	game.tray_refilled.connect(func(_tray): refills[0] += 1)
+	check(game.place(0, Vector3i(0, 0, 0)).ok)
+	check_eq(refills[0], 0)
+	check(game.tray.all(func(p): return p == null), "tray stays empty")
+	check(not game.is_over, "an empty tray doesn't end the game")
+
+
 func test_game_over_when_nothing_fits() -> void:
 	var game = _game(["cube2", "cube2", "cube2"])
 	var ended := [false]

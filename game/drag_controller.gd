@@ -26,6 +26,9 @@ signal dropped(index: int, origin: Vector3i)
 
 ## The game screen (game/main.gd).
 var host
+## Where the piece may snap: null for any legal spot, or a list of origins
+## (the tutorial's target, #29). An empty list lets it snap nowhere.
+var allowed_origins = null
 var _index := -1
 var _has_target := false
 var _target := Vector3i.ZERO
@@ -121,13 +124,25 @@ func fade_occluders(faded: Dictionary, filled: Array) -> void:
 				break
 
 
+## The legal origins the piece may snap to, after `allowed_origins`.
+func snap_origins(piece) -> Array[Vector3i]:
+	var legal := Rules.legal_positions(host.game.grid, piece)
+	if allowed_origins == null:
+		return legal
+	var out: Array[Vector3i] = []
+	for origin in legal:
+		if origin in allowed_origins:
+			out.append(origin)
+	return out
+
+
 ## Nearest legal origin whose piece center projects within SNAP_RADIUS of
 ## `point` (in the tower viewport). Returns [found: bool, origin: Vector3i].
 func _find_snap(piece, point: Vector2) -> Array:
 	var best_distance := SNAP_RADIUS
 	var best := Vector3i.ZERO
 	var found := false
-	for origin in Rules.legal_positions(host.game.grid, piece):
+	for origin in snap_origins(piece):
 		var center := ViewMath.cells_center(piece.cells_at(origin), host.config.grid_size)
 		var d: float = host.tower.project_point(center).distance_to(point)
 		if d < best_distance:
