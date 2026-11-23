@@ -16,6 +16,7 @@ const GAME_PATH := "user://test_saves/smoke_game.json"
 ## And for player settings (#56).
 const SETTINGS_PATH := "user://test_saves/smoke_settings.json"
 const SaveFile := preload("res://core/save_file.gd")
+const UI := preload("res://game/ui_style.gd")
 
 var main
 var frame := 0
@@ -235,7 +236,7 @@ func _check_resume() -> void:
 	root.add_child(resumed)
 	if not resumed.home.visible or not resumed.home.continue_button.visible:
 		failures.append("Home did not offer Continue for a saved game")
-	elif resumed.home.continue_score.text != "· %s" % main._format(main.game.score):
+	elif resumed.home.continue_score.text != "· %s" % UI.format_number(main.game.score):
 		failures.append("Continue shows %s, expected score %d" % [resumed.home.continue_score.text, main.game.score])
 	resumed.home.continue_button.pressed.emit()
 	if resumed.home.visible or resumed.menu_open():
