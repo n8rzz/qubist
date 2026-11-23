@@ -143,6 +143,58 @@ func test_game_over_when_nothing_fits() -> void:
 	check(not game.place(0, Vector3i(0, 0, 0)).ok)
 
 
+## Placing a piece that leaves the rest of the tray with nowhere to go ends
+## the game in the same move.
+func test_placement_that_strands_the_tray_ends_the_game() -> void:
+	var game = _game(["bar2_up", "cube2", "cube2"])
+	var ended := [false]
+	game.game_over.connect(func(_score): ended[0] = true)
+	checkerboard(game.grid)
+	var result: Dictionary = game.place(0, Vector3i(1, 0, 0))
+	check(result.ok)
+	check_eq(result.lines.size(), 0, "the placement clears nothing")
+	check(result.game_over, "result reports game over")
+	check(game.is_over)
+	check(ended[0], "game_over signal fired")
+	check(game.tray[1] != null and game.tray[2] != null, "unplaceable pieces stay in the tray")
+
+
+func test_start_resets_a_played_game() -> void:
+	var game = _game(["bar2_x", "bar2_x", "cube2"])
+	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))
+	fill(game.grid, _row(1, 0, [0, 1, 2, 3]))
+	game.place(0, Vector3i(4, 0, 0))
+	game.place(1, Vector3i(4, 1, 0))
+	checkerboard(game.grid)
+	check(game.check_game_over())
+	check(game.score > 0 and game.longest_streak == 2 and game.best_combo == 1, "game was played")
+
+	game.start()
+	check_eq(game.score, 0)
+	check_eq(game.streak, 0)
+	check_eq(game.longest_streak, 0)
+	check_eq(game.best_combo, 0)
+	check_eq(game.lines_cleared_total, 0)
+	check_eq(game.moves, 0)
+	check(not game.is_over)
+	check_eq(game.grid.filled_count(), 0, "grid is emptied")
+	check(game.tray.all(func(p): return p != null), "a fresh tray is dealt")
+
+
+func test_restore_after_game_over() -> void:
+	var game = _game(["cube2", "cube2", "cube2"])
+	checkerboard(game.grid)
+	check(game.check_game_over())
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(game.to_dict()))
+
+	var restored := Game.new(Config.new(), 99)
+	restored.start()
+	check(not restored.is_over)
+	check(restored.from_dict(saved))
+	check(restored.is_over, "restored game is still over")
+	check(not restored.place(0, Vector3i(0, 0, 0)).ok, "no moves after restoring a finished game")
+
+
 func test_one_fitting_piece_keeps_the_game_going() -> void:
 	var game = _game(["cube2", "cube2", "bar2_up"])
 	checkerboard(game.grid)
