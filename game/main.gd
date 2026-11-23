@@ -22,6 +22,7 @@ const Swiper := preload("res://game/swiper.gd")
 const DragController := preload("res://game/drag_controller.gd")
 const ScoreFeedback := preload("res://game/score_feedback.gd")
 const GameOverCard := preload("res://game/game_over_card.gd")
+const Haptics := preload("res://game/haptics.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -54,6 +55,8 @@ var stats_path := "user://stats.json"
 ## Player settings, loaded from and saved to `settings_path`.
 var settings: Settings = Settings.new()
 var settings_path := "user://settings.json"
+## Taps and pulses on placements and clears (#27), off with the setting.
+var haptics: Haptics = Haptics.new()
 ## The in-progress game and camera, saved after every placement and when the
 ## app goes to the background, and resumed on launch (#18).
 var game_save_path := "user://game.json"
@@ -104,6 +107,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	stats.from_dict(SaveFile.read(stats_path))
 	settings.from_dict(SaveFile.read(settings_path))
+	haptics.enabled = settings.haptics
 	drag.target_changed.connect(_refresh_blocks)
 	drag.dropped.connect(_place)
 	_build_ui()
@@ -262,7 +266,11 @@ func _start_drag(index: int, finger: Vector2) -> void:
 func _place(index: int, origin: Vector3i) -> void:
 	var result: Dictionary = game.place(index, origin)
 	if result.ok:
-		Input.vibrate_handheld(15)
+		haptics.tap()
+		if not result.lines.is_empty():
+			# Pulse again as the cleared cubes start to break, after they land.
+			get_tree().create_timer(TowerView.LAND_SECONDS).timeout.connect(
+				haptics.clear.bind(result.lines.size()))
 		# Sliced-away cubes stay faded instead of animating.
 		tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
 		score_feedback.show_gain(result)
@@ -426,6 +434,8 @@ func set_setting(key: String, on: bool) -> void:
 	settings_sheet.set_switch(key, on)
 	if key == "grid_ticks":
 		tower.set_grid_ticks(on)
+	elif key == "haptics":
+		haptics.enabled = on
 	SaveFile.write(settings_path, settings.to_dict())
 
 
