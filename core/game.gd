@@ -31,6 +31,10 @@ var best_combo := 0
 var lines_cleared_total := 0
 var moves := 0
 var is_over := false
+## Deal a fresh tray once the last piece is placed. The tutorial (#29) turns
+## this off so its one scripted piece isn't followed by random ones; an empty
+## tray then just stays empty, and doesn't end the game.
+var auto_refill := true
 
 
 func _init(p_config = null, seed_value: int = -1) -> void:
@@ -103,7 +107,8 @@ func place(tray_index: int, origin: Vector3i) -> Dictionary:
 
 	# Clears resolve before the game-over check.
 	if _tray_is_empty():
-		_refill()
+		if auto_refill:
+			_refill()
 	else:
 		check_game_over()
 

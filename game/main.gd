@@ -6,7 +6,6 @@ extends Control
 
 const Config := preload("res://core/config.gd")
 const Game := preload("res://core/game.gd")
-const Rules := preload("res://core/rules.gd")
 const ViewMath := preload("res://game/view_math.gd")
 const TowerView := preload("res://game/tower_view.gd")
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
@@ -24,6 +23,10 @@ const ScoreFeedback := preload("res://game/score_feedback.gd")
 const GameOverCard := preload("res://game/game_over_card.gd")
 const Haptics := preload("res://game/haptics.gd")
 const Audio := preload("res://game/audio.gd")
+const Onboarding := preload("res://core/onboarding.gd")
+const TutorialRun := preload("res://game/tutorial_run.gd")
+const TutorialOverlay := preload("res://game/tutorial_overlay.gd")
+const HintToast := preload("res://game/hint_toast.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -44,6 +47,8 @@ const AXIS_LABEL_FADE_SECONDS := 0.1
 const TRAY_FADE_SECONDS := 0.2
 ## A longer buzz as the tower starts to crumble (#132).
 const CRUMBLE_VIBRATE_MS := 300
+## How far below the tower area's top edge hints appear.
+const HINT_TOP := 64.0
 
 var config: Config = Config.new()
 var game: Game
@@ -54,6 +59,9 @@ var stats_path := "user://stats.json"
 ## Player settings, loaded from and saved to `settings_path`.
 var settings: Settings = Settings.new()
 var settings_path := "user://settings.json"
+## Whether the tutorial and each one-time hint have been shown (#29).
+var onboarding: Onboarding = Onboarding.new()
+var onboarding_path := "user://onboarding.json"
 ## Taps and pulses on placements and clears (#27), off with the setting.
 var haptics: Haptics = Haptics.new()
 ## Clacks, crumbles, the combo chime and the music (#26), off with the settings.
@@ -81,6 +89,10 @@ var slice_chip: Label
 var show_all_button: Button
 var slice_slider: HSlider
 var axis_buttons: Array[Button] = []
+## Turn left, turn right.
+var rotate_buttons: Array[Button] = []
+var swiper_bar: PanelContainer
+var gear_button: Button
 ## Axis labels on the tower, indexed by ViewMath mode.
 var axis_labels: Array[Label] = []
 var overlay: Control
@@ -89,6 +101,8 @@ var game_over_card: GameOverCard
 var settings_sheet: SettingsSheet
 var stats_screen: StatsScreen
 var home: HomeScreen
+var tutorial_overlay: TutorialOverlay
+var hint_toast: HintToast
 ## Stats was opened from the Settings sheet, so Back returns there; from
 ## Home, Back just closes it.
 var _stats_from_settings := false
@@ -98,6 +112,8 @@ var swiper: Swiper = Swiper.new(config.grid_size)
 
 ## Dragging a piece from the tray onto the tower.
 var drag := DragController.new(self)
+## The three-move tutorial (#29), played on this screen.
+var tutorial := TutorialRun.new(self)
 var _touches := {}
 var _pinch_distance := 0.0
 ## Game over arrived while the move animation was playing; show it after.
@@ -111,6 +127,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	stats.from_dict(SaveFile.read(stats_path))
 	settings.from_dict(SaveFile.read(settings_path))
+	onboarding.from_dict(SaveFile.read(onboarding_path))
 	haptics.enabled = settings.haptics
 	audio.sound_effects = settings.sound_effects
 	audio.music = settings.music
@@ -161,8 +178,10 @@ func resume_game() -> bool:
 
 ## Writes the current game and camera to `game_save_path`. A finished game
 ## that is already in the stats is not saved, so it can't be counted again.
+## Nothing is written during the tutorial: the player's game was saved as it
+## started and is put back after.
 func save_game() -> void:
-	if game == null:
+	if game == null or tutorial.is_active():
 		return
 	if _recorded_game == game:
 		SaveFile.remove(game_save_path)
@@ -179,8 +198,10 @@ func _use_game(next: Game) -> void:
 	tower.clear_crumble()
 	_pending_game_over = false
 	game = next
-	game.game_over.connect(_on_game_over)
-	game.tray_refilled.connect(_on_tray_refilled)
+	# The tutorial hands back a game that is already connected.
+	if not game.game_over.is_connected(_on_game_over):
+		game.game_over.connect(_on_game_over)
+		game.tray_refilled.connect(_on_tray_refilled)
 	_hide_overlay()
 	game_over_card.close()
 	score_feedback.snap()
@@ -188,6 +209,7 @@ func _use_game(next: Game) -> void:
 
 func _process(delta: float) -> void:
 	_update_axis_labels(delta)
+	tutorial.update()
 	if swiper.update_sweep(delta, tower.rig.is_turning()):
 		tower.set_sweep_alpha(swiper.sweep_alpha())
 
@@ -234,10 +256,13 @@ func _handle_zoom(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and over_tower:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			tower.rig.zoom_by(1.1)
+			show_hint("zoom")
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			tower.rig.zoom_by(1.0 / 1.1)
+			show_hint("zoom")
 	elif event is InputEventMagnifyGesture:
 		tower.rig.zoom_by(event.factor)
+		show_hint("zoom")
 	elif event is InputEventScreenTouch:
 		if event.pressed:
 			_touches[event.index] = event.position
@@ -250,6 +275,7 @@ func _handle_zoom(event: InputEvent) -> void:
 			var spread := _touch_spread()
 			if _pinch_distance > 0.0 and spread > 0.0:
 				tower.rig.zoom_by(spread / _pinch_distance)
+				show_hint("zoom")
 			_pinch_distance = spread
 
 
@@ -287,6 +313,8 @@ func _place(index: int, origin: Vector3i) -> void:
 		# Sliced-away cubes stay faded instead of animating.
 		tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
 		score_feedback.show_gain(result)
+		if tutorial.is_active():
+			tutorial.placed()
 		save_game()
 
 
@@ -294,7 +322,17 @@ func _place(index: int, origin: Vector3i) -> void:
 
 func _turn(quarter_turns: int) -> void:
 	tower.rig.turn(quarter_turns)
+	tutorial.view_used()
+	show_hint("rotate")
 	_refresh()
+
+
+## The player moved the swiper's slider or picked its axis.
+func _on_swiper_used() -> void:
+	swiper.bump()
+	if swiper.is_sliced():
+		tutorial.view_used()
+	show_hint("swiper")
 
 
 func _set_slice_mode(mode: int) -> void:
@@ -355,6 +393,7 @@ func _faded_cells() -> Dictionary:
 
 func _on_move_animation_finished() -> void:
 	_refresh_blocks()
+	tutorial.move_finished()
 	if _pending_game_over:
 		_pending_game_over = false
 		_on_game_over(game.score)
@@ -439,8 +478,12 @@ func _leave_home() -> void:
 
 
 func _on_home_new_game() -> void:
+	# A new player gets the tutorial first, then this fresh game (#29).
+	var teach := onboarding.should_auto_start(stats.games_played, can_continue())
 	new_game()
 	_leave_home()
+	if teach:
+		start_tutorial()
 
 
 func _on_home_continue() -> void:
@@ -450,6 +493,43 @@ func _on_home_continue() -> void:
 func _on_home_stats() -> void:
 	_stats_from_settings = false
 	stats_screen.open(stats)
+
+
+## Plays the tutorial over whatever is showing (#29). Home's How to play
+## returns to Home after; Settings' Replay tutorial returns to where the
+## sheet was opened from.
+func start_tutorial(on_done := Callable()) -> void:
+	drag.clear()
+	hint_toast.dismiss()
+	settings_sheet.visible = false
+	stats_screen.visible = false
+	home.visible = false
+	viewport_box.visible = true
+	tutorial.start(on_done)
+
+
+func _on_replay_tutorial() -> void:
+	start_tutorial(show_home if home.visible else Callable())
+
+
+## The tutorial was finished or skipped: it won't start on its own again.
+func onboarding_done() -> void:
+	onboarding.tutorial_done = true
+	SaveFile.write(onboarding_path, onboarding.to_dict())
+
+
+## Shows one-time hint `key` (core/onboarding.gd HINTS) if the player hasn't
+## had it yet. Not during the tutorial, which teaches the same controls.
+func show_hint(key: String) -> void:
+	if tutorial.is_active() or menu_open() or not onboarding.see(key):
+		return
+	SaveFile.write(onboarding_path, onboarding.to_dict())
+	hint_toast.show_hint(key, viewport_box.get_global_rect(), HINT_TOP)
+
+
+func _on_tutorial_finished(completed: bool) -> void:
+	if completed and not menu_open():
+		hint_toast.show_hint("tutorial_done", viewport_box.get_global_rect(), HINT_TOP)
 
 
 func show_settings() -> void:
@@ -536,23 +616,33 @@ func _build_ui() -> void:
 	game_over_card = GameOverCard.new()
 	game_over_card.play_again_pressed.connect(new_game)
 	add_child(game_over_card)
+	# Under Home and the menus, so they cover it.
+	hint_toast = HintToast.new()
+	add_child(hint_toast)
 
 	home = HomeScreen.new()
 	home.new_game_pressed.connect(_on_home_new_game)
 	home.continue_pressed.connect(_on_home_continue)
 	home.stats_pressed.connect(_on_home_stats)
 	home.settings_pressed.connect(show_settings)
+	home.how_to_play_pressed.connect(start_tutorial.bind(show_home))
 	add_child(home)
 
 	settings_sheet = SettingsSheet.new()
 	settings_sheet.stats_pressed.connect(show_stats)
 	settings_sheet.home_pressed.connect(show_home)
 	settings_sheet.setting_toggled.connect(set_setting)
+	settings_sheet.tutorial_pressed.connect(_on_replay_tutorial)
 	settings_sheet.show_settings(settings)
 	add_child(settings_sheet)
 	stats_screen = StatsScreen.new()
 	stats_screen.back_pressed.connect(_on_stats_back)
 	add_child(stats_screen)
+
+	tutorial_overlay = TutorialOverlay.new()
+	tutorial_overlay.skip_pressed.connect(tutorial.skip)
+	tutorial.finished.connect(_on_tutorial_finished)
+	add_child(tutorial_overlay)
 
 
 func _build_header() -> Control:
@@ -592,9 +682,9 @@ func _build_header() -> Control:
 	row.add_child(scores)
 
 	row.add_child(UI.spacer())
-	var gear := UI.icon_button("gear", "Settings")
-	gear.pressed.connect(show_settings)
-	row.add_child(gear)
+	gear_button = UI.icon_button("gear", "Settings")
+	gear_button.pressed.connect(show_settings)
+	row.add_child(gear_button)
 	return row
 
 
@@ -659,6 +749,7 @@ func _build_tower_area() -> Control:
 		b.offset_bottom = -8
 		b.pressed.connect(_turn.bind(dir))
 		area.add_child(b)
+		rotate_buttons.append(b)
 	return area
 
 
@@ -696,7 +787,7 @@ func _build_controls() -> Control:
 	row.add_theme_constant_override("separation", 8)
 
 
-	var swiper_bar := PanelContainer.new()
+	swiper_bar = PanelContainer.new()
 	swiper_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	swiper_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	swiper_bar.custom_minimum_size.y = 56
@@ -727,7 +818,7 @@ func _build_controls() -> Control:
 		b.add_theme_color_override("font_pressed_color", UI.WHITE)
 		b.add_theme_color_override("font_hover_pressed_color", UI.WHITE)
 		b.pressed.connect(_set_slice_mode.bind(mode))
-		b.pressed.connect(swiper.bump)
+		b.pressed.connect(_on_swiper_used)
 		axes.add_child(b)
 		axis_buttons.append(b)
 	inner.add_child(track)
@@ -749,8 +840,8 @@ func _build_controls() -> Control:
 	slice_slider.add_theme_stylebox_override("grabber_area", UI.slider_track(UI.SKY_ACCENT))
 	slice_slider.add_theme_stylebox_override("grabber_area_highlight", UI.slider_track(UI.SKY_ACCENT))
 	slice_slider.value_changed.connect(func(v: float):
-		swiper.bump()
-		_set_slice_depth(int(v)))
+		_set_slice_depth(int(v))
+		_on_swiper_used())
 	slice_slider.drag_started.connect(swiper.begin_sweep)
 	slice_slider.drag_ended.connect(func(_changed: bool): swiper.end_sweep())
 	inner.add_child(slice_slider)
@@ -820,7 +911,7 @@ func autoplay_one_move() -> bool:
 		var piece = game.tray[i]
 		if piece == null:
 			continue
-		var options := Rules.legal_positions(game.grid, piece)
+		var options := drag.snap_origins(piece)
 		if options.is_empty():
 			continue
 		var origin: Vector3i = options[options.size() >> 1]

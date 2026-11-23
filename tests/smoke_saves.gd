@@ -7,6 +7,7 @@ const SaveFile := preload("res://core/save_file.gd")
 var stats_path: String
 var game_path: String
 var settings_path: String
+var onboarding_path: String
 
 
 ## Save paths under user://test_saves/, named `<prefix>_stats.json` and so on.
@@ -14,6 +15,7 @@ func _init(prefix: String) -> void:
 	stats_path = "user://test_saves/%s_stats.json" % prefix
 	game_path = "user://test_saves/%s_game.json" % prefix
 	settings_path = "user://test_saves/%s_settings.json" % prefix
+	onboarding_path = "user://test_saves/%s_onboarding.json" % prefix
 
 
 ## Points a game screen (scenes/main.tscn) at these save files.
@@ -21,10 +23,11 @@ func use_on(screen) -> void:
 	screen.stats_path = stats_path
 	screen.game_save_path = game_path
 	screen.settings_path = settings_path
+	screen.onboarding_path = onboarding_path
 
 
 func clear() -> void:
-	for path in [stats_path, game_path, settings_path]:
+	for path in [stats_path, game_path, settings_path, onboarding_path]:
 		SaveFile.remove(path)
 
 

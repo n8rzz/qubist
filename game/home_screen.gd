@@ -14,9 +14,6 @@ signal stats_pressed
 signal settings_pressed
 signal how_to_play_pressed
 
-## How to play opens the tutorial, which comes with #29; hidden until then.
-const SHOW_HOW_TO_PLAY := false
-
 const ACCENT_SHADOW := Color("#123D50")
 const CARD_SHADOW := UI.CARD_SHADOW
 const CROWN := Color("#F5C451")
@@ -122,7 +119,6 @@ func _init() -> void:
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		how_to_play_button.add_theme_color_override(state, UI.SKY_ACCENT)
 	how_to_play_button.pressed.connect(func(): how_to_play_pressed.emit())
-	how_to_play_button.visible = SHOW_HOW_TO_PLAY
 	buttons.add_child(how_to_play_button)
 	column.add_child(buttons)
 

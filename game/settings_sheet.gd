@@ -2,7 +2,7 @@ extends Control
 ## Settings bottom sheet (#20), opened from the header gear and from Home.
 ##
 ## Sound and feel: Music, Sound effects and Haptics switches. Game: Stats
-## (#32), Replay tutorial (#29, hidden until the tutorial exists) and Home
+## (#32), Replay tutorial (#29) and Home
 ## (#72, only when opened from a game). Display: the Grid ticks switch (#56),
 ## which the design doesn't show yet. Pause stays a separate menu (#42).
 
@@ -15,9 +15,6 @@ signal home_pressed
 ## A switch was flipped by the player. `key` is a Settings field name.
 signal setting_toggled(key: String, on: bool)
 signal closed
-
-## Replay tutorial opens the tutorial, which comes with #29; hidden until then.
-const SHOW_REPLAY_TUTORIAL := false
 
 ## Colours from the Qubist Settings design.
 const SHEET_BG := Color("#F3F8FA")
@@ -102,7 +99,6 @@ func _init() -> void:
 	stats_button = _link_row(game, "Stats", "stats")
 	stats_button.pressed.connect(func(): stats_pressed.emit())
 	tutorial_button = _link_row(game, "Replay tutorial", "replay")
-	tutorial_button.visible = SHOW_REPLAY_TUTORIAL
 	tutorial_button.pressed.connect(func(): tutorial_pressed.emit())
 	home_button = _link_row(game, "Home", "home")
 	home_button.tooltip_text = "Back to the home screen; your game is saved"
