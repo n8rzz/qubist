@@ -40,7 +40,7 @@ func _draw() -> void:
 	var origin := size * 0.5 - LOADING_VIEW.get_center() * s
 	# The shadow stays put while the island bobs above it.
 	draw_set_transform(origin, 0.0, Vector2(s, s))
-	draw_colored_polygon(_ellipse(Vector2(0, 205), Vector2(110, 14)), SHADOW)
+	draw_colored_polygon(SkyBackdrop.ellipse(Vector2(0, 205), Vector2(110, 14), ELLIPSE_SEGMENTS), SHADOW)
 
 	var bob := 0.0 if still else -BOB * (1.0 - cos(TAU * time / LOOP_SECONDS)) * 0.5
 	draw_set_transform(origin + Vector2(0, bob * s), 0.0, Vector2(s, s))

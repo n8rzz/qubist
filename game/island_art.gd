@@ -7,6 +7,11 @@ extends Control
 ## and 10 down per cell, and 20 up per layer, with the floor's back corner at
 ## the origin. The art scales to fit the control.
 
+const SkyBackdrop := preload("res://game/sky_backdrop.gd")
+
+## Segments for the bush and loading shadow ellipses.
+const ELLIPSE_SEGMENTS := 24
+
 ## Cells to draw, as core Vector3i(x, y, h) with h in .z.
 var cells: Array = []
 
@@ -133,7 +138,7 @@ func _draw_island() -> void:
 
 
 func _bush(base: Vector2, k: float) -> void:
-	draw_colored_polygon(_ellipse(base, Vector2(9.24, 3.78) * k), BUSH_SHADOW)
+	draw_colored_polygon(SkyBackdrop.ellipse(base, Vector2(9.24, 3.78) * k, ELLIPSE_SEGMENTS), BUSH_SHADOW)
 	var top := base - Vector2(0, 6.88 * k)
 	draw_circle(top, 8.4 * k, BUSH)
 	draw_circle(top - Vector2(2.1, 2.1) * k, 4.62 * k, BUSH_LIGHT)
@@ -202,11 +207,3 @@ func _shape(coords: Array, fill: Color, edge := Color(0, 0, 0, 0), width := 0.0)
 	if width > 0.0:
 		points.append(points[0])
 		draw_polyline(points, edge, width, true)
-
-
-static func _ellipse(center: Vector2, radii: Vector2) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	for i in range(24):
-		var a := i * TAU / 24
-		points.append(center + Vector2(cos(a) * radii.x, sin(a) * radii.y))
-	return points
