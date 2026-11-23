@@ -49,7 +49,9 @@ func _init() -> void:
 	sheet.add_child(column)
 
 	var header := HBoxContainer.new()
-	header.add_child(UI.label("Settings", 24, UI.INK))
+	var heading := UI.label("Settings", 24, UI.INK)
+	heading.add_theme_font_override("font", UI.title_font(600))
+	header.add_child(heading)
 	header.add_child(UI.spacer())
 	var close := UI.icon_button("close", "Close settings")
 	close.pressed.connect(close_sheet)

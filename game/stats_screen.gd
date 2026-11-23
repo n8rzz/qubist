@@ -39,7 +39,9 @@ func _init() -> void:
 	var back := UI.icon_button("back", "Back", 44, 14)
 	back.pressed.connect(func(): back_pressed.emit())
 	header.add_child(back)
-	header.add_child(UI.label("Stats", 30, UI.INK))
+	var heading := UI.label("Stats", 30, UI.INK)
+	heading.add_theme_font_override("font", UI.title_font(600))
+	header.add_child(heading)
 	column.add_child(header)
 
 	column.add_child(_card("best_score", "Best score", 56))
@@ -81,8 +83,11 @@ func _card(key: String, title: String, value_size: int) -> PanelContainer:
 		UI.box(UI.WHITE, UI.LINE, CARD_RADIUS, 2, Vector2(16, 18)))
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 6)
-	stack.add_child(UI.label(title, 13, UI.MUTED))
+	var caption := UI.label(title, 13, UI.MUTED)
+	caption.add_theme_font_override("font", UI.body_font(600))
+	stack.add_child(caption)
 	var value := UI.label("0", value_size, UI.INK)
+	value.add_theme_font_override("font", UI.title_font(600))
 	stack.add_child(value)
 	card.add_child(stack)
 	values[key] = value

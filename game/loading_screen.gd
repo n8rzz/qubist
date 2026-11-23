@@ -8,7 +8,6 @@ extends Control
 
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
 const LoadingArt := preload("res://game/loading_art.gd")
-const HomeScreen := preload("res://game/home_screen.gd")
 const UI := preload("res://game/ui_style.gd")
 
 signal finished
@@ -162,7 +161,7 @@ func _build() -> void:
 	title.add_theme_constant_override("separation", 14)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var wordmark := UI.label("Qubist", 56, INK, HORIZONTAL_ALIGNMENT_CENTER)
-	wordmark.add_theme_font_override("font", HomeScreen._bold(0.9))
+	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	title.add_child(_build_bar())
 	column.add_child(title)
