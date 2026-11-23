@@ -72,9 +72,7 @@ func apply(game_data: Dictionary, pieces_data: Dictionary) -> void:
 static func _expand(entry: Dictionary) -> Array:
 	if str(entry.get("orientations", "")) != "all":
 		return [entry]
-	var raw: Array[Vector3i] = []
-	for c in entry.get("cells", []):
-		raw.append(Vector3i(int(c[0]), int(c[1]), int(c[2])))
+	var raw := Piece.parse_cells(entry.get("cells", []))
 	if raw.is_empty():
 		return [entry]
 	var id := str(entry.get("id", ""))

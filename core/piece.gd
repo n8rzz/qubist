@@ -17,10 +17,15 @@ func _init(data: Dictionary = {}) -> void:
 	id = str(data.get("id", ""))
 	shape = str(data.get("shape", id))
 	weight = float(data.get("weight", 1.0))
-	var raw: Array[Vector3i] = []
-	for c in data.get("cells", []):
-		raw.append(Vector3i(int(c[0]), int(c[1]), int(c[2])))
-	_set_cells(raw)
+	_set_cells(parse_cells(data.get("cells", [])))
+
+
+## Turns JSON cells, `[[x, y, h], …]`, into Vector3i offsets in the same order.
+static func parse_cells(raw: Array) -> Array[Vector3i]:
+	var out: Array[Vector3i] = []
+	for c in raw:
+		out.append(Vector3i(int(c[0]), int(c[1]), int(c[2])))
+	return out
 
 
 func cube_count() -> int:
@@ -62,10 +67,19 @@ static func _turn(c: Vector3i, axis: int) -> Vector3i:
 			return Vector3i(-c.y, c.x, c.z)
 
 
-static func _normalized(raw: Array[Vector3i]) -> Array[Vector3i]:
+## The smallest and largest x, y and h in `raw`, as [lo, hi]. `raw` must not
+## be empty.
+static func _bounds(raw: Array[Vector3i]) -> Array[Vector3i]:
 	var lo: Vector3i = raw[0]
+	var hi: Vector3i = raw[0]
 	for c in raw:
 		lo = Vector3i(mini(lo.x, c.x), mini(lo.y, c.y), mini(lo.z, c.z))
+		hi = Vector3i(maxi(hi.x, c.x), maxi(hi.y, c.y), maxi(hi.z, c.z))
+	return [lo, hi]
+
+
+static func _normalized(raw: Array[Vector3i]) -> Array[Vector3i]:
+	var lo: Vector3i = _bounds(raw)[0]
 	var out: Array[Vector3i] = []
 	for c in raw:
 		out.append(c - lo)
@@ -75,11 +89,11 @@ static func _normalized(raw: Array[Vector3i]) -> Array[Vector3i]:
 
 func _set_cells(raw: Array[Vector3i]) -> void:
 	assert(not raw.is_empty(), "Piece '%s' has no cells" % id)
-	var lo: Vector3i = raw[0]
-	var hi: Vector3i = raw[0]
-	for c in raw:
-		lo = Vector3i(mini(lo.x, c.x), mini(lo.y, c.y), mini(lo.z, c.z))
-		hi = Vector3i(maxi(hi.x, c.x), maxi(hi.y, c.y), maxi(hi.z, c.z))
+	var bounds: Array[Vector3i] = _bounds(raw)
+	var lo: Vector3i = bounds[0]
+	var hi: Vector3i = bounds[1]
+	# Keep the input order: it feeds Config.signature(), so sorting here would
+	# discard existing saves.
 	cells.clear()
 	for c in raw:
 		cells.append(c - lo)
