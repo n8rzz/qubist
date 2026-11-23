@@ -29,6 +29,15 @@ static func can_place(grid, piece, origin: Vector3i) -> bool:
 
 ## Every origin where the piece can be placed, layer by layer from the floor.
 static func legal_positions(grid, piece) -> Array[Vector3i]:
+	return _scan(grid, piece, false)
+
+
+static func has_any_legal(grid, piece) -> bool:
+	return not _scan(grid, piece, true).is_empty()
+
+
+## Legal origins in floor-up order. With `first_only`, stops at the first one.
+static func _scan(grid, piece, first_only: bool) -> Array[Vector3i]:
 	var out: Array[Vector3i] = []
 	for h in range(grid.height - piece.size.z + 1):
 		for y in range(grid.depth - piece.size.y + 1):
@@ -36,16 +45,9 @@ static func legal_positions(grid, piece) -> Array[Vector3i]:
 				var origin := Vector3i(x, y, h)
 				if can_place(grid, piece, origin):
 					out.append(origin)
+					if first_only:
+						return out
 	return out
-
-
-static func has_any_legal(grid, piece) -> bool:
-	for h in range(grid.height - piece.size.z + 1):
-		for y in range(grid.depth - piece.size.y + 1):
-			for x in range(grid.width - piece.size.x + 1):
-				if can_place(grid, piece, Vector3i(x, y, h)):
-					return true
-	return false
 
 
 ## The cells of the line along `axis` that passes through `through`.
