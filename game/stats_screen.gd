@@ -3,6 +3,7 @@ extends Control
 ## returns to the Settings sheet.
 
 const UI := preload("res://game/ui_style.gd")
+const SkyBackdrop := preload("res://game/sky_backdrop.gd")
 
 signal back_pressed
 
@@ -16,10 +17,8 @@ func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	visible = false
 
-	var bg := ColorRect.new()
-	bg.color = UI.BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	# Opaque, so the game screen doesn't show through.
+	add_child(SkyBackdrop.new())
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -36,10 +35,10 @@ func _init() -> void:
 	var header := HBoxContainer.new()
 	header.custom_minimum_size.y = 56
 	header.add_theme_constant_override("separation", 12)
-	var back := UI.icon_button("back", "Back", 44, 14)
+	var back := UI.icon_button("back", "Back")
 	back.pressed.connect(func(): back_pressed.emit())
 	header.add_child(back)
-	var heading := UI.label("Stats", 30, UI.INK)
+	var heading := UI.label("Stats", 30, UI.SKY_INK)
 	heading.add_theme_font_override("font", UI.title_font(600))
 	header.add_child(heading)
 	column.add_child(header)
@@ -62,7 +61,7 @@ func _init() -> void:
 		grid.add_child(card)
 	column.add_child(grid)
 
-	var footer := UI.label("Stats are kept on this device.", 13, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	var footer := UI.label("Stats are kept on this device.", 13, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(footer)
 
 
@@ -80,13 +79,13 @@ func open(stats) -> void:
 func _card(key: String, title: String, value_size: int) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel",
-		UI.box(UI.WHITE, UI.LINE, CARD_RADIUS, 2, Vector2(16, 18)))
+		UI.card(UI.WHITE, CARD_RADIUS, Vector2(16, 18)))
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 6)
-	var caption := UI.label(title, 13, UI.MUTED)
+	var caption := UI.label(title, 13, UI.SKY_MUTED)
 	caption.add_theme_font_override("font", UI.body_font(600))
 	stack.add_child(caption)
-	var value := UI.label("0", value_size, UI.INK)
+	var value := UI.label("0", value_size, UI.SKY_INK)
 	value.add_theme_font_override("font", UI.title_font(600))
 	stack.add_child(value)
 	card.add_child(stack)

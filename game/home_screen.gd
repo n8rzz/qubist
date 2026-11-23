@@ -18,7 +18,7 @@ signal how_to_play_pressed
 const SHOW_HOW_TO_PLAY := false
 
 const ACCENT_SHADOW := Color("#123D50")
-const CARD_SHADOW := Color(36 / 255.0, 72 / 255.0, 96 / 255.0, 0.16)
+const CARD_SHADOW := UI.CARD_SHADOW
 const CROWN := Color("#F5C451")
 const CROWN_EDGE := Color("#C98A1E")
 const SIDE_MARGIN := 20
@@ -61,11 +61,11 @@ func _init() -> void:
 
 	var bar := HBoxContainer.new()
 	bar.custom_minimum_size.y = 44
-	stats_button = _icon_button("stats", "Stats")
+	stats_button = UI.icon_button("stats", "Stats")
 	stats_button.pressed.connect(func(): stats_pressed.emit())
 	bar.add_child(stats_button)
 	bar.add_child(UI.spacer())
-	settings_button = _icon_button("gear", "Settings")
+	settings_button = UI.icon_button("gear", "Settings")
 	settings_button.pressed.connect(func(): settings_pressed.emit())
 	bar.add_child(settings_button)
 	column.add_child(bar)
@@ -167,16 +167,6 @@ func _draw_crown(on: Control) -> void:
 	on.draw_colored_polygon(points, CROWN)
 	points.append(points[0])
 	on.draw_polyline(points, CROWN_EDGE, 2.2 * k, true)
-
-
-func _icon_button(kind: String, tooltip: String) -> IconButton:
-	var b := IconButton.new(kind, tooltip)
-	b.icon_color = UI.SKY_INK
-	b.custom_minimum_size = Vector2(44, 44)
-	b.add_theme_stylebox_override("normal", _card(Color.WHITE, 14, CARD_SHADOW, 3))
-	b.add_theme_stylebox_override("hover", _card(Color("#F4F8FA"), 14, CARD_SHADOW, 3))
-	b.add_theme_stylebox_override("pressed", _card(Color("#E6EEF2"), 14, CARD_SHADOW, 1))
-	return b
 
 
 ## A raised button: `color` with a solid `shadow` ledge `drop` points deep,
