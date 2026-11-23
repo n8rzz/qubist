@@ -17,9 +17,6 @@ signal how_to_play_pressed
 ## How to play opens the tutorial, which comes with #29; hidden until then.
 const SHOW_HOW_TO_PLAY := false
 
-const INK := Color("#22313F")
-const MUTED := Color("#3D5568")
-const ACCENT := Color("#1F5E7A")
 const ACCENT_SHADOW := Color("#123D50")
 const CARD_SHADOW := Color(36 / 255.0, 72 / 255.0, 96 / 255.0, 0.16)
 const CROWN := Color("#F5C451")
@@ -75,7 +72,7 @@ func _init() -> void:
 
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", 6)
-	var wordmark := UI.label("Qubist", 68, INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var wordmark := UI.label("Qubist", 68, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
 	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	title.add_child(_best_pill())
@@ -88,7 +85,7 @@ func _init() -> void:
 
 	var buttons := VBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)
-	new_game_button = _button(62, 22, ACCENT, ACCENT_SHADOW, 4)
+	new_game_button = _button(62, 22, UI.SKY_ACCENT, ACCENT_SHADOW, 4)
 	new_game_button.text = "New game"
 	new_game_button.add_theme_font_size_override("font_size", 22)
 	new_game_button.add_theme_font_override("font", UI.title_font(600))
@@ -104,10 +101,10 @@ func _init() -> void:
 	parts.alignment = BoxContainer.ALIGNMENT_CENTER
 	parts.add_theme_constant_override("separation", 8)
 	parts.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var continue_text := UI.label("Continue", 17, ACCENT)
+	var continue_text := UI.label("Continue", 17, UI.SKY_ACCENT)
 	continue_text.add_theme_font_override("font", UI.body_font(600))
 	parts.add_child(continue_text)
-	continue_score = UI.label("· 0", 17, MUTED)
+	continue_score = UI.label("· 0", 17, UI.SKY_MUTED)
 	continue_score.add_theme_font_override("font", UI.body_font(500))
 	parts.add_child(continue_score)
 	continue_button.add_child(parts)
@@ -123,7 +120,7 @@ func _init() -> void:
 	how_to_play_button.add_theme_font_size_override("font_size", 15)
 	how_to_play_button.add_theme_font_override("font", UI.body_font(600))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		how_to_play_button.add_theme_color_override(state, ACCENT)
+		how_to_play_button.add_theme_color_override(state, UI.SKY_ACCENT)
 	how_to_play_button.pressed.connect(func(): how_to_play_pressed.emit())
 	how_to_play_button.visible = SHOW_HOW_TO_PLAY
 	buttons.add_child(how_to_play_button)
@@ -154,7 +151,7 @@ func _best_pill() -> Control:
 	crown.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	crown.draw.connect(_draw_crown.bind(crown))
 	row.add_child(crown)
-	best_label = UI.label("BEST 0", 13, MUTED)
+	best_label = UI.label("BEST 0", 13, UI.SKY_MUTED)
 	best_label.add_theme_font_override("font", UI.body_font(700, 1))
 	row.add_child(best_label)
 	pill.add_child(row)
@@ -174,7 +171,7 @@ func _draw_crown(on: Control) -> void:
 
 func _icon_button(kind: String, tooltip: String) -> IconButton:
 	var b := IconButton.new(kind, tooltip)
-	b.icon_color = INK
+	b.icon_color = UI.SKY_INK
 	b.custom_minimum_size = Vector2(44, 44)
 	b.add_theme_stylebox_override("normal", _card(Color.WHITE, 14, CARD_SHADOW, 3))
 	b.add_theme_stylebox_override("hover", _card(Color("#F4F8FA"), 14, CARD_SHADOW, 3))
