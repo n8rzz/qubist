@@ -180,3 +180,36 @@ func test_each_line_listed_once() -> void:
 		g.set_filled(Vector3i(x, 0, 0), true)
 	var lines := Rules.full_lines_through(g, [Vector3i(1, 0, 0), Vector3i(2, 0, 0)])
 	check_eq(lines.size(), 1)
+
+
+func test_three_lines_through_one_cell() -> void:
+	var g = _grid()
+	var hub := Vector3i(2, 3, 5)
+	for i in range(6):
+		g.set_filled(Vector3i(i, hub.y, hub.z), true)
+		g.set_filled(Vector3i(hub.x, i, hub.z), true)
+	for h in range(12):
+		g.set_filled(Vector3i(hub.x, hub.y, h), true)
+	var lines := Rules.full_lines_through(g, [hub])
+	check_eq(lines.size(), 3)
+	var axes := []
+	for line in lines:
+		axes.append(line.axis)
+		check(hub in line.cells, "axis %d line passes through the cell" % line.axis)
+	axes.sort()
+	check_eq(axes, [Rules.AXIS_X, Rules.AXIS_Y, Rules.AXIS_H], "one line per axis")
+
+
+# main.autoplay_one_move relies on this order.
+func test_legal_positions_run_from_the_floor_up() -> void:
+	var g = _grid()
+	fill(g, [Vector3i(2, 3, 0)])
+	var positions := Rules.legal_positions(g, _piece("bar2_x"))
+	# 30 floor origins minus the 2 that cover (2, 3, 0), plus 2 resting on it.
+	check_eq(positions.size(), 30)
+	check_eq(positions[0], Vector3i(0, 0, 0))
+	check_eq(positions.slice(-2), [Vector3i(1, 3, 1), Vector3i(2, 3, 1)])
+	for i in range(1, positions.size()):
+		var a := positions[i - 1]
+		var b := positions[i]
+		check(Vector3i(a.z, a.y, a.x) < Vector3i(b.z, b.y, b.x), "%s comes before %s" % [a, b])
