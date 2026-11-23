@@ -6,11 +6,12 @@ const Rules := preload("res://core/rules.gd")
 
 
 ## A started game with a known tray and an otherwise empty grid.
-func _game(tray_ids: Array = ["bar2_x", "bar4_x", "cube2"]):
+## `tray` holds piece ids or bar sizes (see q_test.gd).
+func _game(tray: Array = [BAR2_X, BAR4_X, "cube2"]):
 	var game := Game.new(Config.new(), 7)
 	game.start()
 	game.grid.clear_all()
-	game.tray = tray_ids.map(func(id): return game.config.piece_by_id(id))
+	game.tray = tray.map(func(key): return find_piece(game.config, key))
 	return game
 
 
@@ -78,7 +79,7 @@ func test_no_gravity_after_clear() -> void:
 
 
 func test_crossing_lines_share_one_cube() -> void:
-	var game = _game(["bar2_up", "bar4_x", "cube2"])
+	var game = _game([BAR2_UP, BAR4_X, "cube2"])
 	fill(game.grid, _row(0, 0, [1, 2, 3, 4, 5]))
 	for y in range(1, 6):
 		fill(game.grid, [Vector3i(0, y, 0)])
@@ -91,7 +92,7 @@ func test_crossing_lines_share_one_cube() -> void:
 
 
 func test_streak_builds_and_resets() -> void:
-	var game = _game(["bar2_x", "bar2_x", "cube2"])
+	var game = _game([BAR2_X, BAR2_X, "cube2"])
 	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))
 	fill(game.grid, _row(1, 0, [0, 1, 2, 3]))
 	game.place(0, Vector3i(4, 0, 0))
@@ -146,7 +147,7 @@ func test_game_over_when_nothing_fits() -> void:
 ## Placing a piece that leaves the rest of the tray with nowhere to go ends
 ## the game in the same move.
 func test_placement_that_strands_the_tray_ends_the_game() -> void:
-	var game = _game(["bar2_up", "cube2", "cube2"])
+	var game = _game([BAR2_UP, "cube2", "cube2"])
 	var ended := [false]
 	game.game_over.connect(func(_score): ended[0] = true)
 	checkerboard(game.grid)
@@ -160,7 +161,7 @@ func test_placement_that_strands_the_tray_ends_the_game() -> void:
 
 
 func test_start_resets_a_played_game() -> void:
-	var game = _game(["bar2_x", "bar2_x", "cube2"])
+	var game = _game([BAR2_X, BAR2_X, "cube2"])
 	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))
 	fill(game.grid, _row(1, 0, [0, 1, 2, 3]))
 	game.place(0, Vector3i(4, 0, 0))
@@ -196,7 +197,7 @@ func test_restore_after_game_over() -> void:
 
 
 func test_one_fitting_piece_keeps_the_game_going() -> void:
-	var game = _game(["cube2", "cube2", "bar2_up"])
+	var game = _game(["cube2", "cube2", BAR2_UP])
 	checkerboard(game.grid)
 	check(not game.check_game_over())
 
@@ -212,8 +213,9 @@ func test_save_and_restore() -> void:
 	check_eq(restored.moves, 1)
 	check_eq(restored.grid.to_array(), game.grid.to_array())
 	check(restored.tray[0] == null)
-	check_eq(restored.tray[1].id, "bar4_x")
+	check_eq(restored.tray[1].id, game.tray[1].id)
 	check_eq(restored.tray[2].id, "cube2")
+	check_eq(restored.tray[1].size, BAR4_X)
 	for _i in range(5):
 		check_eq(restored.dealer.pick().id, game.dealer.pick().id, "dealer continues the same sequence")
 
@@ -263,7 +265,7 @@ func _state(game) -> Dictionary:
 ## Checks that from_dict rejects a save after `spoil` edits it, and that the
 ## game it was loaded into keeps its own state.
 func _check_rejected(spoil: Callable, message: String) -> void:
-	var source = _game(["cube2", "bar2_x", "bar4_x"])
+	var source = _game(["cube2", BAR2_X, BAR4_X])
 	source.place(0, Vector3i(0, 0, 0))
 	var saved: Dictionary = JSON.parse_string(JSON.stringify(source.to_dict()))
 	spoil.call(saved)

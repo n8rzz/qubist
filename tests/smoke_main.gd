@@ -102,7 +102,7 @@ func _check_tutorial() -> void:
 		if tutorial.step != i:
 			failures.append("tutorial is on step %d, expected %d" % [tutorial.step, i])
 			return
-		if main.game.tray[0] == null or main.game.tray[0].id != Tutorial.step(i).piece:
+		if main.game.tray[0] == null or main.game.tray[0].size != Tutorial.step(i).piece_size:
 			failures.append("tutorial step %d has the wrong piece" % i)
 		if Tutorial.step(i).hidden:
 			if main.autoplay_one_move():

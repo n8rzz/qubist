@@ -17,7 +17,7 @@ func test_each_step_starts_with_its_piece_and_tower() -> void:
 		var data := Tutorial.step(i)
 		var game = Tutorial.make_game(config, i)
 		check_eq(game.tray.size(), config.tray_size, "step %d tray size" % i)
-		check(game.tray[0] != null and game.tray[0].id == data.piece, "step %d piece" % i)
+		check(game.tray[0] != null and game.tray[0].size == data.piece_size, "step %d piece" % i)
 		check(game.tray.slice(1).all(func(p): return p == null), "step %d has one piece" % i)
 		check_eq(game.grid.filled_cells().size(), data.cells.size(), "step %d cubes" % i)
 		check_eq(game.score, 0, "step %d score" % i)

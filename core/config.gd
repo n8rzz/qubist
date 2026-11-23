@@ -107,3 +107,13 @@ func signature() -> String:
 ## Returns the piece with this id, or null.
 func piece_by_id(id: String):
 	return _by_id.get(id)
+
+
+## Returns the first piece whose bounding box is `size` (x, y, h), or null.
+## Finds a piece in a given orientation without relying on the `_00`, `_01`
+## ids that `"orientations": "all"` makes up.
+func piece_by_size(size: Vector3i):
+	for piece in pieces:
+		if piece.size == size:
+			return piece
+	return null

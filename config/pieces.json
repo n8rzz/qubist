@@ -3,13 +3,11 @@
 	{ "id": "cube2", "shape": "2x2x2 cube", "weight": 1.0,
 	  "cells": [[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]] },
 
-	{ "id": "bar2_x", "shape": "2x1x1 bar", "weight": 0.333, "cells": [[0,0,0],[1,0,0]] },
-	{ "id": "bar2_y", "shape": "2x1x1 bar", "weight": 0.333, "cells": [[0,0,0],[0,1,0]] },
-	{ "id": "bar2_up", "shape": "2x1x1 bar", "weight": 0.334, "cells": [[0,0,0],[0,0,1]] },
+	{ "id": "bar2", "shape": "2x1x1 bar", "weight": 1.0, "orientations": "all",
+	  "cells": [[0,0,0],[1,0,0]] },
 
-	{ "id": "bar4_x", "shape": "4x1x1 bar", "weight": 0.333, "cells": [[0,0,0],[1,0,0],[2,0,0],[3,0,0]] },
-	{ "id": "bar4_y", "shape": "4x1x1 bar", "weight": 0.333, "cells": [[0,0,0],[0,1,0],[0,2,0],[0,3,0]] },
-	{ "id": "bar4_up", "shape": "4x1x1 bar", "weight": 0.334, "cells": [[0,0,0],[0,0,1],[0,0,2],[0,0,3]] },
+	{ "id": "bar4", "shape": "4x1x1 bar", "weight": 1.0, "orientations": "all",
+	  "cells": [[0,0,0],[1,0,0],[2,0,0],[3,0,0]] },
 
 	{ "id": "L4", "shape": "L, 1 wide", "weight": 1.0, "orientations": "all",
 	  "cells": [[0,0,0],[1,0,0],[2,0,0],[0,1,0]] },
