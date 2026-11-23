@@ -789,7 +789,7 @@ func autoplay_one_move() -> bool:
 		if options.is_empty():
 			continue
 		var origin: Vector3i = options[options.size() >> 1]
-		var center := ViewMath.cells_center(DragController.cells_at(piece, origin), config.grid_size)
+		var center := ViewMath.cells_center(piece.cells_at(origin), config.grid_size)
 		var finger := viewport_box.get_global_rect().position + tower.project_point(center) \
 			+ Vector2(0, DragController.LIFT)
 		var before := game.moves

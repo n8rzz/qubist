@@ -65,7 +65,7 @@ func update(finger: Vector2) -> void:
 		_has_target = found
 		_target = origin
 		if found:
-			host.tower.show_ghost(cells_at(host.game.tray[_index], origin))
+			host.tower.show_ghost(host.game.tray[_index].cells_at(origin))
 		else:
 			host.tower.hide_ghost()
 		target_changed.emit()
@@ -103,7 +103,7 @@ func fade_occluders(faded: Dictionary, filled: Array) -> void:
 	if _index < 0 or not _has_target:
 		return
 	var tower = host.tower
-	var ghost := cells_at(host.game.tray[_index], _target)
+	var ghost: Array = host.game.tray[_index].cells_at(_target)
 	var radius: float = tower.cube_pixels() * OCCLUDE_RADIUS
 	var ghost_points: Array = []
 	var ghost_depths: Array = []
@@ -128,17 +128,10 @@ func _find_snap(piece, point: Vector2) -> Array:
 	var best := Vector3i.ZERO
 	var found := false
 	for origin in Rules.legal_positions(host.game.grid, piece):
-		var center := ViewMath.cells_center(cells_at(piece, origin), host.config.grid_size)
+		var center := ViewMath.cells_center(piece.cells_at(origin), host.config.grid_size)
 		var d: float = host.tower.project_point(center).distance_to(point)
 		if d < best_distance:
 			best_distance = d
 			best = origin
 			found = true
 	return [found, best]
-
-
-static func cells_at(piece, origin: Vector3i) -> Array:
-	var out: Array = []
-	for offset in piece.cells:
-		out.append(origin + offset)
-	return out

@@ -68,11 +68,9 @@ func place(tray_index: int, origin: Vector3i) -> Dictionary:
 		return {"ok": false}
 
 	var piece = tray[tray_index]
-	var placed: Array[Vector3i] = []
-	for offset in piece.cells:
-		var c: Vector3i = origin + offset
+	var placed: Array[Vector3i] = piece.cells_at(origin)
+	for c in placed:
 		grid.set_filled(c, true)
-		placed.append(c)
 	tray[tray_index] = null
 	moves += 1
 	piece_placed.emit(tray_index, piece, origin)
