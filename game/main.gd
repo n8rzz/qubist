@@ -18,6 +18,7 @@ const Settings := preload("res://core/settings.gd")
 const SettingsSheet := preload("res://game/settings_sheet.gd")
 const StatsScreen := preload("res://game/stats_screen.gd")
 const HomeScreen := preload("res://game/home_screen.gd")
+const Swiper := preload("res://game/swiper.gd")
 const DragController := preload("res://game/drag_controller.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
@@ -28,8 +29,6 @@ const CONTROLS_HEIGHT := 72
 ## Pause is hidden for MVP (#42); re-enable for the post-MVP timed mode.
 const SHOW_PAUSE_BUTTON := false
 
-## Swiper button and chip labels, indexed by ViewMath mode.
-const AXIS_NAMES := ["X", "Y", "Z"]
 ## Axis labels around the tower's base (#53): small and quiet, so they don't
 ## compete with the blocks. They fade out while the tower turns.
 const AXIS_LABEL_SIZE := 11
@@ -37,12 +36,6 @@ const AXIS_LABEL_SIZE := 11
 const AXIS_LABEL_COLOR := Color(1, 1, 1, 0.92)
 const AXIS_LABEL_GAP := 10.0
 const AXIS_LABEL_FADE_SECONDS := 0.1
-
-## Sweep plane (#51): shown while the swiper moves, held briefly after it
-## stops, then faded out.
-const SWEEP_FADE_IN_SECONDS := 0.06
-const SWEEP_HOLD_SECONDS := 0.18
-const SWEEP_FADE_OUT_SECONDS := 0.45
 
 ## Blue for the slice chip's border and the combo banner. The other colours
 ## come from game/ui_style.gd.
@@ -97,13 +90,8 @@ var home: HomeScreen
 ## Home, Back just closes it.
 var _stats_from_settings := false
 
-var slice_mode := ViewMath.MODE_X
-var slice_depth := 0
-## True while a finger is on the swiper's slider.
-var _sweeping := false
-## Seconds left before the sweep plane starts to fade.
-var _sweep_hold := 0.0
-var _sweep_alpha := 0.0
+## Slice mode, depth and the sweep plane's fade.
+var swiper: Swiper = Swiper.new(config.grid_size)
 
 ## Dragging a piece from the tray onto the tower.
 var drag := DragController.new(self)
@@ -188,26 +176,8 @@ func _use_game(next: Game) -> void:
 
 func _process(delta: float) -> void:
 	_update_axis_labels(delta)
-	_update_sweep(delta)
-
-
-## Marks the swiper as just moved, so the sweep plane shows and then fades.
-func _bump_sweep() -> void:
-	_sweep_hold = SWEEP_HOLD_SECONDS
-
-
-func _update_sweep(delta: float) -> void:
-	_sweep_hold = maxf(_sweep_hold - delta, 0.0)
-	var target := 1.0 if _sweeping or _sweep_hold > 0.0 else 0.0
-	# The cut's axis can swap as the tower turns, so keep it hidden meanwhile.
-	if tower.rig.is_turning():
-		target = 0.0
-		_sweep_hold = 0.0
-	var seconds := SWEEP_FADE_IN_SECONDS if target > _sweep_alpha else SWEEP_FADE_OUT_SECONDS
-	var alpha := move_toward(_sweep_alpha, target, delta / seconds)
-	if alpha != _sweep_alpha:
-		_sweep_alpha = alpha
-		tower.set_sweep_alpha(ease(alpha, 0.6))
+	if swiper.update_sweep(delta, tower.rig.is_turning()):
+		tower.set_sweep_alpha(swiper.sweep_alpha())
 
 
 ## Keeps the axis labels beside the base as the view zooms, resizes or turns.
@@ -307,12 +277,12 @@ func _turn(quarter_turns: int) -> void:
 
 
 func _set_slice_mode(mode: int) -> void:
-	slice_mode = mode
+	swiper.mode = mode
 	_refresh()
 
 
 func _set_slice_depth(depth: int) -> void:
-	slice_depth = depth
+	swiper.depth = depth
 	if int(slice_slider.value) != depth:
 		slice_slider.set_value_no_signal(depth)
 	_refresh()
@@ -332,21 +302,14 @@ func _refresh() -> void:
 		tray_slots[i].add_theme_stylebox_override("panel",
 			UI.box(UI.WHITE, UI.LINE, 16) if piece != null else UI.box(Color(0, 0, 0, 0), Color("#9A9A9A"), 16))
 
-	var layers := ViewMath.slice_layer_count(slice_mode, step, config.grid_size)
-	# Modes can have different layer counts (Z has 12, X/Y have 6), so keep the
-	# depth inside the current mode's range.
-	slice_depth = mini(slice_depth, layers - 1)
-	slice_slider.max_value = layers - 1
-	slice_slider.set_value_no_signal(slice_depth)
-	var axis_name: String = AXIS_NAMES[slice_mode]
-	slice_chip.visible = slice_depth > 0
-	show_all_button.visible = slice_depth > 0
-	# X/Y number slices from the front. Z numbers them from the floor, so the
-	# label matches the layer the player sees on top.
-	var slice_number := layers - slice_depth if slice_mode == ViewMath.MODE_Z else slice_depth + 1
-	slice_chip.text = "Slice %d of %d · %s" % [slice_number, layers, axis_name]
+	swiper.fit(step)
+	slice_slider.max_value = swiper.layer_count(step) - 1
+	slice_slider.set_value_no_signal(swiper.depth)
+	slice_chip.visible = swiper.is_sliced()
+	show_all_button.visible = swiper.is_sliced()
+	slice_chip.text = swiper.chip_text(step)
 	for i in range(axis_buttons.size()):
-		axis_buttons[i].set_pressed_no_signal(i == slice_mode)
+		axis_buttons[i].set_pressed_no_signal(i == swiper.mode)
 
 	_refresh_blocks()
 
@@ -355,34 +318,16 @@ func _refresh_blocks() -> void:
 	var filled: Array = game.grid.filled_cells()
 	var faded := _faded_cells()
 	var step := tower.rig.view_step()
-	# While sliced, cubes behind the slice are drawn lighter (#85), and the
-	# shown cubes on the cut light up under the sweep plane.
-	var behind := {}
-	var cap: Array = []
-	for c in filled:
-		if faded.has(c):
-			continue
-		var layer := ViewMath.layer_from_viewer(c, slice_mode, step, config.grid_size)
-		if layer == slice_depth:
-			cap.append(c)
-		elif slice_depth > 0 and layer > slice_depth:
-			behind[c] = true
-	tower.update_blocks(filled, faded, behind)
-
-	tower.set_sweep(
-		ViewMath.slice_plane(slice_mode, step, config.grid_size, slice_depth),
-		ViewMath.slice_toward_viewer(slice_mode, step), cap)
+	var shade := swiper.shade(filled, faded, step)
+	tower.update_blocks(filled, faded, shade.behind)
+	tower.set_sweep(swiper.plane(step), swiper.toward_viewer(step), shade.cap)
 
 
 ## Cells to draw see-through: those the swiper has cut away, plus, while
 ## dragging, those that would hide the ghost.
 func _faded_cells() -> Dictionary:
-	var faded := {}
-	var step := tower.rig.view_step()
 	var filled: Array = game.grid.filled_cells()
-	for c in filled:
-		if ViewMath.is_sliced_away(c, slice_mode, step, config.grid_size, slice_depth):
-			faded[c] = true
+	var faded := swiper.faded_cells(filled, tower.rig.view_step())
 	drag.fade_occluders(faded, filled)
 	return faded
 
@@ -681,7 +626,7 @@ func _build_tower_area() -> Control:
 	tower.rig.view_changed.connect(func(_step): _refresh())
 	tower.move_animation_finished.connect(_on_move_animation_finished)
 
-	for axis_name in AXIS_NAMES:
+	for axis_name in Swiper.AXIS_NAMES:
 		var axis_label := UI.label(axis_name, AXIS_LABEL_SIZE, AXIS_LABEL_COLOR, HORIZONTAL_ALIGNMENT_CENTER)
 		area.add_child(axis_label)
 		axis_labels.append(axis_label)
@@ -744,20 +689,20 @@ func _build_controls() -> Control:
 	row.add_theme_constant_override("separation", 8)
 
 
-	var swiper := PanelContainer.new()
-	swiper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	swiper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	swiper.custom_minimum_size.y = 56
-	swiper.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 28, 2, Vector2(6, 6)))
+	var swiper_bar := PanelContainer.new()
+	swiper_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	swiper_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	swiper_bar.custom_minimum_size.y = 56
+	swiper_bar.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 28, 2, Vector2(6, 6)))
 	var inner := HBoxContainer.new()
 	inner.add_theme_constant_override("separation", 10)
-	swiper.add_child(inner)
+	swiper_bar.add_child(inner)
 
 	var axes := HBoxContainer.new()
 	axes.add_theme_constant_override("separation", 0)
 	var group := ButtonGroup.new()
 	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
-		var b := UI.text_button(AXIS_NAMES[mode], 14)
+		var b := UI.text_button(Swiper.AXIS_NAMES[mode], 14)
 		b.toggle_mode = true
 		b.button_group = group
 		b.custom_minimum_size = Vector2(44, 40)
@@ -767,7 +712,7 @@ func _build_controls() -> Control:
 		b.add_theme_color_override("font_pressed_color", UI.WHITE)
 		b.add_theme_color_override("font_hover_pressed_color", UI.WHITE)
 		b.pressed.connect(_set_slice_mode.bind(mode))
-		b.pressed.connect(_bump_sweep)
+		b.pressed.connect(swiper.bump)
 		axes.add_child(b)
 		axis_buttons.append(b)
 	inner.add_child(axes)
@@ -789,14 +734,12 @@ func _build_controls() -> Control:
 	slice_slider.add_theme_stylebox_override("grabber_area", UI.slider_track(Color("#333333")))
 	slice_slider.add_theme_stylebox_override("grabber_area_highlight", UI.slider_track(Color("#333333")))
 	slice_slider.value_changed.connect(func(v: float):
-		_bump_sweep()
+		swiper.bump()
 		_set_slice_depth(int(v)))
-	slice_slider.drag_started.connect(func(): _sweeping = true)
-	slice_slider.drag_ended.connect(func(_changed: bool):
-		_sweeping = false
-		_bump_sweep())
+	slice_slider.drag_started.connect(swiper.begin_sweep)
+	slice_slider.drag_ended.connect(func(_changed: bool): swiper.end_sweep())
 	inner.add_child(slice_slider)
-	row.add_child(swiper)
+	row.add_child(swiper_bar)
 
 	return row
 
