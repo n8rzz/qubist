@@ -1,8 +1,8 @@
 extends Control
-## Greybox game screen, layout D: header, tower, piece tray, controls.
+## The game screen, layout D: header, tower, piece tray, controls.
 ##
-## Builds its UI in code and connects input to the core game. Styling is
-## placeholder; sizes follow the concept wireframes (390×844 pt iPhone).
+## Builds its UI in code and connects input to the core game. Sizes and
+## styling follow the Gameplay artboard in the Qubist designs (390×844 pt).
 
 const Config := preload("res://core/config.gd")
 const Game := preload("res://core/game.gd")
@@ -38,10 +38,6 @@ const AXIS_LABEL_SIZE := 11
 const AXIS_LABEL_COLOR := Color(1, 1, 1, 0.92)
 const AXIS_LABEL_GAP := 10.0
 const AXIS_LABEL_FADE_SECONDS := 0.1
-
-## Blue for the slice chip's border and the combo banner. The other colours
-## come from game/ui_style.gd.
-const ACCENT := Color("#2559C9")
 
 const TRAY_FADE_SECONDS := 0.2
 
@@ -300,7 +296,7 @@ func _refresh() -> void:
 		var piece = game.tray[i] if i < game.tray.size() else null
 		tray_previews[i].set_piece(piece, step)
 		tray_slots[i].add_theme_stylebox_override("panel",
-			UI.box(UI.WHITE, UI.LINE, 16) if piece != null else UI.box(Color(0, 0, 0, 0), Color("#9A9A9A"), 16))
+			_tray_card(piece != null))
 
 	swiper.fit(step)
 	slice_slider.max_value = swiper.layer_count(step) - 1
@@ -515,7 +511,7 @@ func _build_header() -> Control:
 	row.custom_minimum_size.y = HEADER_HEIGHT
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	var pause := UI.icon_button("pause", "Pause", 44, 12)
+	var pause := UI.icon_button("pause", "Pause")
 	pause.pressed.connect(_show_pause)
 	if not SHOW_PAUSE_BUTTON:
 		# Keep the slot so the score stays centered, but make it inert.
@@ -528,17 +524,26 @@ func _build_header() -> Control:
 
 	var scores := VBoxContainer.new()
 	scores.alignment = BoxContainer.ALIGNMENT_CENTER
-	scores.add_theme_constant_override("separation", 0)
-	score_label = UI.label("0", 28, UI.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	scores.add_theme_constant_override("separation", 2)
+	score_label = UI.label("0", 36, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
 	score_label.add_theme_font_override("font", UI.title_font(600))
-	best_label = UI.label("Best 0", 12, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-	best_label.add_theme_font_override("font", UI.body_font(700))
+	best_label = UI.label("BEST 0", 11, UI.SKY_MUTED)
+	best_label.add_theme_font_override("font", UI.body_font(700, 1))
+	var best_row := HBoxContainer.new()
+	best_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	best_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	best_row.add_theme_constant_override("separation", 4)
+	var crown := GameOverCard.Crown.new()
+	crown.custom_minimum_size = Vector2(12, 12)
+	crown.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	best_row.add_child(crown)
+	best_row.add_child(best_label)
 	scores.add_child(score_label)
-	scores.add_child(best_label)
+	scores.add_child(best_row)
 	row.add_child(scores)
 
 	row.add_child(UI.spacer())
-	var gear := UI.icon_button("settings", "Settings", 44, 12)
+	var gear := UI.icon_button("gear", "Settings")
 	gear.pressed.connect(show_settings)
 	row.add_child(gear)
 	return row
@@ -573,8 +578,9 @@ func _build_tower_area() -> Control:
 		area.add_child(axis_label)
 		axis_labels.append(axis_label)
 
-	slice_chip = UI.label("", 13, Color("#1B428F"), HORIZONTAL_ALIGNMENT_CENTER)
-	slice_chip.add_theme_stylebox_override("normal", UI.box(UI.WHITE, ACCENT, 16, 2, Vector2(10, 4)))
+	slice_chip = UI.label("", 13, UI.SKY_ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+	slice_chip.add_theme_font_override("font", UI.body_font(700))
+	slice_chip.add_theme_stylebox_override("normal", UI.card(UI.WHITE, 16, Vector2(12, 6)))
 	slice_chip.position = Vector2(12, 12)
 	slice_chip.visible = false
 	area.add_child(slice_chip)
@@ -591,15 +597,16 @@ func _build_tower_area() -> Control:
 	area.add_child(show_all_button)
 
 	# Rotate buttons sit in the bottom corners beside the base, so the swiper
-	# can use the whole controls row.
+	# can use the whole controls row (it has a third, Z, axis button the
+	# design's row leaves out). Round white 56-point buttons, as designed.
 	for dir in [-1, 1]:
 		var b := UI.icon_button("rotate_left" if dir < 0 else "rotate_right",
-			"Rotate tower left" if dir < 0 else "Rotate tower right", 52, 26)
+			"Rotate tower left" if dir < 0 else "Rotate tower right", 56, 28)
 		b.set_anchors_preset(Control.PRESET_BOTTOM_LEFT if dir < 0 else Control.PRESET_BOTTOM_RIGHT)
-		b.offset_left = 4 if dir < 0 else -56
-		b.offset_right = 56 if dir < 0 else -4
-		b.offset_top = -56
-		b.offset_bottom = -4
+		b.offset_left = 4 if dir < 0 else -60
+		b.offset_right = 60 if dir < 0 else -4
+		b.offset_top = -64
+		b.offset_bottom = -8
 		b.pressed.connect(_turn.bind(dir))
 		area.add_child(b)
 	return area
@@ -608,12 +615,12 @@ func _build_tower_area() -> Control:
 func _build_tray() -> Control:
 	var tray := HBoxContainer.new()
 	tray.custom_minimum_size.y = TRAY_HEIGHT
-	tray.add_theme_constant_override("separation", 10)
+	tray.add_theme_constant_override("separation", 12)
 	for i in range(config.tray_size):
 		var slot := PanelContainer.new()
 		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slot.mouse_filter = Control.MOUSE_FILTER_STOP
-		slot.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 16))
+		slot.add_theme_stylebox_override("panel", _tray_card(true))
 		slot.gui_input.connect(_on_slot_input.bind(i))
 		var preview := PiecePreview.new()
 		preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -623,6 +630,14 @@ func _build_tray() -> Control:
 		tray_slots.append(slot)
 		tray_previews.append(preview)
 	return tray
+
+
+## A tray slot's card: white and raised when it holds a piece, a faint
+## outline once the piece is placed.
+static func _tray_card(filled: bool) -> StyleBoxFlat:
+	if filled:
+		return UI.card(UI.TRAY_CARD, 20)
+	return UI.box(Color(1, 1, 1, 0.25), Color(1, 1, 1, 0.7), 20, 2)
 
 
 func _build_controls() -> Control:
@@ -635,30 +650,37 @@ func _build_controls() -> Control:
 	swiper_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	swiper_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	swiper_bar.custom_minimum_size.y = 56
-	swiper_bar.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 28, 2, Vector2(6, 6)))
+	swiper_bar.add_theme_stylebox_override("panel", UI.card(UI.WHITE, 28, Vector2(6, 6)))
 	var inner := HBoxContainer.new()
 	inner.add_theme_constant_override("separation", 10)
 	swiper_bar.add_child(inner)
 
+	# The axis toggle: a pale pill track with the chosen axis filled in ink.
+	var track := PanelContainer.new()
+	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	track.add_theme_stylebox_override("panel", UI.box(UI.SEGMENT_TRACK, Color(0, 0, 0, 0), 22, 0, Vector2(2, 2)))
 	var axes := HBoxContainer.new()
 	axes.add_theme_constant_override("separation", 0)
+	track.add_child(axes)
+	var clear := Color(0, 0, 0, 0)
 	var group := ButtonGroup.new()
 	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
-		var b := UI.text_button(Swiper.AXIS_NAMES[mode], 14)
+		var b := UI.text_button(Swiper.AXIS_NAMES[mode], 15)
 		b.add_theme_font_override("font", UI.title_font(600))
 		b.toggle_mode = true
 		b.button_group = group
-		b.custom_minimum_size = Vector2(44, 40)
-		b.add_theme_stylebox_override("normal", UI.box(Color("#ECECEA"), Color(0, 0, 0, 0), 20, 0))
-		b.add_theme_stylebox_override("hover", UI.box(Color("#E2E2E0"), Color(0, 0, 0, 0), 20, 0))
-		b.add_theme_stylebox_override("pressed", UI.box(Color("#333333"), Color(0, 0, 0, 0), 20, 0))
+		b.custom_minimum_size = Vector2(40, 40)
+		b.add_theme_stylebox_override("normal", UI.box(clear, clear, 20, 0))
+		b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.6), clear, 20, 0))
+		b.add_theme_stylebox_override("pressed", UI.box(UI.SKY_INK, clear, 20, 0))
+		b.add_theme_stylebox_override("hover_pressed", UI.box(UI.SKY_INK, clear, 20, 0))
 		b.add_theme_color_override("font_pressed_color", UI.WHITE)
 		b.add_theme_color_override("font_hover_pressed_color", UI.WHITE)
 		b.pressed.connect(_set_slice_mode.bind(mode))
 		b.pressed.connect(swiper.bump)
 		axes.add_child(b)
 		axis_buttons.append(b)
-	inner.add_child(axes)
+	inner.add_child(track)
 
 	# The chip over the tower names the slice, so the slider gets the bar's
 	# full height and a large grabber to make it easy to hit with a thumb.
@@ -673,9 +695,9 @@ func _build_controls() -> Control:
 	var grabber := UI.grabber_texture(26)
 	slice_slider.add_theme_icon_override("grabber", grabber)
 	slice_slider.add_theme_icon_override("grabber_highlight", grabber)
-	slice_slider.add_theme_stylebox_override("slider", UI.slider_track(Color("#D6D6D3")))
-	slice_slider.add_theme_stylebox_override("grabber_area", UI.slider_track(Color("#333333")))
-	slice_slider.add_theme_stylebox_override("grabber_area_highlight", UI.slider_track(Color("#333333")))
+	slice_slider.add_theme_stylebox_override("slider", UI.slider_track(UI.SLIDER_RAIL))
+	slice_slider.add_theme_stylebox_override("grabber_area", UI.slider_track(UI.SKY_ACCENT))
+	slice_slider.add_theme_stylebox_override("grabber_area_highlight", UI.slider_track(UI.SKY_ACCENT))
 	slice_slider.value_changed.connect(func(v: float):
 		swiper.bump()
 		_set_slice_depth(int(v)))
@@ -692,7 +714,7 @@ func _build_overlay() -> Control:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.visible = false
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.3)
+	dim.color = Color(16 / 255.0, 32 / 255.0, 44 / 255.0, 0.45)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(dim)
 	var center := CenterContainer.new()
@@ -700,7 +722,7 @@ func _build_overlay() -> Control:
 	root.add_child(center)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.x = 310
-	panel.add_theme_stylebox_override("panel", UI.box(UI.WHITE, UI.LINE, 24, 2, Vector2(24, 24)))
+	panel.add_theme_stylebox_override("panel", UI.card(UI.WHITE, 24, Vector2(24, 24)))
 	center.add_child(panel)
 	overlay_panel = VBoxContainer.new()
 	overlay_panel.add_theme_constant_override("separation", 14)
@@ -712,15 +734,15 @@ func _show_overlay(title: String, body: String, primary: String, on_primary: Cal
 		secondary: String = "", on_secondary: Callable = Callable(), score: String = "") -> void:
 	for child in overlay_panel.get_children():
 		child.queue_free()
-	var heading := UI.label(title, 22, UI.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var heading := UI.label(title, 22, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
 	heading.add_theme_font_override("font", UI.title_font(600))
 	overlay_panel.add_child(heading)
 	if score != "":
-		var big := UI.label(score, 48, UI.INK, HORIZONTAL_ALIGNMENT_CENTER)
+		var big := UI.label(score, 48, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
 		big.add_theme_font_override("font", UI.title_font(600))
 		overlay_panel.add_child(big)
 	if body != "":
-		overlay_panel.add_child(UI.label(body, 16, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+		overlay_panel.add_child(UI.label(body, 16, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	var first := UI.text_button(primary, 16, true)
 	first.custom_minimum_size.y = 52
 	first.pressed.connect(on_primary)

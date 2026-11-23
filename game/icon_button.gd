@@ -1,10 +1,10 @@
 extends Button
-## A button that draws a simple line icon instead of text, so the greybox
-## needs no icon assets. Set `kind` to "pause", "settings", "gear", "stats",
+## A button that draws a line icon instead of text, so the UI needs no icon
+## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "pause", "settings", "gear", "stats",
 ## "back", "close", "rotate_left" or "rotate_right".
 
 var kind := "pause"
-var icon_color := Color("#333333")
+var icon_color := Color("#22313F")
 
 
 func _init(p_kind: String = "pause", label: String = "") -> void:
@@ -17,8 +17,12 @@ func _draw() -> void:
 	var c := size * 0.5
 	match kind:
 		"pause":
-			draw_rect(Rect2(c + Vector2(-6, -7), Vector2(4, 14)), icon_color)
-			draw_rect(Rect2(c + Vector2(2, -7), Vector2(4, 14)), icon_color)
+			var bar := StyleBoxFlat.new()
+			bar.bg_color = icon_color
+			bar.set_corner_radius_all(2)
+			bar.anti_aliasing = true
+			draw_style_box(bar, Rect2(c + Vector2(-5.5, -7), Vector2(3.5, 14)))
+			draw_style_box(bar, Rect2(c + Vector2(2, -7), Vector2(3.5, 14)))
 		"settings":
 			draw_line(c + Vector2(-8, -4), c + Vector2(8, -4), icon_color, 2.0)
 			draw_line(c + Vector2(-8, 4), c + Vector2(8, 4), icon_color, 2.0)
@@ -40,16 +44,14 @@ func _draw() -> void:
 			draw_line(c + Vector2(-6, -6), c + Vector2(6, 6), icon_color, 2.0, true)
 			draw_line(c + Vector2(6, -6), c + Vector2(-6, 6), icon_color, 2.0, true)
 		"rotate_left", "rotate_right":
-			var dir := -1.0 if kind == "rotate_left" else 1.0
-			var radius := 9.0
-			var start := deg_to_rad(-90.0 - 40.0 * dir)
-			var finish := start + deg_to_rad(280.0) * dir
-			draw_arc(c, radius, start, finish, 32, icon_color, 2.0, true)
-			var tip := c + Vector2(cos(finish), sin(finish)) * radius
-			var along := Vector2(-sin(finish), cos(finish)) * dir
-			var out := (tip - c).normalized()
-			draw_colored_polygon(PackedVector2Array([
-				tip + along * 5.0,
-				tip - along * 2.0 + out * 4.5,
-				tip - along * 2.0 - out * 4.5,
-			]), icon_color)
+			# An open circle with an L-shaped arrowhead at its top-left (or
+			# top-right), on the design's 24-unit grid scaled to 26 points.
+			var k := 26.0 / 24.0
+			var flip := 1.0 if kind == "rotate_left" else -1.0
+			var start := PI if kind == "rotate_left" else 0.0
+			var sweep := deg_to_rad(312.5) * flip
+			draw_arc(c, 8.0 * k, start, start - sweep, 40, icon_color, 2.2, true)
+			var corner := PackedVector2Array()
+			for p in [Vector2(-8, -8), Vector2(-8, -3), Vector2(-3, -3)]:
+				corner.append(c + Vector2(p.x * flip, p.y) * k)
+			draw_polyline(corner, icon_color, 2.2, true)
