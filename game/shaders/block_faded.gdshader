@@ -1,16 +1,15 @@
 shader_type spatial;
-// Swept cubes (#67): paper-white faces with a thin outline, like a paper
-// model. They write depth, so a swept cube hides the edges of swept cubes
-// behind it, but skip any pixel a solid cube or the ghost has marked in the
-// stencil buffer, so the slice and the ghost always show through.
-// Alpha is written only to keep these in the see-through pass, after the
-// solid cubes have marked the stencil.
+// Swept cubes (#67, #85), first pass: invisible faces that only write depth,
+// so the edge pass (block_swept_edges, this material's next pass) draws just
+// the edges of the swept faces nearest the camera. With no fill, the floor
+// and empty cells show through. Pixels a solid cube or the ghost has marked
+// in the stencil buffer are skipped, so the slice and the ghost always show.
+// Alpha keeps this in the see-through pass, after the solid cubes have
+// marked the stencil.
 render_mode unshaded, depth_draw_always, blend_mix;
 stencil_mode read, compare_not_equal, 1;
 
-#include "res://game/shaders/block_edges.gdshaderinc"
-
 void fragment() {
-	ALBEDO = mix(face_color.rgb, edge_color.rgb, edge_amount() * edge_color.a);
-	ALPHA = 1.0;
+	ALBEDO = vec3(0.0);
+	ALPHA = 0.0;
 }
