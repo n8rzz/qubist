@@ -254,3 +254,40 @@ func test_major_ticks_are_longer() -> void:
 			var length: float = (points[i + 1] - points[i]).length()
 			var expected: float = minf(group[1], ViewMath.FLOOR_TICK_MAX) if points[i].y < 0.01 else group[1]
 			check(is_equal_approx(length, expected), "tick %s has length %.2f" % [points[i], length])
+
+
+func test_crumble_starts_at_the_top() -> void:
+	var cells := [Vector3i(0, 0, 0), Vector3i(1, 0, 2), Vector3i(2, 0, 1), Vector3i(3, 0, 2)]
+	var starts := ViewMath.crumble_starts(cells, [0.0, 0.0, 0.0, 1.0], 0.1, 0.05)
+	check(is_equal_approx(starts[1], 0.0), "the top layer breaks first")
+	check(is_equal_approx(starts[2], 0.1), "one layer down waits one step")
+	check(is_equal_approx(starts[0], 0.2), "the floor layer breaks last")
+	check(is_equal_approx(starts[3], 0.05), "jitter staggers cubes within a layer")
+
+
+func test_rubble_peak_grows_with_the_tower() -> void:
+	var low := ViewMath.rubble_peak(20, 3.0, 0.12, 0.3, 2.5)
+	var high := ViewMath.rubble_peak(200, 3.0, 0.12, 0.3, 2.5)
+	check(high > low, "more cubes make a taller heap")
+	check_eq(ViewMath.rubble_peak(1, 3.0, 0.12, 0.3, 2.5), 0.3, "a few cubes still make a heap")
+	check_eq(ViewMath.rubble_peak(432, 3.0, 1.0, 0.3, 2.5), 2.5, "a full tower is capped")
+	check_eq(ViewMath.rubble_peak(0, 3.0, 0.12, 0.3, 2.5), 0.0, "no cubes, no heap")
+
+
+func test_rubble_height_slopes_to_the_edge() -> void:
+	check_eq(ViewMath.rubble_height(0.0, 2.0, 3.0), 2.0, "peak in the middle")
+	check_eq(ViewMath.rubble_height(3.0, 2.0, 3.0), 0.0, "flat at the edge")
+	check_eq(ViewMath.rubble_height(5.0, 2.0, 3.0), 0.0, "flat beyond the edge")
+	check(ViewMath.rubble_height(1.0, 2.0, 3.0) > ViewMath.rubble_height(2.0, 2.0, 3.0), "slopes down")
+
+
+func test_fall_seconds() -> void:
+	# Dropped from 4.9 under 9.8 lands after 1 second.
+	check(is_equal_approx(ViewMath.fall_seconds(4.9, 0.0, 9.8), 1.0))
+	# Thrown up, it takes longer.
+	check(ViewMath.fall_seconds(4.9, 2.0, 9.8) > 1.0)
+	# Landing above the start: reached on the way down from the peak.
+	var t := ViewMath.fall_seconds(-1.0, 6.0, 10.0)
+	check(is_equal_approx(6.0 * t - 5.0 * t * t, 1.0), "lands at the right height")
+	# Too low a throw to reach: stops at the peak instead of failing.
+	check(is_equal_approx(ViewMath.fall_seconds(-5.0, 1.0, 10.0), 0.1))

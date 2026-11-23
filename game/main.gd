@@ -45,6 +45,8 @@ const AXIS_LABEL_FADE_SECONDS := 0.1
 const ACCENT := Color("#2559C9")
 
 const TRAY_FADE_SECONDS := 0.2
+## A longer buzz as the tower starts to crumble (#132).
+const CRUMBLE_VIBRATE_MS := 300
 
 var config: Config = Config.new()
 var game: Game
@@ -101,6 +103,9 @@ var _touches := {}
 var _pinch_distance := 0.0
 ## Game over arrived while the move animation was playing; show it after.
 var _pending_game_over := false
+## True while game.place() runs, so a game over it raises waits for the
+## move's animation, which starts just after.
+var _placing := false
 
 
 func _ready() -> void:
@@ -169,6 +174,7 @@ func save_game() -> void:
 func _use_game(next: Game) -> void:
 	drag.clear()
 	tower.cancel_move_animation()
+	tower.clear_crumble()
 	_pending_game_over = false
 	game = next
 	game.game_over.connect(_on_game_over)
@@ -264,7 +270,9 @@ func _start_drag(index: int, finger: Vector2) -> void:
 
 ## The dragged piece was let go over a legal spot.
 func _place(index: int, origin: Vector3i) -> void:
+	_placing = true
 	var result: Dictionary = game.place(index, origin)
+	_placing = false
 	if result.ok:
 		haptics.tap()
 		if not result.lines.is_empty():
@@ -347,17 +355,35 @@ func _on_move_animation_finished() -> void:
 		_on_game_over(game.score)
 
 
-## Skips any running animation. Used by the smoke test.
+## Skips any running animation, the crumble included. Used by the smoke
+## test.
 func finish_animations() -> void:
 	tower.finish_move_animation()
+	tower.finish_crumble()
 	score_feedback.snap()
 
 
+## Once the last move has played out, the tower crumbles (#132), then the
+## game-over card comes up.
 func _on_game_over(_final_score: int) -> void:
-	if tower.is_animating():
+	if _placing or tower.is_animating():
 		_pending_game_over = true
 		return
 	_record_finished_game()
+	if not tower.has_crumbled():
+		Input.vibrate_handheld(CRUMBLE_VIBRATE_MS)
+		tower.play_crumble(game.grid.filled_cells())
+	elif not tower.is_crumbling():
+		_open_game_over_card()
+
+
+func _on_crumble_finished() -> void:
+	# Left for Home mid-crumble: the card would cover it.
+	if game.is_over and not menu_open():
+		_open_game_over_card()
+
+
+func _open_game_over_card() -> void:
 	# Above the last move's score pop and banner. Menus can't open while the
 	# card is up, so it never covers them.
 	game_over_card.move_to_front()
@@ -577,6 +603,7 @@ func _build_tower_area() -> Control:
 	tower.set_grid_ticks(settings.grid_ticks)
 	tower.rig.view_changed.connect(func(_step): _refresh())
 	tower.move_animation_finished.connect(_on_move_animation_finished)
+	tower.crumble_finished.connect(_on_crumble_finished)
 
 	for axis_name in Swiper.AXIS_NAMES:
 		var axis_label := UI.label(axis_name, AXIS_LABEL_SIZE, AXIS_LABEL_COLOR, HORIZONTAL_ALIGNMENT_CENTER)

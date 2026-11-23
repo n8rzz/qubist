@@ -62,6 +62,7 @@ const SWEEP_BORDER := 0.09
 const SWEEP_CAP_LIFT := 0.004
 
 const ClearingShader := preload("res://game/shaders/block_clearing.gdshader")
+const CrumblingShader := preload("res://game/shaders/block_crumbling.gdshader")
 
 ## A placed piece drops this far, in cubes, as it lands.
 const DROP_HEIGHT := 0.6
@@ -92,9 +93,40 @@ const SHAKE_PER_LINE := 0.12
 const MAX_SHAKE := 0.3
 const SHAKE_SECONDS := 0.3
 
+# Tower crumble on a loss (#132): the tower shakes as cracks spread through
+# every cube, then it breaks apart from the top down and the pieces fall
+# into a heap of rubble on the island, which stays until the next game.
+## The shake before the first cube breaks.
+const CRUMBLE_SHAKE_SECONDS := 0.8
+## How far the tower sways and cubes rattle at the height of the shake.
+const CRUMBLE_SWAY := 0.06
+const CRUMBLE_RATTLE := 0.025
+## Delay between one layer breaking and the one below, plus a random stagger
+## within each layer.
+const CRUMBLE_LAYER_SECONDS := 0.07
+const CRUMBLE_JITTER_SECONDS := 0.08
+const RUBBLE_PER_CUBE := 4
+const RUBBLE_GRAVITY := 16.0
+## Rubble left per broken cube, in cubic units, for sizing the heap.
+const RUBBLE_FILL := 0.12
+const RUBBLE_MIN_PEAK := 0.35
+const RUBBLE_MAX_PEAK := 2.4
+## The heap keeps this far inside the island's grass edge.
+const RUBBLE_EDGE_MARGIN := 0.4
+## How far each piece drifts from under its cube toward a random spot in the
+## heap (0 lands straight down, 1 anywhere).
+const RUBBLE_SCATTER := 0.7
+const CRUMBLE_DUST_SECONDS := 0.7
+## The camera rumbles while the tower comes down.
+const CRUMBLE_RUMBLE := 0.12
+const CRUMBLE_RUMBLE_FADE_SECONDS := 0.5
+
 ## Emitted when the move animation ends (or is skipped). Not emitted when it is
 ## cancelled.
 signal move_animation_finished
+## Emitted when the crumble ends (or is skipped), with the rubble at rest.
+## Not emitted when it is cleared.
+signal crumble_finished
 
 var grid_size := Vector3i(6, 6, 12)
 var rig: CameraRig
@@ -127,6 +159,23 @@ var _dust_list: Array = []
 var _burst := 1.0
 var _shake := 0.0
 var _move_tween: Tween
+## The crumble (#132): whole cubes shaking and cracking, the rubble they
+## break into and their dust.
+var _crumbling := MultiMeshInstance3D.new()
+var _rubble := MultiMeshInstance3D.new()
+var _crumble_dust := MultiMeshInstance3D.new()
+## True from play_crumble() until clear_crumble(): placed blocks are hidden.
+var _crumbled := false
+var _crumble_cells: Array = []
+## When each cube breaks, in seconds from the start of the crumble.
+var _crumble_breaks: Array[float] = []
+## Per-cube seed in 0..1 for its crack pattern and rattle.
+var _crumble_seeds: Array[float] = []
+## One entry per rubble piece: { "start", "rest", "up", "fall", ... }.
+var _rubble_list: Array = []
+var _crumble_dust_list: Array = []
+var _crumble_total := 0.0
+var _crumble_tween: Tween
 ## The sweep pane and the lit faces under it, in one mesh.
 var _sweep := MeshInstance3D.new()
 var _sweep_material := _sweep_plane_material()
@@ -175,11 +224,19 @@ func setup(size: Vector3i) -> void:
 	# the puffs.
 	_dust.material_override.render_priority = -3
 	_dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_crumbling.multimesh = _make_multimesh(true)
+	_crumbling.material_override = _block_material(CrumblingShader, BLOCK_COLOR, EDGE_COLOR)
+	_rubble.multimesh = _make_multimesh(true, 1.0)
+	_rubble.material_override = chip_material
+	_crumble_dust.multimesh = _make_dust_multimesh()
+	_crumble_dust.material_override = _dust.material_override
+	_crumble_dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sweep.mesh = ImmediateMesh.new()
 	_sweep.material_override = _sweep_material
 	_sweep.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sweep.visible = false
-	for node in [_solid, _behind, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust, _sweep]:
+	for node in [_solid, _behind, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust,
+			_crumbling, _rubble, _crumble_dust, _sweep]:
 		add_child(node)
 
 	rig = CameraRig.new()
@@ -209,7 +266,10 @@ func grid_ticks_visible() -> bool:
 
 ## Draws `cells`; those in `faded` (a set of Vector3i keys) are see-through
 ## outlines and those in `behind` (cubes behind the slice) are lighter.
+## Draws nothing once the tower has crumbled, until clear_crumble().
 func update_blocks(cells: Array, faded: Dictionary, behind := {}) -> void:
+	if _crumbled:
+		cells = []
 	var solid: Array = []
 	var faint: Array = []
 	var light: Array = []
@@ -262,10 +322,11 @@ func set_sweep(plane: Array, toward: Vector3i, cap_cells: Array) -> void:
 	mesh.surface_end()
 
 
-## 0 hides the sweep plane, 1 shows it at full strength.
+## 0 hides the sweep plane, 1 shows it at full strength. Stays hidden once
+## the tower has crumbled.
 func set_sweep_alpha(alpha: float) -> void:
 	_sweep_material.albedo_color = Color(1, 1, 1, alpha)
-	_sweep.visible = alpha > 0.0
+	_sweep.visible = alpha > 0.0 and not _crumbled
 
 
 func _add_quad(mesh: ImmediateMesh, corners: Array, color: Color) -> void:
@@ -524,6 +585,212 @@ func _draw_shake(t: float) -> void:
 	var amount := _shake * left * left
 	rig.camera.h_offset = amount * sin(since * 71.0)
 	rig.camera.v_offset = amount * cos(since * 53.0)
+
+
+# --- Crumble (#132) ---
+
+## Plays the loss animation over `cells`, every placed cube: the tower shakes
+## and cracks, then breaks from the top down into a heap of rubble that stays
+## until clear_crumble(). Placed blocks, the ghost and the sweep pane are
+## hidden meanwhile. Emits crumble_finished when the rubble has settled.
+func play_crumble(cells: Array) -> void:
+	clear_crumble()
+	cancel_move_animation()
+	_crumbled = true
+	hide_ghost()
+	set_sweep_alpha(0.0)
+	update_blocks([], {})
+	_crumble_cells = cells.duplicate()
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(_crumble_cells)
+	var jitter: Array = []
+	for c in _crumble_cells:
+		jitter.append(rng.randf())
+		_crumble_seeds.append(rng.randf())
+	for start in ViewMath.crumble_starts(_crumble_cells, jitter, CRUMBLE_LAYER_SECONDS, CRUMBLE_JITTER_SECONDS):
+		_crumble_breaks.append(CRUMBLE_SHAKE_SECONDS + start)
+
+	var rim := FloatingIsland.rim_half(grid_size)
+	var radius := minf(rim.x, rim.y) - RUBBLE_EDGE_MARGIN
+	var peak := ViewMath.rubble_peak(_crumble_cells.size(), radius, RUBBLE_FILL, RUBBLE_MIN_PEAK, RUBBLE_MAX_PEAK)
+	_crumble_total = 0.0
+	for i in range(_crumble_cells.size()):
+		var center := ViewMath.to_world(_crumble_cells[i], grid_size)
+		var broken := _crumble_breaks[i] + CRACK_SECONDS
+		for k in range(RUBBLE_PER_CUBE):
+			var start := center + Vector3(rng.randf_range(-0.28, 0.28), rng.randf_range(-0.28, 0.28), rng.randf_range(-0.28, 0.28))
+			var spot := Vector2.from_angle(rng.randf() * TAU) * radius * sqrt(rng.randf())
+			var land := Vector2(start.x, start.z).lerp(spot, RUBBLE_SCATTER)
+			if land.length() > radius:
+				land = land.normalized() * radius
+			var size := Vector3(rng.randf_range(0.26, 0.46), rng.randf_range(0.18, 0.34), rng.randf_range(0.26, 0.46))
+			var lift := ViewMath.rubble_height(land.length(), peak, radius) * rng.randf_range(0.7, 1.0)
+			var rest := Vector3(land.x, lift + size.y * 0.5, land.y)
+			var up := rng.randf_range(0.5, 2.5)
+			var fall := ViewMath.fall_seconds(start.y - rest.y, up, RUBBLE_GRAVITY)
+			var stone := rng.randf_range(0.8, 1.06)
+			_rubble_list.append({
+				"cube": i,
+				"start": start,
+				"rest": rest,
+				"up": up,
+				"fall": fall,
+				"axis": Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)).normalized(),
+				"spin": rng.randf_range(3.0, 8.0),
+				"size": size,
+				"color": Color(BLOCK_COLOR.r * stone, BLOCK_COLOR.g * stone, BLOCK_COLOR.b * stone),
+			})
+			_crumble_total = maxf(_crumble_total, broken + fall)
+		for k in range(DUST_PER_CUBE):
+			_crumble_dust_list.append({
+				"cube": i,
+				"offset": Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(-0.2, 0.2), rng.randf_range(-0.3, 0.3)),
+				"rise": rng.randf_range(0.2, 0.6),
+				"size": rng.randf_range(1.0, 1.5),
+			})
+		_crumble_total = maxf(_crumble_total, broken + CRUMBLE_DUST_SECONDS)
+
+	_set_crumble_time(0.0)
+	_crumble_tween = create_tween()
+	_crumble_tween.tween_method(_set_crumble_time, 0.0, _crumble_total, _crumble_total)
+	_crumble_tween.finished.connect(_end_crumble.bind(true))
+
+
+func is_crumbling() -> bool:
+	return _crumble_tween != null and _crumble_tween.is_valid()
+
+
+## True from play_crumble() until clear_crumble(), the rubble included.
+func has_crumbled() -> bool:
+	return _crumbled
+
+
+## Jumps the crumble to its settled rubble, emitting crumble_finished.
+func finish_crumble() -> void:
+	if is_crumbling():
+		_crumble_tween.kill()
+		_set_crumble_time(_crumble_total)
+		_end_crumble(true)
+
+
+## Sweeps the rubble away and lets update_blocks() draw placed cubes again,
+## without emitting crumble_finished.
+func clear_crumble() -> void:
+	if _crumble_tween != null:
+		_crumble_tween.kill()
+	_end_crumble(false)
+	_crumbled = false
+	_crumble_cells.clear()
+	_crumble_breaks.clear()
+	_crumble_seeds.clear()
+	_rubble_list.clear()
+	_crumble_dust_list.clear()
+	for node in [_crumbling, _rubble, _crumble_dust]:
+		node.multimesh.instance_count = 0
+
+
+## Leaves the rubble where it lies.
+func _end_crumble(notify: bool) -> void:
+	_crumble_tween = null
+	if rig != null:
+		rig.camera.h_offset = 0.0
+		rig.camera.v_offset = 0.0
+	if notify:
+		crumble_finished.emit()
+
+
+func _set_crumble_time(t: float) -> void:
+	_draw_crumbling_cubes(t)
+	_draw_rubble(t)
+	_draw_crumble_dust(t)
+	_draw_rumble(t)
+
+
+## Cubes still standing sway with the tower and rattle on their own, cracking
+## more the closer they are to breaking, and swell just before they go.
+func _draw_crumbling_cubes(t: float) -> void:
+	var shake := smoothstep(0.0, CRUMBLE_SHAKE_SECONDS, t)
+	var sway := Vector3(sin(t * 37.0), 0.0, cos(t * 29.0)) * CRUMBLE_SWAY * shake
+	var standing: Array[int] = []
+	for i in range(_crumble_cells.size()):
+		if t < _crumble_breaks[i] + CRACK_SECONDS:
+			standing.append(i)
+	var mm := _crumbling.multimesh
+	mm.instance_count = standing.size()
+	for n in range(standing.size()):
+		var i := standing[n]
+		var cube_seed := _crumble_seeds[i]
+		var cell: Vector3i = _crumble_cells[i]
+		# Higher cubes sway further, as if the tower rocks on its base.
+		var lean := sway * (0.3 + 0.7 * float(cell.z + 1) / grid_size.z)
+		var rattle := Vector3(sin(t * 61.0 + cube_seed * 40.0), 0.5 * sin(t * 73.0 + cube_seed * 17.0),
+			cos(t * 67.0 + cube_seed * 29.0)) * CRUMBLE_RATTLE * shake
+		var crack := clampf(t / _crumble_breaks[i], 0.0, 1.0)
+		var swell := clampf((t - _crumble_breaks[i]) / CRACK_SECONDS, 0.0, 1.0)
+		var basis := Basis(Vector3(cube_seed - 0.5, 0.0, 0.5 - cube_seed).normalized(), 0.04 * shake * sin(t * 41.0 + cube_seed * 9.0)) \
+			.scaled(Vector3.ONE * (1.0 + CRACK_SWELL * swell))
+		mm.set_instance_transform(n, Transform3D(basis, ViewMath.to_world(cell, grid_size) + lean + rattle))
+		mm.set_instance_color(n, Color(ease(crack, 0.6), cube_seed, 0.0))
+
+
+## Pieces fly out from each broken cube and fall onto the heap, where they
+## stay.
+func _draw_rubble(t: float) -> void:
+	var live: Array = []
+	for piece in _rubble_list:
+		var since: float = t - _crumble_breaks[piece.cube] - CRACK_SECONDS
+		if since >= 0.0:
+			live.append([piece, since])
+	var mm := _rubble.multimesh
+	mm.instance_count = live.size()
+	for n in range(live.size()):
+		var piece: Dictionary = live[n][0]
+		var since: float = minf(live[n][1], piece.fall)
+		var start: Vector3 = piece.start
+		var rest: Vector3 = piece.rest
+		var along := since / maxf(piece.fall, 0.001)
+		var origin := Vector3(
+			lerpf(start.x, rest.x, along),
+			start.y + piece.up * since - 0.5 * RUBBLE_GRAVITY * since * since,
+			lerpf(start.z, rest.z, along))
+		if since >= piece.fall:
+			origin = rest
+		var basis := Basis(piece.axis, piece.spin * since).scaled(piece.size)
+		mm.set_instance_transform(n, Transform3D(basis, origin))
+		mm.set_instance_color(n, piece.color)
+
+
+func _draw_crumble_dust(t: float) -> void:
+	var live: Array = []
+	for puff in _crumble_dust_list:
+		var since: float = t - _crumble_breaks[puff.cube] - CRACK_SECONDS
+		if since >= 0.0 and since < CRUMBLE_DUST_SECONDS:
+			live.append([puff, since])
+	var facing := rig.camera.global_transform.basis.orthonormalized()
+	var mm := _crumble_dust.multimesh
+	mm.instance_count = live.size()
+	for n in range(live.size()):
+		var puff: Dictionary = live[n][0]
+		var life: float = live[n][1] / CRUMBLE_DUST_SECONDS
+		var size: float = puff.size * (0.5 + ease(life, 0.4) * 0.9)
+		var origin: Vector3 = ViewMath.to_world(_crumble_cells[puff.cube], grid_size) + puff.offset \
+			+ Vector3.UP * puff.rise * life
+		mm.set_instance_transform(n, Transform3D(facing.scaled(Vector3.ONE * size), origin))
+		mm.set_instance_color(n, Color(DUST_COLOR, 0.5 * (1.0 - life) * minf(life * 8.0, 1.0)))
+
+
+## The camera rumbles from the shake until the last cube breaks, then settles.
+func _draw_rumble(t: float) -> void:
+	if rig == null or _crumble_breaks.is_empty():
+		return
+	var last: float = float(_crumble_breaks.max()) + CRACK_SECONDS
+	var amount := CRUMBLE_RUMBLE * smoothstep(CRUMBLE_SHAKE_SECONDS * 0.5, CRUMBLE_SHAKE_SECONDS, t)
+	if t > last:
+		var left := 1.0 - clampf((t - last) / CRUMBLE_RUMBLE_FADE_SECONDS, 0.0, 1.0)
+		amount *= left * left
+	rig.camera.h_offset = amount * sin(t * 71.0)
+	rig.camera.v_offset = amount * cos(t * 53.0)
 
 
 ## Screen position, in this view's viewport, of a world point.
