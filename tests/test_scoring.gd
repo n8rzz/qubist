@@ -43,3 +43,13 @@ func test_streak_bonus_grows() -> void:
 
 func test_streak_bonus_needs_a_clear() -> void:
 	check_eq(scoring.score_placement([], 3).streak_bonus, 0)
+
+
+func test_uses_the_configs_numbers() -> void:
+	const Config := preload("res://core/config.gd")
+	var cfg := Config.new({"scoring": {"points_per_cube_cleared": 7, "streak_bonus": 20}})
+	var custom := Scoring.new(cfg)
+	var s := custom.score_placement([6, 12], 3)
+	check_eq(s.line_points, 7 * 18 * 2)
+	check_eq(s.streak_bonus, 20 * 2)
+	check_eq(s.total, 7 * 18 * 2 + 20 * 2)
