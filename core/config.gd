@@ -57,6 +57,9 @@ func apply(game_data: Dictionary, pieces_data: Dictionary) -> void:
 	pieces.clear()
 	_by_id.clear()
 	for entry in pieces_data.get("pieces", []):
+		if (entry.get("cells", []) as Array).is_empty():
+			push_error("Piece '%s' has no cells" % str(entry.get("id", "")))
+			continue
 		for expanded in _expand(entry):
 			var piece := Piece.new(expanded)
 			if _by_id.has(piece.id):
@@ -73,8 +76,6 @@ static func _expand(entry: Dictionary) -> Array:
 	if str(entry.get("orientations", "")) != "all":
 		return [entry]
 	var raw := Piece.parse_cells(entry.get("cells", []))
-	if raw.is_empty():
-		return [entry]
 	var id := str(entry.get("id", ""))
 	var turns: Array = Piece.orientations(raw)
 	var weight := float(entry.get("weight", 1.0)) / turns.size()
