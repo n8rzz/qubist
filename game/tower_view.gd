@@ -218,7 +218,7 @@ func setup(size: Vector3i) -> void:
 	chip_material.vertex_color_use_as_albedo = true
 	chip_material.vertex_color_is_srgb = true
 	_chips.material_override = chip_material
-	_dust.multimesh = _make_dust_multimesh()
+	_dust.multimesh = _make_multimesh(true, CUBE_SIZE, QuadMesh.new())
 	_dust.material_override = _dust_material()
 	# Before swept cubes, whose invisible faces would otherwise cut holes in
 	# the puffs.
@@ -228,7 +228,7 @@ func setup(size: Vector3i) -> void:
 	_crumbling.material_override = _block_material(CrumblingShader, BLOCK_COLOR, EDGE_COLOR)
 	_rubble.multimesh = _make_multimesh(true, 1.0)
 	_rubble.material_override = chip_material
-	_crumble_dust.multimesh = _make_dust_multimesh()
+	_crumble_dust.multimesh = _make_multimesh(true, CUBE_SIZE, QuadMesh.new())
 	_crumble_dust.material_override = _dust.material_override
 	_crumble_dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sweep.mesh = ImmediateMesh.new()
@@ -853,21 +853,16 @@ func _fill(target: MultiMeshInstance3D, cells: Array) -> void:
 		mm.set_instance_transform(i, Transform3D(Basis(), ViewMath.to_world(cells[i], grid_size)))
 
 
-func _make_multimesh(colors := false, size := CUBE_SIZE) -> MultiMesh:
+## A MultiMesh of `mesh`, or of cubes `size` wide when no mesh is given.
+func _make_multimesh(colors := false, size := CUBE_SIZE, mesh: Mesh = null) -> MultiMesh:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = colors
-	var box := BoxMesh.new()
-	box.size = Vector3.ONE * size
-	mm.mesh = box
-	return mm
-
-
-func _make_dust_multimesh() -> MultiMesh:
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
-	mm.mesh = QuadMesh.new()
+	if mesh == null:
+		var box := BoxMesh.new()
+		box.size = Vector3.ONE * size
+		mesh = box
+	mm.mesh = mesh
 	return mm
 
 
