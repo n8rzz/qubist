@@ -526,10 +526,6 @@ func _draw_shake(t: float) -> void:
 	rig.camera.v_offset = amount * cos(since * 53.0)
 
 
-func camera() -> Camera3D:
-	return rig.camera
-
-
 ## Screen position, in this view's viewport, of a world point.
 func project_point(p: Vector3) -> Vector2:
 	return rig.camera.unproject_position(p)
