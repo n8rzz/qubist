@@ -45,3 +45,32 @@ func test_array_round_trip() -> void:
 	check(copy.is_filled(Vector3i(5, 5, 11)))
 	check_eq(copy.filled_count(), 2)
 	check_eq(copy.filled_cells().size(), 2)
+
+
+# Saves store to_array() as-is, so its order (x fastest, then y, then h) is
+# part of the save format. A grid with distinct sizes catches swapped axes.
+func test_array_order() -> void:
+	var g := Grid.new(3, 4, 5)
+	fill(g, [Vector3i(1, 0, 0), Vector3i(0, 1, 0), Vector3i(0, 0, 1)])
+	var values := g.to_array()
+	var filled: Array[int] = []
+	for i in range(values.size()):
+		if values[i] != 0:
+			filled.append(i)
+	var expected: Array[int] = [1, g.width, g.width * g.depth]
+	check_eq(filled, expected)
+
+
+func test_filled_cells_order() -> void:
+	var g := Grid.new(3, 4, 5)
+	var expected: Array[Vector3i] = [
+		Vector3i(2, 0, 0),
+		Vector3i(0, 1, 0),
+		Vector3i(1, 1, 0),
+		Vector3i(0, 0, 1),
+		Vector3i(2, 3, 4),
+	]
+	var reversed := expected.duplicate()
+	reversed.reverse()
+	fill(g, reversed)
+	check_eq(g.filled_cells(), expected)
