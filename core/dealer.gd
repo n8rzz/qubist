@@ -31,18 +31,18 @@ func _init(pieces: Array, p_tray_size: int = 3, p_max_rerolls: int = 5, seed_val
 
 func pick():
 	var roll := rng.randf() * _total_weight
+	# Floating-point leftovers can let the roll fall through, so remember the
+	# last piece that can be picked and return it at the end.
+	var last_pickable = _pieces[-1]
 	for piece in _pieces:
 		var w := maxf(piece.weight, 0.0)
 		if w <= 0.0:
 			continue
+		last_pickable = piece
 		roll -= w
 		if roll < 0.0:
 			return piece
-	# Floating-point leftovers: fall back to the last piece that can be picked.
-	for i in range(_pieces.size() - 1, -1, -1):
-		if _pieces[i].weight > 0.0:
-			return _pieces[i]
-	return _pieces[-1]
+	return last_pickable
 
 
 func deal(grid) -> Array:
