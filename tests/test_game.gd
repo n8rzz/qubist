@@ -160,6 +160,36 @@ func test_placement_that_strands_the_tray_ends_the_game() -> void:
 	check(game.tray[1] != null and game.tray[2] != null, "unplaceable pieces stay in the tray")
 
 
+## Placing the last tray piece deals a fresh tray. If none of the new pieces
+## can be placed, the game ends right there, in _refill().
+func test_refill_that_cannot_be_placed_ends_the_game() -> void:
+	# The dot is never dealt (weight 0), so every refill is 2x2x2 blocks,
+	# which a checkerboard leaves no room for.
+	var cfg := Config.new({}, {"pieces": [
+		{"id": "dot", "weight": 0.0, "cells": [[0, 0, 0]]},
+		{"id": "block", "weight": 1.0, "cells": [
+			[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0],
+			[0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]]},
+	]})
+	var game := Game.new(cfg, 7)
+	game.start()
+	game.grid.clear_all()
+	checkerboard(game.grid)
+	game.tray = [cfg.piece_by_id("dot"), null, null]
+	var events: Array = []
+	game.tray_refilled.connect(func(_tray): events.append("refilled"))
+	game.game_over.connect(func(_score): events.append("game_over"))
+	var result: Dictionary = game.place(0, Vector3i(1, 0, 0))
+	check(result.ok)
+	check_eq(result.lines.size(), 0, "the placement clears nothing")
+	check_eq(events, ["refilled", "game_over"], "the refill ends the game")
+	check(result.game_over, "result reports game over")
+	check(game.is_over)
+	check_eq(game.tray.size(), 3)
+	for piece in game.tray:
+		check(piece != null and piece.id == "block", "the refill dealt only blocks")
+
+
 func test_start_resets_a_played_game() -> void:
 	var game = _game([BAR2_X, BAR2_X, "cube2"])
 	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))

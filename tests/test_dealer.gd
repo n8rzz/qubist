@@ -52,3 +52,44 @@ func test_rerolls_sets_that_cannot_be_placed() -> void:
 	for _round in range(20):
 		var tray := dealer.deal(grid)
 		check(tray.any(func(p): return Rules.has_any_legal(grid, p)), "tray %s has no playable piece" % [_ids(tray)])
+
+
+## On a full grid nothing fits, so every reroll fails. deal() still hands
+## back a full tray: the last set it drew, after max_rerolls rerolls.
+func test_full_tray_when_every_reroll_fails() -> void:
+	var cfg := Config.new()
+	var grid := Grid.new(2, 2, 2)
+	for h in range(2):
+		for y in range(2):
+			for x in range(2):
+				grid.set_filled(Vector3i(x, y, h), true)
+	var dealer := Dealer.new(cfg.pieces, 3, 4, 11)
+	var tray := dealer.deal(grid)
+	check_eq(tray.size(), 3)
+	for piece in tray:
+		check(piece != null, "tray slot is empty")
+		check(not Rules.has_any_legal(grid, piece), "%s fits a full grid" % piece.id)
+	# Draw the same picks by hand: the first set plus 4 rerolls, 3 pieces each.
+	var same := Dealer.new(cfg.pieces, 3, 4, 11)
+	var picks: Array = []
+	for _i in range((4 + 1) * 3):
+		picks.append(same.pick())
+	check_eq(_ids(tray), _ids(picks.slice(-3)), "the tray is the last set drawn")
+	check_eq(dealer.rng.state, same.rng.state, "deal() drew exactly the first set and 4 rerolls")
+
+
+func test_picks_follow_the_weights() -> void:
+	var cfg := Config.new({}, {"pieces": [
+		{"id": "heavy", "weight": 3.0, "cells": [[0, 0, 0]]},
+		{"id": "light", "weight": 1.0, "cells": [[0, 0, 0]]},
+	]})
+	var dealer := Dealer.new(cfg.pieces, 3, 0, 21)
+	const PICKS := 4000
+	var heavy := 0
+	for _i in range(PICKS):
+		if dealer.pick().id == "heavy":
+			heavy += 1
+	var share := float(heavy) / PICKS
+	# Expect 75%. One standard deviation is under 1%, so 5% either way is
+	# generous.
+	check(share > 0.70 and share < 0.80, "heavy was picked %.1f%% of the time, expected about 75%%" % (share * 100.0))
