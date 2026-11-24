@@ -809,12 +809,17 @@ func _build_controls() -> Control:
 	swiper_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	swiper_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	swiper_bar.custom_minimum_size.y = 56
-	swiper_bar.add_theme_stylebox_override("panel", UI.card(UI.WHITE, 28, Vector2(6, 6)))
+	var bar_card := UI.card(UI.WHITE, 28, Vector2(6, 6))
+	# Extra room past the slider's end, so the knob doesn't crowd the bar's
+	# rounded edge.
+	bar_card.content_margin_right = 18
+	swiper_bar.add_theme_stylebox_override("panel", bar_card)
 	var inner := HBoxContainer.new()
 	inner.add_theme_constant_override("separation", 10)
 	swiper_bar.add_child(inner)
 
-	# The axis toggle: a pale pill track with the chosen axis filled in ink.
+	# The axis toggle: a pale pill track with the chosen axis drawn as the
+	# teal primary key, ledge and all (#162).
 	var track := PanelContainer.new()
 	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	track.add_theme_stylebox_override("panel", UI.box(UI.SEGMENT_TRACK, Color(0, 0, 0, 0), 22, 0, Vector2(2, 2)))
@@ -831,8 +836,10 @@ func _build_controls() -> Control:
 		b.custom_minimum_size = Vector2(40, 40)
 		b.add_theme_stylebox_override("normal", UI.box(clear, clear, 20, 0))
 		b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.6), clear, 20, 0))
-		b.add_theme_stylebox_override("pressed", UI.box(UI.SKY_INK, clear, 20, 0))
-		b.add_theme_stylebox_override("hover_pressed", UI.box(UI.SKY_INK, clear, 20, 0))
+		b.add_theme_stylebox_override("pressed", UI.accent_key(20, UI.SKY_ACCENT, 3))
+		b.add_theme_stylebox_override("hover_pressed", UI.accent_key(20, UI.SKY_ACCENT, 3))
+		for state in ["font_color", "font_hover_color"]:
+			b.add_theme_color_override(state, UI.SKY_MUTED)
 		b.add_theme_color_override("font_pressed_color", UI.WHITE)
 		b.add_theme_color_override("font_hover_pressed_color", UI.WHITE)
 		b.pressed.connect(_set_slice_mode.bind(mode))
@@ -851,7 +858,7 @@ func _build_controls() -> Control:
 	slice_slider.step = 1
 	slice_slider.focus_mode = Control.FOCUS_NONE
 	slice_slider.custom_minimum_size.y = 40
-	var grabber := UI.grabber_texture(26)
+	var grabber := UI.knob_texture(26)
 	slice_slider.add_theme_icon_override("grabber", grabber)
 	slice_slider.add_theme_icon_override("grabber_highlight", grabber)
 	slice_slider.add_theme_stylebox_override("slider", UI.slider_track(UI.SLIDER_RAIL))

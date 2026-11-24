@@ -126,41 +126,50 @@ static func text_button(text: String, font_size: int, primary := false) -> Butto
 	for state in ["font_color", "font_hover_color", "font_pressed_color"]:
 		b.add_theme_color_override(state, fg)
 	if primary:
-		for state in ["normal", "hover", "pressed"]:
-			var face := SKY_ACCENT
-			if state == "hover":
-				face = SKY_ACCENT.lightened(0.06)
-			elif state == "pressed":
-				face = SKY_ACCENT.darkened(0.08)
-			var style := box(face, Color(0, 0, 0, 0), 22, 0)
-			style.shadow_color = ACCENT_LEDGE
-			style.shadow_size = 1
-			style.shadow_offset = Vector2(0, 1 if state == "pressed" else 4)
-			b.add_theme_stylebox_override(state, style)
+		b.add_theme_stylebox_override("normal", accent_key(22))
+		b.add_theme_stylebox_override("hover", accent_key(22, SKY_ACCENT.lightened(0.06)))
+		b.add_theme_stylebox_override("pressed", accent_key(22, SKY_ACCENT.darkened(0.08), 1))
 	else:
 		style_card_button(b, 22)
 	return b
 
 
-## Slider track: a rounded bar 6 px thick.
+## The teal primary face with its dark ledge `drop` points deep, shared by
+## primary buttons and the swiper's chosen axis.
+static func accent_key(radius: int, face: Color = SKY_ACCENT, drop: int = 4) -> StyleBoxFlat:
+	var style := box(face, Color(0, 0, 0, 0), radius, 0)
+	style.shadow_color = ACCENT_LEDGE
+	style.shadow_size = 1
+	style.shadow_offset = Vector2(0, drop)
+	return style
+
+
+## Slider track: a rounded bar 10 px thick.
 static func slider_track(color: Color) -> StyleBoxFlat:
-	var b := box(color, Color(0, 0, 0, 0), 3, 0)
-	b.content_margin_top = 3
-	b.content_margin_bottom = 3
+	var b := box(color, Color(0, 0, 0, 0), 5, 0)
+	b.content_margin_top = 5
+	b.content_margin_bottom = 5
 	return b
 
 
-## A round slider grabber: white with a `ring` coloured edge and a faint
-## shadow, drawn in code so it needs no image assets.
-static func grabber_texture(diameter: int, ring: Color = SKY_ACCENT) -> ImageTexture:
-	var img := Image.create(diameter, diameter, false, Image.FORMAT_RGBA8)
+## A round slider knob like the Settings switch's: plain white with a soft
+## shadow 2 px below it, drawn in code so it needs no image assets. The
+## texture is 3 px taller than `diameter` to fit the shadow.
+static func knob_texture(diameter: int) -> ImageTexture:
+	var img := Image.create(diameter, diameter + 3, false, Image.FORMAT_RGBA8)
 	var r := diameter * 0.5
-	for y in range(diameter):
+	var knob := Vector2(r, r)
+	var shadow := knob + Vector2(0, 2)
+	for y in range(diameter + 3):
 		for x in range(diameter):
-			var d := Vector2(x + 0.5 - r, y + 0.5 - r).length()
-			var edge := clampf(r - d, 0.0, 1.0)
-			var fill := clampf(r - 3.0 - d, 0.0, 1.0)
-			img.set_pixel(x, y, ring.lerp(WHITE, fill) * Color(1, 1, 1, edge))
+			var p := Vector2(x + 0.5, y + 0.5)
+			var a_knob := clampf(r - 0.5 - p.distance_to(knob), 0.0, 1.0)
+			var a_shadow := clampf(r - p.distance_to(shadow), 0.0, 1.0) * 0.12
+			var out_a := a_knob + a_shadow * (1.0 - a_knob)
+			if out_a <= 0.0:
+				continue
+			var c := WHITE * a_knob + Color.BLACK * a_shadow * (1.0 - a_knob)
+			img.set_pixel(x, y, Color(c.r / out_a, c.g / out_a, c.b / out_a, out_a))
 	return ImageTexture.create_from_image(img)
 
 
