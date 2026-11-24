@@ -45,9 +45,18 @@ func test_unknown_piece_is_null() -> void:
 	check(Config.new().piece_by_size(Vector3i(5, 5, 5)) == null)
 
 
+## The weight written in config/pieces.json for the entry with this id.
+func _entry_weight(id: String) -> float:
+	for entry in Config.load_json(Config.DEFAULT_PIECES_PATH).pieces:
+		if entry.id == id:
+			return float(entry.weight)
+	return -1.0
+
+
 ## Each bar is dealt in three orientations whose weights add up to the
-## cube's, so the cube is picked as often as either bar shape.
-func test_bars_weigh_the_same_as_the_cube() -> void:
+## weight its entry is given, so tuning a shape's weight (#21) tunes the
+## shape as a whole.
+func test_bar_orientations_share_the_entry_weight() -> void:
 	var cfg := Config.new()
 	for bar in ["bar2", "bar4"]:
 		var total := 0.0
@@ -57,7 +66,7 @@ func test_bars_weigh_the_same_as_the_cube() -> void:
 				total += p.weight
 				count += 1
 		check_eq(count, 3, "%s lies along x, along y or upright" % bar)
-		check(is_equal_approx(total, cfg.piece_by_id("cube2").weight), "%s weighs as much as cube2" % bar)
+		check(is_equal_approx(total, _entry_weight(bar)), "%s orientations add up to its entry weight" % bar)
 
 
 func test_piece_cells_are_normalized() -> void:
@@ -97,7 +106,7 @@ func test_all_orientations_expand_into_rotations() -> void:
 			total += piece.weight
 			check(not seen.has(str(piece.cells)), "%s is listed twice" % piece.id)
 			seen[str(piece.cells)] = true
-		check(absf(total - 1.0) < 0.0001, "%s weights add up to 1" % key)
+		check(absf(total - _entry_weight(key)) < 0.0001, "%s weights add up to its entry weight" % key)
 
 
 func test_first_orientation_is_the_one_written() -> void:

@@ -13,6 +13,7 @@ The product requirements live in Notion (Qubist › PRD and Concept wireframes).
 | `game/` | The greybox game screen: layout, 3D tower view, camera, piece previews and touch input. Builds its UI in code. |
 | `assets/` | The app icon, the Fredoka and Inter fonts (`assets/fonts/`, each with its OFL license), the sound effects and music (`assets/audio/`, with every source and license in `CREDITS.md`) and `ui_theme.tres`, the project theme that makes Inter the default font. |
 | `scenes/` | `loading.tscn`, the loading view the app starts in, and `main.tscn`, the game screen it hands off to (opening on Home). |
+| `tools/` | `simulate.gd`, which plays many games with bots to check game length and score spread. Results and the chosen config values are in [docs/tuning.md](docs/tuning.md). |
 | `tests/` | Unit tests for everything in `core/`, with a small built-in runner (no add-ons needed). |
 
 ## Coordinates
@@ -83,7 +84,7 @@ Add an entry to `config/pieces.json`. Each entry is one piece in one fixed orien
 { "id": "l3_x", "shape": "3-cube L", "weight": 0.25, "cells": [[0,0,0],[1,0,0],[0,1,0]] }
 ```
 
-`weight` sets how often the dealer picks it relative to the others.
+`weight` sets how often the dealer picks it relative to the others. Before changing a weight, see [docs/tuning.md](docs/tuning.md) for how the current ones were chosen and how to measure a change.
 
 To deal a shape in every orientation, write it once and add `"orientations": "all"`. The config expands it into one piece per distinct 3D rotation (`L4_00`, `L4_01`, …) and splits `weight` evenly between them:
 
