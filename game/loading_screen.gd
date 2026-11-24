@@ -16,8 +16,6 @@ const UI := preload("res://game/ui_style.gd")
 signal finished
 
 const MAIN_SCENE := "res://scenes/main.tscn"
-## Where the game keeps its settings, for the sky's season and time (#168).
-const SETTINGS_PATH := "user://settings.json"
 ## The view stays up at least this long, even when the game is ready sooner.
 const MIN_SECONDS := 3.0
 const FADE_SECONDS := 0.3
@@ -144,9 +142,8 @@ func _finish() -> void:
 func _build() -> void:
 	# The game screen does the same once it loads, so the sky carries on.
 	var settings := Settings.new()
-	settings.from_dict(SaveFile.read(SETTINGS_PATH))
-	SkyView.still = DisplayServer.accessibility_should_reduce_animation() == 1
-	SkyView.follow(settings, true)
+	settings.from_dict(SaveFile.read(Settings.PATH))
+	SkyView.start(settings)
 	add_child(SkyBackdrop.new())
 
 	var center := MarginContainer.new()

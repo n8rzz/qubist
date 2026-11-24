@@ -53,9 +53,6 @@ const TRAY_FADE_SECONDS := 0.2
 const CRUMBLE_VIBRATE_MS := 300
 ## How far below the tower area's top edge hints appear.
 const HINT_TOP := 64.0
-## How often, in seconds, the sky checks the clock for a new season or time
-## of day (#168).
-const SKY_CHECK_SECONDS := 30.0
 
 var config: Config = Config.new()
 var game: Game
@@ -65,7 +62,7 @@ var stats: Stats = Stats.new()
 var stats_path := "user://stats.json"
 ## Player settings, loaded from and saved to `settings_path`.
 var settings: Settings = Settings.new()
-var settings_path := "user://settings.json"
+var settings_path := Settings.PATH
 ## Whether the tutorial and each one-time hint have been shown (#29).
 var onboarding: Onboarding = Onboarding.new()
 var onboarding_path := "user://onboarding.json"
@@ -139,8 +136,6 @@ var _pending_game_over := false
 ## True while game.place() runs, so a game over it raises waits for the
 ## move's animation, which starts just after.
 var _placing := false
-## Seconds until the sky next checks the clock.
-var _sky_check_in := SKY_CHECK_SECONDS
 
 
 func _ready() -> void:
@@ -155,9 +150,7 @@ func _ready() -> void:
 	audio.music_volume = settings.music_volume
 	add_child(audio)
 	analytics.enabled = settings.analytics
-	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
-	SkyView.still = DisplayServer.accessibility_should_reduce_animation() == 1
-	SkyView.follow(settings, true)
+	SkyView.start(settings)
 	if analytics.backend == null and OS.is_debug_build():
 		analytics.backend = Analytics.LogBackend.new()
 	add_child(ErrorReporter.new(analytics))
@@ -259,15 +252,11 @@ func _process(delta: float) -> void:
 		tower.set_sweep_alpha(swiper.sweep_alpha())
 
 
-## Follows the clock when Settings says the sky follows the day, checking
-## every SKY_CHECK_SECONDS but never while a piece is being dragged (#168).
-## Applies the current sky's light, snow and text colours to the game.
+## Follows the clock when Settings says the sky follows the day, but never
+## while a piece is being dragged (#168). Applies the current sky's light,
+## snow and text colours to the game.
 func update_sky(delta: float) -> void:
-	_sky_check_in -= delta
-	if _sky_check_in <= 0.0 and not drag.is_dragging():
-		_sky_check_in = SKY_CHECK_SECONDS
-		if settings.sky_follows_day:
-			SkyView.follow(settings)
+	SkyView.follow_clock(delta, drag.is_dragging())
 	viewport_box.modulate = SkyView.tint()
 	var snow := SkyView.snow_amount()
 	if not is_equal_approx(tower.snow_amount(), snow):
