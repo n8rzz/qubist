@@ -251,10 +251,14 @@ func _check_game_over_card() -> void:
 
 
 ## On a loss the last move lands, then the tower shakes and crumbles into
-## rubble before the game-over card comes up (#132).
+## rubble before the game-over card comes up (#132). The game ends while its
+## last move is still animating, so main holds the game over until then
+## (#112).
 func _check_crumble() -> void:
 	var tower = main.tower
 	var cubes: int = main.game.grid.filled_cells().size()
+	if not tower.is_animating():
+		failures.append("the last move was not animating when the game ended, so the held game over went untested")
 	if main.game_over_card.visible:
 		failures.append("game-over card opened before the last move landed")
 	tower.finish_move_animation()
@@ -267,6 +271,8 @@ func _check_crumble() -> void:
 	main.finish_animations()
 	if tower.is_crumbling() or not tower.has_crumbled():
 		failures.append("crumble did not finish into rubble")
+	if not main.game_over_card.visible:
+		failures.append("the held game over did not open the game-over card once the tower crumbled")
 	if tower._rubble.multimesh.instance_count != cubes * tower.RUBBLE_PER_CUBE:
 		failures.append("rubble has %d pieces, expected %d" % [tower._rubble.multimesh.instance_count, cubes * tower.RUBBLE_PER_CUBE])
 	if tower._crumbling.multimesh.instance_count != 0:
@@ -289,8 +295,9 @@ func _check_stats() -> void:
 		failures.append("autoplay could not finish a game")
 		return
 	_check_crumble()
-	main._on_game_over(main.game.score)
 	_check_game_over_card()
+	# A repeated game_over must not count the game a second time.
+	main._on_game_over(main.game.score)
 	if main.stats.games_played != before + 1:
 		failures.append("finished game counted %d times" % (main.stats.games_played - before))
 	if main.stats.best_score < main.game.score:
