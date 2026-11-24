@@ -85,6 +85,7 @@ func _show_home_button(on: bool) -> void:
 func _end(completed: bool) -> void:
 	if not is_active():
 		return
+	host.analytics.tutorial_ended(completed, step)
 	step = -1
 	_moving = false
 	host.drag.clear()
@@ -117,6 +118,7 @@ func _load_step(index: int) -> void:
 	# Over the last move's score pop, which was added after it.
 	overlay.move_to_front()
 	overlay.set_progress(index, Tutorial.step_count())
+	host.analytics.tutorial_step(index, Tutorial.step_count())
 	_show_text()
 	host._refresh()
 	host._on_tray_refilled(host.game.tray)

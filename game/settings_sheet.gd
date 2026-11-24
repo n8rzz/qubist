@@ -4,8 +4,12 @@ extends Control
 ## Sound and feel: Music, Sound effects and Haptics switches, with a volume
 ## slider under Music and Sound effects (#165). Display: the Grid ticks switch
 ## (#56), which the design doesn't show yet; it sits above Game (#183). Game:
-## Stats (#32), Replay tutorial (#29), the Tips switch (#164) and Home (#72,
-## only when opened from a game). Pause stays a separate menu (#42).
+## Stats (#32), Replay tutorial (#29), the Tips switch (#164), the Share usage
+## data switch (#31) and Home (#72, only when opened from a game). Pause stays
+## a separate menu (#42).
+##
+## The cards scroll under the header when they don't fit below the status
+## bar (UI.SAFE_TOP).
 
 const UI := preload("res://game/ui_style.gd")
 const IconButton := preload("res://game/icon_button.gd")
@@ -46,6 +50,7 @@ var sound_effects_volume_slider: HSlider
 var stats_button: Button
 var tutorial_button: Button
 var tips_button: Button
+var analytics_button: Button
 var home_button: Button
 
 ## Settings key -> its switch row.
@@ -54,6 +59,11 @@ var _switches := {}
 var _sliders := {}
 ## Each card's rows, so dividers can follow which rows are visible.
 var _cards: Array[VBoxContainer] = []
+var _sheet: PanelContainer
+## Holds the cards; as tall as they are, unless that would run the sheet up
+## past UI.SAFE_TOP.
+var _scroll: ScrollContainer
+var _card_column: VBoxContainer
 
 
 func _init() -> void:
@@ -68,6 +78,7 @@ func _init() -> void:
 	add_child(dim)
 
 	var sheet := PanelContainer.new()
+	_sheet = sheet
 	sheet.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	sheet.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	var style := UI.box(SHEET_BG, Color(0, 0, 0, 0), SHEET_RADIUS, 0, Vector2(UI.SIDE_MARGIN, 0))
@@ -100,6 +111,17 @@ func _init() -> void:
 	header.add_child(_close_button())
 	column.add_child(header)
 
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# Drag or wheel to scroll; a bar would narrow the cards.
+	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	column.add_child(_scroll)
+	_card_column = VBoxContainer.new()
+	_card_column.add_theme_constant_override("separation", 20)
+	_card_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_card_column)
+	column = _card_column
+
 	var sound := _card(column, "SOUND AND FEEL")
 	music_button = _switch_row(sound, "music", "Music", "music")
 	music_volume_slider = _volume_row(sound, "music_volume", music_button, "Music volume")
@@ -119,11 +141,14 @@ func _init() -> void:
 	tutorial_button.pressed.connect(func(): tutorial_pressed.emit())
 	tips_button = _switch_row(game, "tips", "Tips", "tip")
 	tips_button.tooltip_text = "Show tips the first time you use each control"
+	analytics_button = _switch_row(game, "analytics", "Share usage data", "share")
+	analytics_button.tooltip_text = "Send anonymous game events and error reports to help improve Qubist"
 	home_button = _link_row(game, "Home", "home")
 	home_button.tooltip_text = "Back to the home screen; your game is saved"
 	home_button.pressed.connect(func(): home_pressed.emit())
 
 	_update_dividers()
+	resized.connect(_fit_scroll)
 
 
 ## Shows every switch and slider as `settings` has it, without emitting
@@ -152,7 +177,20 @@ func set_volume(key: String, value: float) -> void:
 func open(in_game := true) -> void:
 	home_button.visible = in_game
 	_update_dividers()
+	_fit_scroll()
 	visible = true
+	_scroll.scroll_vertical = 0
+
+
+## Sizes the scroll area to the cards, or to the room left below
+## UI.SAFE_TOP when they need more.
+func _fit_scroll() -> void:
+	if _scroll == null:
+		return
+	_scroll.custom_minimum_size.y = 0
+	var chrome := _sheet.get_combined_minimum_size().y
+	var room := maxf(size.y - UI.SAFE_TOP - chrome, ROW_HEIGHT)
+	_scroll.custom_minimum_size.y = minf(_card_column.get_combined_minimum_size().y, room)
 
 
 func close_sheet() -> void:
@@ -458,6 +496,11 @@ class Icon:
 				line.call([Vector2(7.8, 14.2), Vector2(9.5, 16), Vector2(9.5, 17.5),
 					Vector2(14.5, 17.5), Vector2(14.5, 16), Vector2(16.2, 14.2)])
 				line.call([Vector2(10, 20.5), Vector2(14, 20.5)])
+			"share":
+				line.call([Vector2(8, 10), Vector2(5, 10), Vector2(5, 20), Vector2(19, 20),
+					Vector2(19, 10), Vector2(16, 10)])
+				line.call([Vector2(12, 15), Vector2(12, 3)])
+				line.call([Vector2(8, 7), Vector2(12, 3), Vector2(16, 7)])
 			"grid":
 				line.call([Vector2(4, 4), Vector2(4, 20), Vector2(20, 20)])
 				for t in [8.0, 12.0, 16.0]:

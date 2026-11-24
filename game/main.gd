@@ -27,6 +27,8 @@ const Onboarding := preload("res://core/onboarding.gd")
 const TutorialRun := preload("res://game/tutorial_run.gd")
 const TutorialOverlay := preload("res://game/tutorial_overlay.gd")
 const HintToast := preload("res://game/hint_toast.gd")
+const Analytics := preload("res://core/analytics.gd")
+const ErrorReporter := preload("res://game/error_reporter.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -66,11 +68,16 @@ var onboarding_path := "user://onboarding.json"
 var haptics: Haptics = Haptics.new()
 ## Clacks, crumbles, the combo chime and the music (#26), off with the settings.
 var audio: Audio = Audio.new()
+## Anonymous gameplay events and error reports (#31), off with the settings.
+## No provider yet: debug builds print them, release builds drop them.
+var analytics: Analytics = Analytics.new()
 ## The in-progress game and camera, saved after every placement and when the
 ## app goes to the background, and resumed on launch (#18).
 var game_save_path := "user://game.json"
 ## The game already added to `stats`, so it is never counted twice.
 var _recorded_game: Game
+## The last game a game_quit was sent for, so leaving it twice sends once.
+var _quit_sent_game: Game
 ## The "+points" pop, the combo/streak banner and the header count-up.
 var score_feedback := ScoreFeedback.new(self)
 ## The score the header shows; trails game.score while the counter ticks up.
@@ -138,6 +145,10 @@ func _ready() -> void:
 	audio.sound_effects_volume = settings.sound_effects_volume
 	audio.music_volume = settings.music_volume
 	add_child(audio)
+	analytics.enabled = settings.analytics
+	if analytics.backend == null and OS.is_debug_build():
+		analytics.backend = Analytics.LogBackend.new()
+	add_child(ErrorReporter.new(analytics))
 	drag.target_changed.connect(_refresh_blocks)
 	drag.dropped.connect(_place)
 	_build_ui()
@@ -150,9 +161,22 @@ func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST:
 			save_game()
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST:
+			_send_quit(Analytics.QUIT_BACKGROUNDED)
+
+
+## Sends game_quit if a game is in progress (not the tutorial's), once per
+## game.
+func _send_quit(reason: String) -> void:
+	if tutorial.is_active() or not can_continue() or _quit_sent_game == game:
+		return
+	_quit_sent_game = game
+	analytics.game_quit(game, reason)
 
 
 func new_game() -> void:
+	_send_quit(Analytics.QUIT_NEW_GAME)
 	var fresh := Game.new(config)
 	_use_game(fresh)
 	fresh.start()
@@ -325,6 +349,8 @@ func _place(index: int, origin: Vector3i) -> void:
 		score_feedback.show_gain(result)
 		if tutorial.is_active():
 			tutorial.placed()
+		elif game.moves == 1:
+			analytics.game_started()
 		save_game()
 
 
@@ -470,6 +496,7 @@ func _record_finished_game() -> void:
 		return
 	_recorded_game = game
 	stats.record_game(game)
+	analytics.game_over(game)
 	SaveFile.write(stats_path, stats.to_dict())
 	SaveFile.remove(game_save_path)
 
@@ -584,6 +611,8 @@ func set_setting(key: String, on: bool) -> void:
 		audio.music = on
 	elif key == "tips" and not on:
 		hint_toast.dismiss()
+	elif key == "analytics":
+		analytics.enabled = on
 	SaveFile.write(settings_path, settings.to_dict())
 
 

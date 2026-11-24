@@ -8,7 +8,7 @@ The product requirements live in Notion (Qubist › PRD and Concept wireframes).
 
 | Path | What it holds |
 | --- | --- |
-| `core/` | The game rules in plain GDScript: grid, pieces, placement, line clearing, scoring, dealing, game state. No rendering and no platform code, so it can be unit-tested and reused on Android. |
+| `core/` | The game rules in plain GDScript: grid, pieces, placement, line clearing, scoring, dealing, game state, plus the analytics events. No rendering and no platform code, so it can be unit-tested and reused on Android. |
 | `config/` | Data that tunes the game: grid size, tray size, scoring numbers (`game.json`) and piece shapes (`pieces.json`). |
 | `game/` | The greybox game screen: layout, 3D tower view, camera, piece previews and touch input. Builds its UI in code. |
 | `assets/` | The app icon, the Fredoka and Inter fonts (`assets/fonts/`, each with its OFL license), the sound effects and music (`assets/audio/`, with every source and license in `CREDITS.md`) and `ui_theme.tres`, the project theme that makes Inter the default font. |
@@ -92,3 +92,11 @@ To deal a shape in every orientation, write it once and add `"orientations": "al
 ```
 
 Changing the piece list changes the save signature, so a game saved under the old list starts fresh.
+
+## Analytics and error reports
+
+`core/analytics.gd` defines the anonymous events the game sends (`game_start`, `game_over`, `tutorial_step`, `tutorial_end`, `game_quit`) and the numbers each one carries. `track()` refuses any other event or prop. `game/error_reporter.gd` hands the engine's script errors and `push_error()` messages to it, sending each distinct error once per launch.
+
+No provider is plugged in yet. Debug builds print each event as `[analytics] …`, and release builds drop them. To add a provider, write a backend with `track(event, props)` and `report_error(message, details)` that forwards to its SDK, and set it as `analytics.backend` in `game/main.gd` before the screen is ready. Native crashes, the kind that kill the app, need the provider's own SDK.
+
+Nothing identifies the player: no device or advertising ID and no ID kept between launches, so there's no App Tracking Transparency prompt. Settings › Share usage data turns it all off.

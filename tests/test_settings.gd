@@ -14,6 +14,7 @@ func test_defaults() -> void:
 	check_eq(settings.haptics, true, "haptics")
 	check_eq(settings.grid_ticks, false, "grid ticks")
 	check_eq(settings.tips, true, "tips")
+	check_eq(settings.analytics, true, "analytics")
 
 
 func test_round_trips_through_the_save_file() -> void:
@@ -23,6 +24,7 @@ func test_round_trips_through_the_save_file() -> void:
 	settings.haptics = false
 	settings.grid_ticks = true
 	settings.tips = false
+	settings.analytics = false
 	check(SaveFile.write(TEST_PATH, settings.to_dict()), "settings were written")
 	var loaded := Settings.new()
 	loaded.from_dict(SaveFile.read(TEST_PATH))
@@ -31,6 +33,7 @@ func test_round_trips_through_the_save_file() -> void:
 	check_eq(loaded.haptics, false, "haptics")
 	check_eq(loaded.grid_ticks, true, "grid ticks")
 	check_eq(loaded.tips, false, "tips")
+	check_eq(loaded.analytics, false, "analytics")
 	SaveFile.remove(TEST_PATH)
 
 
