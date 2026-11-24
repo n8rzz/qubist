@@ -49,6 +49,15 @@ func turn(quarter_turns: int) -> void:
 	_tween.finished.connect(func(): view_changed.emit(view_step()))
 
 
+## Jumps a turn in progress to its end, emitting view_changed.
+func finish_turn() -> void:
+	if _tween == null or not _tween.is_valid():
+		return
+	_tween.kill()
+	rotation.y = ViewMath.yaw_for_step(_turns)
+	view_changed.emit(view_step())
+
+
 func is_turning() -> bool:
 	return _tween != null and _tween.is_running()
 

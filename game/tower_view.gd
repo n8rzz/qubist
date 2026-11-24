@@ -666,6 +666,29 @@ func has_crumbled() -> bool:
 	return _crumbled
 
 
+## Placed cubes drawn solid. None while the tower is crumbled.
+func solid_count() -> int:
+	return _solid.multimesh.instance_count
+
+
+## Whole cubes drawn shaking before they break.
+func crumbling_count() -> int:
+	return _crumbling.multimesh.instance_count
+
+
+## Rubble pieces drawn.
+func rubble_count() -> int:
+	return _rubble.multimesh.instance_count
+
+
+## Where each rubble piece comes to rest, in the tower's space.
+func rubble_rests() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for piece in _rubble_list:
+		out.append(piece.rest)
+	return out
+
+
 ## Jumps the crumble to its settled rubble, emitting crumble_finished.
 func finish_crumble() -> void:
 	if is_crumbling():

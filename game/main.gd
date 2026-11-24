@@ -245,7 +245,7 @@ func _input(event: InputEvent) -> void:
 
 func _on_slot_input(event: InputEvent, index: int) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		_start_drag(index, event.global_position)
+		start_drag(index, event.global_position)
 		accept_event()
 
 
@@ -288,7 +288,9 @@ func _touch_spread() -> float:
 
 # --- Dragging a piece ---
 
-func _start_drag(index: int, finger: Vector2) -> void:
+## A finger went down on tray slot `index`. Does nothing while a move can't
+## start.
+func start_drag(index: int, finger: Vector2) -> void:
 	# No new move until the last one has finished animating, so the grid and
 	# the view stay in step.
 	if game.is_over or overlay.visible or game_over_card.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
@@ -903,6 +905,21 @@ func _hide_overlay() -> void:
 
 # --- Test hooks ---
 
+## Turns the view as the rotate buttons do. With `instant`, the turn ends at
+## once instead of animating. Used by the smoke test.
+func turn(quarter_turns: int, instant := false) -> void:
+	_turn(quarter_turns)
+	if instant:
+		tower.rig.finish_turn()
+
+
+## Sets the swiper's axis and depth, as its buttons and slider do, without
+## the hints they show. Used by the smoke test.
+func set_slice(mode: int, depth: int) -> void:
+	_set_slice_mode(mode)
+	_set_slice_depth(depth)
+
+
 ## Places a piece through the same drag path a finger would take: presses the
 ## tray slot, moves to where the ghost would snap, releases. Returns true if a
 ## move was made. Used by the smoke test.
@@ -919,7 +936,7 @@ func autoplay_one_move() -> bool:
 		var finger := viewport_box.get_global_rect().position + tower.project_point(center) \
 			+ Vector2(0, DragController.LIFT)
 		var before := game.moves
-		_start_drag(i, finger)
+		start_drag(i, finger)
 		if not drag.is_dragging():
 			return false
 		drag.update(finger)

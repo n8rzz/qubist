@@ -94,7 +94,7 @@ func _check_home() -> void:
 func _check_tutorial() -> void:
 	var tutorial = main.tutorial
 	# The new game, set aside while the tutorial plays.
-	var fresh = tutorial._saved_game
+	var fresh = tutorial.saved_game()
 	if not tutorial.is_active() or not main.tutorial_overlay.visible:
 		failures.append("New game for a new player did not start the tutorial")
 		return
@@ -111,8 +111,7 @@ func _check_tutorial() -> void:
 				failures.append("the hidden gap took the piece before the tower was turned")
 			if not main.tutorial_overlay.ring.target.has_area():
 				failures.append("the hidden step does not ring the rotate button")
-			main._turn(1)
-			main.tower.rig._tween.custom_step(1.0)
+			main.turn(1, true)
 			if not tutorial.found:
 				failures.append("turning the tower did not find the hidden gap")
 		var lines: int = main.game.lines_cleared_total
@@ -149,19 +148,17 @@ func _check_tutorial() -> void:
 ## again (#29).
 func _check_hints() -> void:
 	main.hint_toast.dismiss()
-	main._turn(1)
-	main.tower.rig._tween.custom_step(1.0)
+	main.turn(1, true)
 	if not main.hint_toast.visible or main.hint_toast.label.text != HintToast.TEXT.rotate:
 		failures.append("the first turn did not show the rotate hint")
 	main.hint_toast.dismiss()
-	main._turn(-1)
-	main.tower.rig._tween.custom_step(1.0)
+	main.turn(-1, true)
 	if main.hint_toast.visible:
 		failures.append("the rotate hint showed twice")
 	main.slice_slider.value = 2
 	if not main.hint_toast.visible or main.hint_toast.label.text != HintToast.TEXT.swiper:
 		failures.append("the first slice did not show the swiper hint")
-	main._set_slice_depth(0)
+	main.set_slice(main.swiper.mode, 0)
 	main.hint_toast.dismiss()
 	if not main.onboarding.has_seen("rotate") or not main.onboarding.has_seen("swiper"):
 		failures.append("hints seen were not recorded")
@@ -177,11 +174,9 @@ func _play() -> void:
 			main.new_game()
 		# Exercise rotation and the swiper between moves.
 		if i % 7 == 3:
-			main._turn(1)
-			main.tower.rig._tween.custom_step(1.0)
+			main.turn(1, true)
 		if i % 5 == 2:
-			main._set_slice_mode(i % 3)
-			main._set_slice_depth(i % 10)
+			main.set_slice(i % 3, i % 10)
 		if main.autoplay_one_move():
 			moves += 1
 			if not main.tower.is_animating():
@@ -192,7 +187,7 @@ func _play() -> void:
 				failures.append("move %d: header shows %d, score is %d" % [i, main.shown_score, main.game.score])
 		else:
 			failures.append("move %d did not go through the drag path" % i)
-	main._set_slice_depth(0)
+	main.set_slice(main.swiper.mode, 0)
 	_check_score_tick()
 	print("Placed %d of %d moves; score %d" % [moves, MOVES, main.game.score])
 	# A new game mid-animation must cancel it cleanly.
@@ -247,7 +242,7 @@ func _check_game_over_card() -> void:
 		failures.append("game-over card claims a Game Center save with Game Center off")
 	if main.overlay.visible:
 		failures.append("game over also opened the old overlay")
-	main._start_drag(0, Vector2.ZERO)
+	main.start_drag(0, Vector2.ZERO)
 	if main.drag.is_dragging():
 		failures.append("a piece could be dragged under the game-over card")
 
@@ -268,20 +263,20 @@ func _check_crumble() -> void:
 		failures.append("game over did not start the crumble")
 	if main.game_over_card.visible:
 		failures.append("game-over card opened before the tower crumbled")
-	if tower._solid.multimesh.instance_count != 0:
+	if tower.solid_count() != 0:
 		failures.append("placed blocks still drawn while the tower crumbles")
 	main.finish_animations()
 	if tower.is_crumbling() or not tower.has_crumbled():
 		failures.append("crumble did not finish into rubble")
 	if not main.game_over_card.visible:
 		failures.append("the held game over did not open the game-over card once the tower crumbled")
-	if tower._rubble.multimesh.instance_count != cubes * tower.RUBBLE_PER_CUBE:
-		failures.append("rubble has %d pieces, expected %d" % [tower._rubble.multimesh.instance_count, cubes * tower.RUBBLE_PER_CUBE])
-	if tower._crumbling.multimesh.instance_count != 0:
+	if tower.rubble_count() != cubes * tower.RUBBLE_PER_CUBE:
+		failures.append("rubble has %d pieces, expected %d" % [tower.rubble_count(), cubes * tower.RUBBLE_PER_CUBE])
+	if tower.crumbling_count() != 0:
 		failures.append("whole cubes left standing after the crumble")
-	for piece in tower._rubble_list:
-		if piece.rest.y < 0.0 or Vector2(piece.rest.x, piece.rest.z).length() > 4.0:
-			failures.append("rubble came to rest off the island at %s" % piece.rest)
+	for rest in tower.rubble_rests():
+		if rest.y < 0.0 or Vector2(rest.x, rest.z).length() > 4.0:
+			failures.append("rubble came to rest off the island at %s" % rest)
 			break
 
 
@@ -299,7 +294,7 @@ func _check_stats() -> void:
 	_check_crumble()
 	_check_game_over_card()
 	# A repeated game_over must not count the game a second time.
-	main._on_game_over(main.game.score)
+	main.game.game_over.emit(main.game.score)
 	if main.stats.games_played != before + 1:
 		failures.append("finished game counted %d times" % (main.stats.games_played - before))
 	if main.stats.best_score < main.game.score:
@@ -440,7 +435,7 @@ func _check_sound_switches() -> void:
 		failures.append("a fresh screen did not apply the saved sound settings")
 	reopened.queue_free()
 	main.new_game()
-	if main.tower.has_crumbled() or main.tower._rubble.multimesh.instance_count != 0:
+	if main.tower.has_crumbled() or main.tower.rubble_count() != 0:
 		failures.append("a new game kept the last game's rubble")
 	for key in switches:
 		switches[key].button_pressed = true
@@ -455,8 +450,7 @@ func _check_sound_switches() -> void:
 ## a save that doesn't fit the config is dropped for a new game (#18).
 func _check_resume() -> void:
 	main.new_game()
-	main._turn(1)
-	main.tower.rig._tween.custom_step(1.0)
+	main.turn(1, true)
 	main.tower.rig.zoom_by(1.2)
 	if not main.autoplay_one_move():
 		failures.append("resume check could not place a piece")
