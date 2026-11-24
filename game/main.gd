@@ -9,6 +9,8 @@ const Game := preload("res://core/game.gd")
 const ViewMath := preload("res://game/view_math.gd")
 const TowerView := preload("res://game/tower_view.gd")
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
+const SkyView := preload("res://game/sky_view.gd")
+const SkyWeather := preload("res://game/sky_weather.gd")
 const PiecePreview := preload("res://game/piece_preview.gd")
 const UI := preload("res://game/ui_style.gd")
 const Stats := preload("res://core/stats.gd")
@@ -51,6 +53,9 @@ const TRAY_FADE_SECONDS := 0.2
 const CRUMBLE_VIBRATE_MS := 300
 ## How far below the tower area's top edge hints appear.
 const HINT_TOP := 64.0
+## How often, in seconds, the sky checks the clock for a new season or time
+## of day (#168).
+const SKY_CHECK_SECONDS := 30.0
 
 var config: Config = Config.new()
 var game: Game
@@ -87,6 +92,8 @@ var shown_score: int:
 
 var tower: TowerView
 var viewport_box: SubViewportContainer
+## Petals, leaves, snow and fireflies over the tower (#168).
+var weather: SkyWeather
 var score_label: Label
 var best_label: Label
 var tray_slots: Array[PanelContainer] = []
@@ -132,6 +139,8 @@ var _pending_game_over := false
 ## True while game.place() runs, so a game over it raises waits for the
 ## move's animation, which starts just after.
 var _placing := false
+## Seconds until the sky next checks the clock.
+var _sky_check_in := SKY_CHECK_SECONDS
 
 
 func _ready() -> void:
@@ -146,6 +155,9 @@ func _ready() -> void:
 	audio.music_volume = settings.music_volume
 	add_child(audio)
 	analytics.enabled = settings.analytics
+	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
+	SkyView.still = DisplayServer.accessibility_should_reduce_animation() == 1
+	SkyView.follow(settings, true)
 	if analytics.backend == null and OS.is_debug_build():
 		analytics.backend = Analytics.LogBackend.new()
 	add_child(ErrorReporter.new(analytics))
@@ -242,8 +254,26 @@ func _process(delta: float) -> void:
 	tutorial.update()
 	# Undo depends on drags, menus and animations, so it is checked each frame.
 	undo_button.disabled = not can_undo()
+	update_sky(delta)
 	if swiper.update_sweep(delta, tower.rig.is_turning()):
 		tower.set_sweep_alpha(swiper.sweep_alpha())
+
+
+## Follows the clock when Settings says the sky follows the day, checking
+## every SKY_CHECK_SECONDS but never while a piece is being dragged (#168).
+## Applies the current sky's light, snow and text colours to the game.
+func update_sky(delta: float) -> void:
+	_sky_check_in -= delta
+	if _sky_check_in <= 0.0 and not drag.is_dragging():
+		_sky_check_in = SKY_CHECK_SECONDS
+		if settings.sky_follows_day:
+			SkyView.follow(settings)
+	viewport_box.modulate = SkyView.tint()
+	var snow := SkyView.snow_amount()
+	if not is_equal_approx(tower.snow_amount(), snow):
+		tower.set_snow(snow)
+	score_label.add_theme_color_override("font_color", SkyView.text_color(UI.SKY_INK, SkyView.NIGHT_INK))
+	best_label.add_theme_color_override("font_color", SkyView.text_color(UI.SKY_MUTED, SkyView.NIGHT_MUTED))
 
 
 ## Keeps the axis labels beside the base as the view zooms, resizes or turns.
@@ -613,6 +643,24 @@ func set_setting(key: String, on: bool) -> void:
 		hint_toast.dismiss()
 	elif key == "analytics":
 		analytics.enabled = on
+	elif key == "sky_follows_day":
+		if not on:
+			# Start the pickers on what's showing, so nothing jumps.
+			for choice in [["sky_season", SkyView.season], ["sky_time", SkyView.time_of_day]]:
+				settings.set(choice[0], choice[1])
+				settings_sheet.set_choice(choice[0], choice[1])
+		SkyView.follow(settings)
+	SaveFile.write(settings_path, settings.to_dict())
+
+
+## Picks a season or time of day for the sky (#168), shows it and saves the
+## settings. `key` is "sky_season" or "sky_time".
+func set_choice(key: String, value: String) -> void:
+	if not (Settings.CHOICES[key] as Array).has(value):
+		return
+	settings.set(key, value)
+	settings_sheet.set_choice(key, value)
+	SkyView.follow(settings)
 	SaveFile.write(settings_path, settings.to_dict())
 
 
@@ -675,6 +723,10 @@ func _build_ui() -> void:
 	column.add_child(_build_tray())
 	column.add_child(_build_controls())
 
+	# Over the tower, under the dragged piece, the cards and the menus.
+	weather = SkyWeather.new()
+	add_child(weather)
+
 	drag_preview = PiecePreview.new()
 	drag_preview.size = Vector2(110, 110)
 	drag_preview.unit = 18.0
@@ -705,6 +757,7 @@ func _build_ui() -> void:
 	settings_sheet.home_pressed.connect(show_home)
 	settings_sheet.setting_toggled.connect(set_setting)
 	settings_sheet.volume_changed.connect(set_volume)
+	settings_sheet.choice_changed.connect(set_choice)
 	settings_sheet.next_track_pressed.connect(audio.next_track)
 	audio.track_changed.connect(settings_sheet.set_now_playing)
 	settings_sheet.set_now_playing(audio.track_title(), audio.track_artist())

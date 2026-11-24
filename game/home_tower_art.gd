@@ -400,6 +400,7 @@ func _draw() -> void:
 		draw_circle(iso(at.x, at.y, at.z + puff.rise * u), puff.size * (1.0 + 0.6 * u),
 			Color(DUST, 0.55 * (1.0 - u)))
 	_draw_outline_front()
+	draw_tree()
 	draw_set_transform(Vector2.ZERO)
 
 
@@ -433,7 +434,10 @@ static func _faces(at: Vector3, k: float) -> Array:
 func _draw_block(at: Vector3, k: float, alpha: float, crack: float, cracks: Array) -> void:
 	var faces := _faces(at, k)
 	var d := crack * DARKEN
-	_face(faces[0], CUBE_TOP.lerp(CRACK_COLOR, d), CUBE_TOP_INSET.lerp(CRACK_COLOR, d), alpha)
+	var snow := SkyView.snow_amount()
+	var snow_top := CUBE_TOP.lerp(SkyView.SNOW_TOP, snow)
+	var snow_inset := CUBE_TOP_INSET.lerp(SkyView.SNOW_TOP_INSET, snow)
+	_face(faces[0], snow_top.lerp(CRACK_COLOR, d), snow_inset.lerp(CRACK_COLOR, d), alpha)
 	_face(faces[1], CUBE_LEFT.lerp(CRACK_COLOR, d), CUBE_LEFT_INSET.lerp(CRACK_COLOR, d), alpha)
 	_face(faces[2], CUBE_RIGHT.lerp(CRACK_COLOR, d), CUBE_RIGHT_INSET.lerp(CRACK_COLOR, d), alpha)
 	if crack <= 0.0:

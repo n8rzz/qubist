@@ -8,7 +8,7 @@ The product requirements live in Notion (Qubist › PRD and Concept wireframes).
 
 | Path | What it holds |
 | --- | --- |
-| `core/` | The game rules in plain GDScript: grid, pieces, placement, line clearing, scoring, dealing, game state, plus the analytics events. No rendering and no platform code, so it can be unit-tested and reused on Android. |
+| `core/` | The game rules in plain GDScript: grid, pieces, placement, line clearing, scoring, dealing, game state, plus the analytics events and the sky's season and time of day (`sky_clock.gd`). No rendering and no platform code, so it can be unit-tested and reused on Android. |
 | `config/` | Data that tunes the game: grid size, tray size, scoring numbers (`game.json`) and piece shapes (`pieces.json`). |
 | `game/` | The greybox game screen: layout, 3D tower view, camera, piece previews and touch input. Builds its UI in code. |
 | `assets/` | The app icon, the Fredoka and Inter fonts (`assets/fonts/`, each with its OFL license), the sound effects and music (`assets/audio/`, with every source and license in `CREDITS.md`) and `ui_theme.tres`, the project theme that makes Inter the default font. |
