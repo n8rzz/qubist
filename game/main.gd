@@ -692,6 +692,7 @@ func _build_ui() -> void:
 	add_child(hint_toast)
 
 	home = HomeScreen.new()
+	home.island.pieces = config.pieces
 	home.new_game_pressed.connect(_on_home_new_game)
 	home.continue_pressed.connect(_on_home_continue)
 	home.stats_pressed.connect(_on_home_stats)

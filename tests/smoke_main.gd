@@ -89,6 +89,8 @@ func _check_home() -> void:
 		failures.append("launch did not open Home")
 	if main.home.continue_button.visible:
 		failures.append("Home offered Continue with no game to resume")
+	if not main.home.island.is_animating():
+		failures.append("Home's island did not play its tower loop with no game to resume")
 	main.home.new_game_button.pressed.emit()
 	if main.home.visible or main.menu_open():
 		failures.append("New game did not leave Home")
@@ -447,6 +449,8 @@ func _check_home_buttons() -> void:
 	main.home_button.pressed.emit()
 	if not main.home.visible or not main.home.continue_button.visible:
 		failures.append("the header's Home button did not open Home with Continue")
+	if main.home.island.is_animating() or main.home.island.cells.size() != main.game.grid.filled_cells().size():
+		failures.append("Home with a game to continue did not show that game's tower standing still")
 	main.home.continue_button.pressed.emit()
 	if main.game != playing or main.menu_open():
 		failures.append("Continue after the header's Home button did not return to the game")
