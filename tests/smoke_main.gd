@@ -280,7 +280,7 @@ func _check_crumble() -> void:
 			break
 
 
-## Finished games are recorded once and saved; gear → Settings → Stats → Back
+## Finished games are recorded once and saved; settings button → Settings → Stats → Back
 ## opens and closes the right screens (#32).
 func _check_stats() -> void:
 	main.new_game()
@@ -310,7 +310,7 @@ func _check_stats() -> void:
 
 	main.show_settings()
 	if not main.settings_sheet.visible or not main.menu_open():
-		failures.append("gear did not open the Settings sheet")
+		failures.append("the settings button did not open the Settings sheet")
 	if not main.settings_sheet.home_button.visible:
 		failures.append("Settings opened in a game has no Home row")
 	main.settings_sheet.stats_button.pressed.emit()

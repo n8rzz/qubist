@@ -1,5 +1,5 @@
 extends Control
-## Settings bottom sheet (#20), opened from the header gear and from Home.
+## Settings bottom sheet (#20), opened from the header settings button and from Home.
 ##
 ## Sound and feel: Music, Sound effects and Haptics switches. Game: Stats
 ## (#32), Replay tutorial (#29) and Home

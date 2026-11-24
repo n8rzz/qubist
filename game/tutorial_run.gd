@@ -58,8 +58,8 @@ func start(on_done := Callable()) -> void:
 	_saved_view_step = host.tower.rig.view_step()
 	_saved_zoom = host.tower.rig.camera.size
 	host.tutorial_overlay.visible = true
-	# Skip sits where the gear is, so the gear makes way.
-	host.gear_button.modulate.a = 0.0
+	# Skip sits where the settings button is, so that button makes way.
+	host.settings_button.modulate.a = 0.0
 	_load_step(0)
 
 
@@ -77,7 +77,7 @@ func _end(completed: bool) -> void:
 	host.drag.allowed_origins = null
 	host.tutorial_overlay.hide_hand()
 	host.tutorial_overlay.visible = false
-	host.gear_button.modulate.a = 1.0
+	host.settings_button.modulate.a = 1.0
 	host.onboarding_done()
 	_reset_view(_saved_view_step, _saved_zoom)
 	host._use_game(_saved_game)
