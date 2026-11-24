@@ -3,8 +3,8 @@ extends Node
 ## and a chime when lines clear, and one soft ambient track on a loop.
 ##
 ## The clacks take turns so repeated landings don't sound identical, the two
-## crumbles alternate, and the chime climbs a major arpeggio as more lines
-## clear at once. `sound_effects` and `music` follow the Settings switches,
+## takes of the stone tumble crumble alternate (#170), and the chime climbs a
+## major arpeggio as more lines clear at once. `sound_effects` and `music` follow the Settings switches,
 ## and `sound_effects_volume` and `music_volume` follow its sliders (#165).
 ## Credits and licenses are in assets/audio/CREDITS.md.
 
@@ -16,8 +16,8 @@ const CLACKS: Array[AudioStream] = [
 	preload("res://assets/audio/footstep_concrete_004.ogg"),
 ]
 const CRUMBLES: Array[AudioStream] = [
-	preload("res://assets/audio/569510__sheyvan__stone-impact-rubble-debris-14.wav"),
-	preload("res://assets/audio/758582__magnuswaker__rubble-trouble-3.wav"),
+	preload("res://assets/audio/stone_tumble_a.wav"),
+	preload("res://assets/audio/stone_tumble_b.wav"),
 ]
 const CHIME: AudioStream = preload("res://assets/audio/759839__noisyredfox__singleding.ogg")
 ## Loops: the import has loop on, and the track fades softly at both ends.
