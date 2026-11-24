@@ -51,6 +51,8 @@ func _process(_delta: float) -> bool:
 		_check_stats()
 	elif frame == 18:
 		_check_resume()
+	elif frame == 19:
+		_check_finished_save()
 	elif frame == 20:
 		# Free the screen and give the audio thread a moment to drop its
 		# sounds (#26) before quitting, or they show up as leaks at exit.
@@ -482,3 +484,43 @@ func _check_resume() -> void:
 		failures.append("a save from another config was resumed")
 	fresh.queue_free()
 	SaveFile.remove(saves.game_path)
+
+
+## A save whose game is already over (the app closed before the game-over
+## card counted it) is counted on launch, once: the next launch doesn't
+## count it again (#111).
+func _check_finished_save() -> void:
+	main.new_game()
+	var data: Dictionary = main.game.to_dict()
+	data.is_over = true
+	data.moves = 12
+	data.score = 98765
+	SaveFile.write(saves.game_path, {"game": data, "view": {}})
+	var before := int(SaveFile.read(saves.stats_path).get("games_played", 0))
+
+	var first = _make_main()
+	root.add_child(first)
+	if first.stats.games_played != before + 1:
+		failures.append("a finished game in the save was counted %d times on launch" % (first.stats.games_played - before))
+	if first.stats.best_score < 98765:
+		failures.append("launch counted the finished game with best score %d, expected 98765" % first.stats.best_score)
+	if int(SaveFile.read(saves.stats_path).get("games_played", -1)) != before + 1:
+		failures.append("the finished game counted on launch was not saved to the stats file")
+	# Launch starts a new game and saves it, so the finished game's save must
+	# be gone or replaced by that fresh one.
+	var left: Dictionary = SaveFile.read(saves.game_path).get("game", {})
+	if left.get("is_over", false) or int(left.get("moves", 0)) != 0:
+		failures.append("the finished game's save was left behind after launch")
+	if first.game.is_over or first.game.moves != 0:
+		failures.append("launch with a finished game saved did not start a new game")
+	if not first.home.visible or first.home.continue_button.visible:
+		failures.append("Home offered Continue for a game that was already over")
+	first.queue_free()
+
+	var second = _make_main()
+	root.add_child(second)
+	if second.stats.games_played != before + 1:
+		failures.append("the finished game was counted again on the next launch (%d games, expected %d)" % [second.stats.games_played, before + 1])
+	second.queue_free()
+	SaveFile.remove(saves.game_path)
+	SaveFile.remove(saves.stats_path)
