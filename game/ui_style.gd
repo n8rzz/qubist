@@ -103,6 +103,7 @@ static func style_card_button(b: Button, radius: int, padding := Vector2.ZERO) -
 	b.add_theme_stylebox_override("normal", card(WHITE, radius, padding))
 	b.add_theme_stylebox_override("hover", card(CARD_HOVER, radius, padding))
 	b.add_theme_stylebox_override("pressed", card(CARD_PRESSED, radius, padding, 1))
+	b.add_theme_stylebox_override("disabled", card(WHITE, radius, padding))
 
 
 ## A white icon tile. Pass `radius` = side / 2 for a round button.

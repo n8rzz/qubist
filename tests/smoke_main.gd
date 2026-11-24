@@ -49,6 +49,8 @@ func _process(_delta: float) -> bool:
 		_play()
 	elif frame == 15:
 		_check_stats()
+	elif frame == 17:
+		_check_undo()
 	elif frame == 18:
 		_check_resume()
 	elif frame == 19:
@@ -69,6 +71,12 @@ func _check_layout() -> void:
 		failures.append("tower area is too small: %s" % rect)
 	if main.tray_slots.size() != 3:
 		failures.append("expected 3 tray slots, found %d" % main.tray_slots.size())
+	# Home and Undo on one side, Settings on the other: the score stays
+	# centered over the screen (#184).
+	var score_mid: float = main.score_label.get_global_rect().get_center().x
+	var screen_mid: float = main.get_global_rect().get_center().x
+	if absf(score_mid - screen_mid) > 1.0:
+		failures.append("score is off center: %.1f vs %.1f" % [score_mid, screen_mid])
 
 
 ## Launch opens Home with no Continue (nothing saved yet); New game leaves
@@ -424,6 +432,8 @@ func _check_home_buttons() -> void:
 	main.start_tutorial()
 	if main.home_button.modulate.a != 0.0 or not main.home_button.disabled:
 		failures.append("the header's Home button stayed usable during the tutorial")
+	if main.undo_button.modulate.a != 0.0 or main.can_undo():
+		failures.append("the header's Undo button stayed usable during the tutorial")
 	main.tutorial_overlay.skip_button.pressed.emit()
 	if main.home_button.modulate.a != 1.0 or main.home_button.disabled:
 		failures.append("the header's Home button did not come back after the tutorial")
@@ -550,6 +560,41 @@ func _check_volume_sliders() -> void:
 	for key in sliders:
 		sliders[key].value = 1.0
 	SaveFile.remove(saves.settings_path)
+
+
+## Undo takes back the last move through the header button, only once,
+## and only once the move has finished animating (#184).
+func _check_undo() -> void:
+	main.new_game()
+	if main.can_undo():
+		failures.append("a new game offers undo")
+	var before := JSON.stringify(main.game.to_dict())
+	if not main.autoplay_one_move():
+		failures.append("undo check could not place a piece")
+		return
+	if main.can_undo():
+		failures.append("undo is offered while the move animates")
+	main.finish_animations()
+	if not main.can_undo():
+		failures.append("undo is not offered after a move")
+	main.undo_button.pressed.emit()
+	if JSON.stringify(main.game.to_dict()) != before:
+		failures.append("undo did not restore the game")
+	if main.shown_score != main.game.score:
+		failures.append("header shows %d after undo, score is %d" % [main.shown_score, main.game.score])
+	if main.can_undo():
+		failures.append("undo is offered twice in a row")
+	var saved := SaveFile.read(saves.game_path)
+	if int(saved.get("game", {}).get("moves", -1)) != 0:
+		failures.append("the undone game was not saved")
+	main.autoplay_one_move()
+	main.finish_animations()
+	main.show_settings()
+	if main.can_undo():
+		failures.append("undo is offered behind the Settings sheet")
+	main.settings_sheet.close_sheet()
+	if not main.can_undo():
+		failures.append("undo is not offered once Settings closes")
 
 
 ## A placement saves the game and camera; a fresh screen picks both up, and

@@ -288,6 +288,81 @@ func test_one_fitting_piece_keeps_the_game_going() -> void:
 	check(not game.check_game_over())
 
 
+func test_nothing_to_undo_before_a_move() -> void:
+	var game = _game()
+	check(not game.can_undo())
+	check(not game.undo())
+
+
+func test_undo_puts_the_piece_back() -> void:
+	var game = _game()
+	var before := _state(game)
+	check(game.place(0, Vector3i(0, 0, 0)).ok)
+	check(game.can_undo())
+	check(game.undo())
+	check_eq(_state(game), before)
+	check_eq(game.tray[0].size, BAR2_X, "the piece is back in its slot")
+
+
+func test_undo_brings_back_cleared_lines_and_score() -> void:
+	var game = _game([BAR2_X, BAR4_X, "cube2"])
+	for c in _row(0, 0, [2, 3, 4, 5]):
+		game.grid.set_filled(c, true)
+	game.streak = 2
+	var before := _state(game)
+	var result: Dictionary = game.place(0, Vector3i(0, 0, 0))
+	check_eq(result.lines.size(), 1)
+	check(game.score > 0)
+	check(game.undo())
+	check_eq(_state(game), before, "line, score and streak are back")
+	check_eq(game.lines_cleared_total, 0)
+
+
+func test_undo_is_one_step_only() -> void:
+	var game = _game()
+	game.place(0, Vector3i(0, 0, 0))
+	game.place(1, Vector3i(0, 1, 0))
+	check(game.undo())
+	check(not game.can_undo(), "only the last move can be undone")
+	check(not game.undo())
+	check_eq(game.moves, 1, "the first move stays")
+	check(game.place(1, Vector3i(0, 1, 0)).ok)
+	check(game.can_undo(), "a new move can be undone")
+
+
+func test_undo_takes_back_a_refill_and_deals_it_again() -> void:
+	var game = _game()
+	game.place(0, Vector3i(0, 0, 0))
+	game.place(1, Vector3i(0, 1, 0))
+	game.place(2, Vector3i(0, 3, 0))
+	var dealt: Array = game.tray.map(func(p): return p.id)
+	check(game.undo())
+	check(game.tray[0] == null and game.tray[1] == null, "the refill is gone")
+	check_eq(game.tray[2].id, "cube2")
+	game.place(2, Vector3i(0, 3, 0))
+	check_eq(game.tray.map(func(p): return p.id), dealt, "no new pieces from undoing")
+
+
+func test_no_undo_after_game_over() -> void:
+	var game = _game([BAR2_UP, "cube2", "cube2"])
+	checkerboard(game.grid)
+	check(game.place(0, Vector3i(1, 0, 0)).game_over)
+	check(not game.can_undo(), "a finished game is already in the stats")
+	check(not game.undo())
+	check(game.is_over)
+
+
+func test_start_and_restore_clear_undo() -> void:
+	var game = _game()
+	game.place(0, Vector3i(0, 0, 0))
+	game.start()
+	check(not game.can_undo(), "a new game has nothing to undo")
+	var copy = _game()
+	copy.place(0, Vector3i(0, 0, 0))
+	check(copy.from_dict(game.to_dict()))
+	check(not copy.can_undo(), "a restored game has nothing to undo")
+
+
 func test_save_and_restore() -> void:
 	var game = _game()
 	game.place(0, Vector3i(0, 0, 0))

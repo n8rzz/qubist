@@ -60,7 +60,8 @@ func start(on_done := Callable()) -> void:
 	host.tutorial_overlay.visible = true
 	# Skip sits where the settings button is, so that button makes way.
 	host.settings_button.modulate.a = 0.0
-	# Home would leave the tutorial running behind it, so it is hidden too.
+	# Home would leave the tutorial running behind it, so it is hidden too,
+	# with Undo beside it.
 	_show_home_button(false)
 	_load_step(0)
 
@@ -70,12 +71,15 @@ func skip() -> void:
 	_end(false)
 
 
-## Hides the header's Home button in place, keeping its slot so the score
-## doesn't move.
+## Hides the header's Home and Undo buttons in place, keeping their slots
+## so the score doesn't move. Undo is already off during the tutorial (the
+## host checks each frame), so only its look and input change here.
 func _show_home_button(on: bool) -> void:
 	host.home_button.modulate.a = 1.0 if on else 0.0
 	host.home_button.disabled = not on
 	host.home_button.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+	host.undo_button.modulate.a = 1.0 if on else 0.0
+	host.undo_button.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
 
 
 func _end(completed: bool) -> void:

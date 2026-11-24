@@ -35,6 +35,9 @@ var is_over := false
 ## this off so its one scripted piece isn't followed by random ones; an empty
 ## tray then just stays empty, and doesn't end the game.
 var auto_refill := true
+## The game as it was before the last move, for a one-step undo (#184).
+## Empty when there is nothing to undo.
+var _undo_snapshot := {}
 
 
 func _init(p_config = null, seed_value: int = -1) -> void:
@@ -53,6 +56,7 @@ func start() -> void:
 	lines_cleared_total = 0
 	moves = 0
 	is_over = false
+	_undo_snapshot = {}
 	_refill()
 
 
@@ -71,6 +75,7 @@ func place(tray_index: int, origin: Vector3i) -> Dictionary:
 	if not can_place(tray_index, origin):
 		return {"ok": false}
 
+	_undo_snapshot = to_dict()
 	var piece = tray[tray_index]
 	var placed: Array[Vector3i] = piece.cells_at(origin)
 	for c in placed:
@@ -122,6 +127,27 @@ func place(tray_index: int, origin: Vector3i) -> Dictionary:
 		"score": breakdown,
 		"game_over": is_over,
 	}
+
+
+## True when the last move can be taken back: there was one since the game
+## started or was restored, it wasn't undone already, and the game isn't
+## over (a finished game is already in the stats).
+func can_undo() -> bool:
+	return not _undo_snapshot.is_empty() and not is_over
+
+
+## Puts the game back as it was before the last move (#184): the piece
+## returns to its slot and any cleared lines, score and streak come back.
+## If the move emptied the tray, the refill is taken back too; the dealer
+## goes back with it, so placing the piece again deals the same tray.
+## Only one step: a second undo does nothing until another move is made.
+## Returns false when there is nothing to undo.
+func undo() -> bool:
+	if not can_undo():
+		return false
+	var snapshot := _undo_snapshot
+	_undo_snapshot = {}
+	return from_dict(snapshot)
 
 
 ## Ends the game if no remaining tray piece fits anywhere, including spots
@@ -210,6 +236,8 @@ func from_dict(data: Dictionary) -> bool:
 	moves = int(data.get("moves", 0))
 	is_over = bool(data.get("is_over", false))
 	dealer.rng.state = str(data.get("rng_state", "0")).to_int()
+	# A restored game starts with nothing to undo; undo() clears it itself.
+	_undo_snapshot = {}
 	return true
 
 
