@@ -165,6 +165,37 @@ func _check_hints() -> void:
 	var saved: Dictionary = SaveFile.read(saves.onboarding_path)
 	if not "swiper" in saved.get("hints_seen", []):
 		failures.append("hints seen were not saved")
+	_check_tips_switch()
+
+
+## Settings › Game › Tips off hides a showing hint and keeps new ones from
+## coming up; they stay unseen and show once Tips is back on (#164).
+func _check_tips_switch() -> void:
+	var tips_button = main.settings_sheet.tips_button
+	if not tips_button.button_pressed:
+		failures.append("the Tips switch did not start on")
+	main.hint_toast.show_hint("rotate", main.viewport_box.get_global_rect(), 0)
+	tips_button.button_pressed = false
+	if main.hint_toast.visible:
+		failures.append("turning off Tips left a hint showing")
+	if SaveFile.read(saves.settings_path).get("tips") != false:
+		failures.append("Tips off was not saved")
+	main.show_hint("zoom")
+	if main.hint_toast.visible:
+		failures.append("a hint showed with Tips off")
+	if main.onboarding.has_seen("zoom"):
+		failures.append("a hint skipped with Tips off was marked seen")
+	var reopened = _make_main()
+	root.add_child(reopened)
+	if reopened.settings.tips or reopened.settings_sheet.tips_button.button_pressed:
+		failures.append("a fresh screen did not start with Tips off")
+	reopened.queue_free()
+	tips_button.button_pressed = true
+	main.show_hint("zoom")
+	if not main.hint_toast.visible or main.hint_toast.label.text != HintToast.TEXT.zoom:
+		failures.append("turning Tips back on did not bring the hints back")
+	main.hint_toast.dismiss()
+	SaveFile.remove(saves.settings_path)
 
 
 func _play() -> void:
@@ -280,7 +311,7 @@ func _check_crumble() -> void:
 			break
 
 
-## Finished games are recorded once and saved; gear → Settings → Stats → Back
+## Finished games are recorded once and saved; settings button → Settings → Stats → Back
 ## opens and closes the right screens (#32).
 func _check_stats() -> void:
 	main.new_game()
@@ -310,7 +341,7 @@ func _check_stats() -> void:
 
 	main.show_settings()
 	if not main.settings_sheet.visible or not main.menu_open():
-		failures.append("gear did not open the Settings sheet")
+		failures.append("the settings button did not open the Settings sheet")
 	if not main.settings_sheet.home_button.visible:
 		failures.append("Settings opened in a game has no Home row")
 	main.settings_sheet.stats_button.pressed.emit()

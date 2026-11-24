@@ -3,7 +3,7 @@ extends Control
 ## with the final score, the best score and this game's lines, best combo and
 ## longest streak, over a single Play again button.
 ##
-## There is no Home button: Home stays one tap away through gear → Settings
+## There is no Home button: Home stays one tap away through the settings button
 ## once the next game starts. The "Score saved to Game Center" line stays
 ## hidden until the leaderboard (#30) reports a submit with
 ## show_score_saved().

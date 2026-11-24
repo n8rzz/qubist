@@ -92,7 +92,7 @@ var axis_buttons: Array[Button] = []
 ## Turn left, turn right.
 var rotate_buttons: Array[Button] = []
 var swiper_bar: PanelContainer
-var gear_button: Button
+var settings_button: Button
 ## Axis labels on the tower, indexed by ViewMath mode.
 var axis_labels: Array[Label] = []
 var overlay: Control
@@ -523,9 +523,10 @@ func onboarding_done() -> void:
 
 
 ## Shows one-time hint `key` (core/onboarding.gd HINTS) if the player hasn't
-## had it yet. Not during the tutorial, which teaches the same controls.
+## had it yet. Not during the tutorial, which teaches the same controls, nor
+## with Settings › Tips off (#164); a hint skipped that way stays unseen.
 func show_hint(key: String) -> void:
-	if tutorial.is_active() or menu_open() or not onboarding.see(key):
+	if not settings.tips or tutorial.is_active() or menu_open() or not onboarding.see(key):
 		return
 	SaveFile.write(onboarding_path, onboarding.to_dict())
 	hint_toast.show_hint(key, viewport_box.get_global_rect(), HINT_TOP)
@@ -555,6 +556,8 @@ func set_setting(key: String, on: bool) -> void:
 		audio.sound_effects = on
 	elif key == "music":
 		audio.music = on
+	elif key == "tips" and not on:
+		hint_toast.dismiss()
 	SaveFile.write(settings_path, settings.to_dict())
 
 
@@ -695,9 +698,9 @@ func _build_header() -> Control:
 	row.add_child(scores)
 
 	row.add_child(UI.spacer())
-	gear_button = UI.icon_button("gear", "Settings")
-	gear_button.pressed.connect(show_settings)
-	row.add_child(gear_button)
+	settings_button = UI.icon_button("settings", "Settings")
+	settings_button.pressed.connect(show_settings)
+	row.add_child(settings_button)
 	return row
 
 

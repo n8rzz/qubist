@@ -1,6 +1,7 @@
 extends RefCounted
 ## Player settings kept on the device (#20): the Sound and feel switches,
-## the music and sound effects volumes (#165) and the grid ticks switch (#56).
+## the music and sound effects volumes (#165), the grid ticks switch (#56)
+## and the tips switch (#164).
 ##
 ## Music and sound effects drive game/audio.gd (#26); haptics drives
 ## game/haptics.gd (#27).
@@ -13,6 +14,7 @@ const DEFAULTS := {
 	"sound_effects": true,
 	"haptics": true,
 	"grid_ticks": false,
+	"tips": true,
 }
 
 ## Every volume, 0 (silent) to 1 (full), with its default.
@@ -28,6 +30,8 @@ var haptics := true
 var grid_ticks := false
 var music_volume := 1.0
 var sound_effects_volume := 1.0
+## Show the one-time tip popups during play (#29). Off keeps them hidden.
+var tips := true
 
 
 func to_dict() -> Dictionary:
