@@ -3,7 +3,7 @@ extends RefCounted
 ## the music and sound effects volumes (#165), the grid ticks switch (#56)
 ## the tips switch (#164), the usage data switch (#31) and the sky (#168):
 ## whether it follows the device's date and clock, and the season and time of
-## day to show when it doesn't.
+## day to show when it doesn't, and whether Santa flies over it then (#198).
 ##
 ## Music and sound effects drive game/audio.gd (#26); haptics drives
 ## game/haptics.gd (#27).
@@ -21,6 +21,7 @@ const DEFAULTS := {
 	"tips": true,
 	"analytics": true,
 	"sky_follows_day": true,
+	"sky_christmas": false,
 }
 
 ## Every choice setting with its default; each must be one of CHOICES[key].
@@ -55,6 +56,9 @@ var analytics := true
 var sky_follows_day := true
 var sky_season := "spring"
 var sky_time := "day"
+## Santa flies across the sky (#198) while it doesn't follow the day. While
+## it does, the date decides.
+var sky_christmas := false
 
 
 func to_dict() -> Dictionary:

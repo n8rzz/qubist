@@ -15,6 +15,10 @@ extends Control
 ## clouds stay put when one screen's backdrop hands off to the next. Under
 ## Reduce Motion (SkyView.still) everything stands still.
 ##
+## At Christmas (SkyView.christmas, #198) Santa's sleigh and three reindeer
+## fly across now and then, in front of the clouds, leaving a trail of
+## sparkles. The lead reindeer's nose glows, brighter at night.
+##
 ## Positions are in the design's 390-point-wide frame: x stretches with the
 ## width, y is in points from the top.
 
@@ -74,6 +78,33 @@ const MIST_VIEWS := ["spring sunrise", "fall sunrise"]
 ## Mist banks as [left, top, width, opacity].
 const MIST := [[40.0, 420.0, 300.0, 0.55], [70.0, 470.0, 360.0, 0.45], [100.0, 520.0, 280.0, 0.5]]
 
+## Santa (#198) crosses from SANTA_FROM to SANTA_TO (x at 390 wide) in
+## SANTA_CROSSING_SECONDS, once every SANTA_EVERY_SECONDS. He starts halfway
+## across, so he's in the sky when Reduce Motion stops the clock.
+const SANTA_CROSSING_SECONDS := 16.0
+const SANTA_EVERY_SECONDS := 40.0
+const SANTA_FROM := -150.0
+const SANTA_TO := 420.0
+## He flies an arc: SANTA_LOW points down at either edge, SANTA_HIGH mid-sky.
+const SANTA_LOW := 260.0
+const SANTA_HIGH := 190.0
+const SANTA_SCALE := 0.8
+## Reindeer, nose to tail, in front of the sleigh: this far apart.
+const REINDEER_COUNT := 3
+const REINDEER_GAP := 30.0
+const SANTA_RED := Color("#C8312F")
+const SANTA_RED_DEEP := Color("#9E2222")
+const SANTA_GOLD := Color("#E8B64C")
+const SANTA_SKIN := Color("#F2C9A8")
+const SANTA_WHITE := Color("#FFFFFF")
+const SANTA_SACK := Color("#8A5A3B")
+const REINDEER := Color("#8B5E3C")
+const REINDEER_DARK := Color("#5E3D26")
+const RED_NOSE := Color("#FF3B30")
+## Sparkles trail this many seconds behind the sleigh.
+const SPARKLES := 10
+const SPARKLE_GAP_SECONDS := 0.09
+
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -125,6 +156,9 @@ func _draw() -> void:
 			var center: Vector2 = cloud[i][0]
 			var radii: Vector2 = cloud[i][1]
 			draw_colored_polygon(ellipse(Vector2(center.x * k, CLOUD_TOP + center.y) + shift, radii), color)
+
+	if SkyView.christmas:
+		_draw_santa(w, seconds)
 
 	for layer in layers:
 		var view: String = "%s %s" % [layer[0], layer[1]]
@@ -265,6 +299,99 @@ func _draw_mist(k: float, seconds: float, alpha: float) -> void:
 			var f := 0.7 * (1.0 - float(r) / rings)
 			draw_colored_polygon(ellipse(center, Vector2(bank[2] * 0.5 * k, 20.0) * f),
 				Color(1, 1, 1, bank[3] / rings * 1.4 * alpha))
+
+
+## Where Santa's sleigh is, `seconds` in, on a backdrop `width` points
+## wide, as [position, tilt in radians, whether he's crossing now].
+static func santa_at(seconds: float, width: float) -> Array:
+	var t := fposmod(seconds + SANTA_CROSSING_SECONDS * 0.5, SANTA_EVERY_SECONDS)
+	var p := t / SANTA_CROSSING_SECONDS
+	var crossing := p <= 1.0
+	p = minf(p, 1.0)
+	var k := width / 390.0
+	var x := lerpf(SANTA_FROM, SANTA_TO, p) * k
+	var y := lerpf(SANTA_LOW, SANTA_HIGH, sin(PI * p)) + 4.0 * sin(TAU * seconds / 2.5)
+	# The arc's slope, so the team noses up as it climbs and down as it falls.
+	var dy := (SANTA_HIGH - SANTA_LOW) * PI * cos(PI * p)
+	var dx := (SANTA_TO - SANTA_FROM) * k
+	return [Vector2(x, y), atan2(dy, dx) * 0.6, crossing]
+
+
+func _draw_santa(width: float, seconds: float) -> void:
+	var at := santa_at(seconds, width)
+	if not at[2]:
+		return
+	var night := SkyView.night_amount()
+	# Lit like the island, so he isn't glaring at night.
+	var light := Color.WHITE.lerp(SkyView.tint(), 0.7)
+
+	for j in range(SPARKLES, 0, -1):
+		var behind: Vector2 = santa_at(seconds - j * SPARKLE_GAP_SECONDS, width)[0]
+		var twinkle := 0.6 + 0.4 * sin(TAU * (seconds * 3.0 + rand(j, 7)))
+		var fade := (1.0 - float(j) / (SPARKLES + 1)) * twinkle
+		var jitter := Vector2(rand(j, 8) - 0.5, rand(j, 9) - 0.5) * 8.0
+		draw_circle(behind + Vector2(-18, 6) + jitter, 1.2 + 1.3 * fade, Color(SANTA_GOLD, 0.85 * fade), true, -1.0, true)
+
+	draw_set_transform(at[0], at[1], Vector2.ONE * SANTA_SCALE)
+	var gallop := TAU * seconds / 0.7
+
+	# Reins from the sleigh's front to the lead reindeer.
+	var reins := PackedVector2Array([Vector2(16, -6)])
+	var deer: Array[Vector2] = []
+	for i in REINDEER_COUNT:
+		var bob := 2.5 * sin(gallop - i * 0.9)
+		deer.append(Vector2(44.0 + REINDEER_GAP * i, -10.0 + bob))
+		reins.append(deer[i] + Vector2(-4, -2))
+	draw_polyline(reins, Color(SANTA_GOLD * light, 1.0), 1.2, true)
+
+	for i in REINDEER_COUNT:
+		_draw_reindeer(deer[i], gallop - i * 0.9, i == REINDEER_COUNT - 1, light, night)
+
+	# Sack, Santa, then the sleigh in front of him.
+	draw_circle(Vector2(-15, -12), 7.5, SANTA_SACK * light, true, -1.0, true)
+	draw_circle(Vector2(-4, -12), 7.0, SANTA_RED * light, true, -1.0, true)
+	draw_circle(Vector2(-2, -22), 4.5, SANTA_SKIN * light, true, -1.0, true)
+	draw_circle(Vector2(0, -19), 4.0, SANTA_WHITE * light, true, -1.0, true)
+	draw_colored_polygon(PackedVector2Array([Vector2(-7, -24), Vector2(3, -25), Vector2(-9, -33)]), SANTA_RED * light)
+	draw_rect(Rect2(-7.5, -26, 11, 2.5), SANTA_WHITE * light)
+	draw_circle(Vector2(-9, -33), 2.0, SANTA_WHITE * light, true, -1.0, true)
+
+	var sleigh := PackedVector2Array([
+		Vector2(-26, -16), Vector2(-21, -14), Vector2(-18, -4), Vector2(10, -4),
+		Vector2(16, -10), Vector2(20, -8), Vector2(15, 4), Vector2(-20, 4), Vector2(-25, -2),
+	])
+	draw_colored_polygon(sleigh, SANTA_RED_DEEP * light)
+	draw_colored_polygon(PackedVector2Array([Vector2(-18, -4), Vector2(10, -4), Vector2(14, 0), Vector2(-19, 0)]), SANTA_RED * light)
+	draw_polyline(PackedVector2Array([Vector2(-24, 10), Vector2(16, 10), Vector2(21, 7), Vector2(22, 3)]), SANTA_GOLD * light, 2.0, true)
+	for strut in [-14.0, 8.0]:
+		draw_line(Vector2(strut, 4), Vector2(strut, 10), SANTA_GOLD * light, 1.5, true)
+	draw_set_transform(Vector2.ZERO)
+
+
+## One reindeer at `at`, facing right, legs swinging with `phase`.
+func _draw_reindeer(at: Vector2, phase: float, lead: bool, light: Color, night: float) -> void:
+	var swing := 0.5 * sin(phase)
+	for leg in [[Vector2(-7, 2), 1.0], [Vector2(-4, 2), -1.0], [Vector2(5, 2), -1.0], [Vector2(8, 2), 1.0]]:
+		var dir := Vector2.DOWN.rotated(swing * leg[1] + (0.6 if leg[0].x < 0 else -0.6))
+		draw_line(at + leg[0], at + leg[0] + dir * 8.0, REINDEER_DARK * light, 1.6, true)
+	draw_colored_polygon(ellipse(at, Vector2(11, 5), 20), REINDEER * light)
+	draw_circle(at + Vector2(-11, -2), 2.0, SANTA_WHITE * light, true, -1.0, true)
+	draw_line(at + Vector2(8, -2), at + Vector2(12, -8), REINDEER * light, 4.0, true)
+	var head := at + Vector2(14, -9)
+	draw_colored_polygon(ellipse(head, Vector2(4.5, 3.2), 16), REINDEER * light)
+	for side in [-1.0, 1.0]:
+		var base := head + Vector2(-1.5 + side * 1.2, -2.5)
+		var tip := base + Vector2(-2.0 + side * 2.0, -7)
+		draw_polyline(PackedVector2Array([base, tip]), REINDEER_DARK * light, 1.3, true)
+		draw_line(base.lerp(tip, 0.5), base.lerp(tip, 0.5) + Vector2(side * 2.5 - 1.0, -1.5), REINDEER_DARK * light, 1.1, true)
+	var nose := head + Vector2(4.5, 0.5)
+	if lead:
+		var pulse := 0.5 + 0.5 * sin(TAU * SkyView.seconds() / 1.2)
+		var glow := lerpf(0.35, 0.8, night) * (0.7 + 0.3 * pulse)
+		_glow(nose, 14.0 + 6.0 * night, Color(RED_NOSE, glow))
+		draw_circle(nose, 2.0, RED_NOSE, true, -1.0, true)
+	else:
+		draw_circle(nose, 1.4, REINDEER_DARK * light, true, -1.0, true)
 
 
 static func ellipse(center: Vector2, radii: Vector2, segments := 32) -> PackedVector2Array:

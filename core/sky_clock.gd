@@ -78,3 +78,21 @@ static func view_at(datetime: Dictionary, locale: String) -> Array[String]:
 ## [season, time of day] right now, on this device.
 static func now() -> Array[String]:
 	return view_at(Time.get_datetime_dict_from_system(), OS.get_locale())
+
+
+## Christmas (#198): Santa flies over the sky from CHRISTMAS_FIRST to
+## CHRISTMAS_LAST December, everywhere, whatever the season.
+const CHRISTMAS_FIRST := 20
+const CHRISTMAS_LAST := 26
+
+
+## Whether `datetime` (a Time.get_datetime_dict_from_system() dictionary)
+## falls at Christmas.
+static func is_christmas(datetime: Dictionary) -> bool:
+	var day := int(datetime.get("day", 1))
+	return int(datetime.get("month", 1)) == 12 and day >= CHRISTMAS_FIRST and day <= CHRISTMAS_LAST
+
+
+## Whether it's Christmas right now, on this device.
+static func christmas_now() -> bool:
+	return is_christmas(Time.get_datetime_dict_from_system())

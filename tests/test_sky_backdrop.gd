@@ -56,3 +56,31 @@ func test_clouds_bob_out_of_step() -> void:
 	for step in range(0, 12):
 		apart = maxf(apart, absf(SkyBackdrop.cloud_shift(0, step, 390.0).y - SkyBackdrop.cloud_shift(1, step, 390.0).y))
 	check(apart > 1.0, "neighboring clouds shouldn't float in sync")
+
+
+func test_santa_is_mid_sky_when_the_clock_stands_still() -> void:
+	# Reduce Motion stops the clock at 0, so he has to be on screen then.
+	var at: Array = SkyBackdrop.santa_at(0.0, 390.0)
+	check(at[2], "Santa should be crossing at second 0")
+	check(at[0].x > 0.0 and at[0].x < 390.0, "Santa should be on screen at second 0: %f" % at[0].x)
+
+
+func test_santa_flies_right_and_starts_and_ends_offscreen() -> void:
+	var half := SkyBackdrop.SANTA_CROSSING_SECONDS * 0.5
+	var start: Array = SkyBackdrop.santa_at(-half + 0.001, 390.0)
+	var end: Array = SkyBackdrop.santa_at(half - 0.001, 390.0)
+	check(start[0].x < -100.0, "Santa should come in from past the left edge: %f" % start[0].x)
+	check(end[0].x > 390.0, "Santa should leave past the right edge: %f" % end[0].x)
+	check(SkyBackdrop.santa_at(1.0, 390.0)[0].x > SkyBackdrop.santa_at(0.0, 390.0)[0].x, "Santa should fly right")
+
+
+func test_santa_only_comes_by_now_and_then() -> void:
+	var crossing := 0
+	var steps := 400
+	for i in steps:
+		if SkyBackdrop.santa_at(i * SkyBackdrop.SANTA_EVERY_SECONDS / steps, 390.0)[2]:
+			crossing += 1
+	var share := float(crossing) / steps
+	check(share > 0.3 and share < 0.5, "Santa should be in the sky about 40%% of the time: %f" % share)
+	var later: Array = SkyBackdrop.santa_at(SkyBackdrop.SANTA_EVERY_SECONDS, 390.0)
+	check(is_equal_approx(later[0].x, SkyBackdrop.santa_at(0.0, 390.0)[0].x), "Santa should come back around")

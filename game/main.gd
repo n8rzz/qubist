@@ -649,6 +649,10 @@ func set_setting(key: String, on: bool) -> void:
 			for choice in [["sky_season", SkyView.season], ["sky_time", SkyView.time_of_day]]:
 				settings.set(choice[0], choice[1])
 				settings_sheet.set_choice(choice[0], choice[1])
+			settings.sky_christmas = SkyView.christmas
+			settings_sheet.set_switch("sky_christmas", SkyView.christmas)
+		SkyView.follow(settings)
+	elif key == "sky_christmas":
 		SkyView.follow(settings)
 	SaveFile.write(settings_path, settings.to_dict())
 

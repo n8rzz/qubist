@@ -6,7 +6,7 @@ extends Control
 ## track playing with a button to skip to the next (#166). Display: the Grid
 ## ticks switch (#56), which the design doesn't show yet; it sits above Game
 ## (#183), and the Sky follows my day switch (#168), with Season and Time of
-## day pickers under it while it's off. Game:
+## day pickers and a Christmas switch (#198) under it while it's off. Game:
 ## Stats (#32), Replay tutorial (#29), the Tips switch (#164), the Share usage
 ## data switch (#31) and Home (#72, only when opened from a game). Pause stays
 ## a separate menu (#42).
@@ -62,6 +62,8 @@ var sky_button: Button
 ## Holds the Season and Time of day pickers; shown while the sky doesn't
 ## follow the day.
 var sky_choices: VBoxContainer
+## Santa in the sky (#198); shown with the pickers.
+var christmas_button: Button
 var music_volume_slider: HSlider
 var sound_effects_volume_slider: HSlider
 ## The track playing and its artist, and the button that skips it (#166).
@@ -162,6 +164,8 @@ func _init() -> void:
 	sky_button = _switch_row(display, "sky_follows_day", "Sky follows my day", "sky")
 	sky_button.tooltip_text = "Match the background to the season and time of day"
 	sky_choices = _sky_choices(display)
+	christmas_button = _switch_row(display, "sky_christmas", "Christmas", "tree")
+	christmas_button.tooltip_text = "Santa flies across the sky"
 	sky_button.toggled.connect(func(_on): _sync_sky_choices())
 
 	var game := _card(column, "GAME")
@@ -449,14 +453,17 @@ func _picker(column: VBoxContainer, key: String, caption: String, values: Array[
 	_choices[key] = buttons
 
 
-## The pickers show only while the sky doesn't follow the day.
+## The pickers and the Christmas switch show only while the sky doesn't
+## follow the day.
 func _sync_sky_choices() -> void:
-	if sky_choices == null:
+	if sky_choices == null or christmas_button == null:
 		return
 	var follows := sky_button.button_pressed
 	if sky_choices.get_parent().visible == not follows:
 		return
 	sky_choices.get_parent().visible = not follows
+	christmas_button.visible = not follows
+	_update_dividers()
 	if visible:
 		_fit_scroll.call_deferred()
 
@@ -672,6 +679,13 @@ class Icon:
 					line.call([Vector2(4, t), Vector2(4 + tick, t)])
 			"chevron":
 				line.call([Vector2(9, 5), Vector2(16, 12), Vector2(9, 19)])
+			"tree":
+				# A Christmas tree: two tiers, a trunk and a star.
+				line.call([Vector2(12, 6), Vector2(7, 12), Vector2(9.5, 12), Vector2(5, 18),
+					Vector2(19, 18), Vector2(14.5, 12), Vector2(17, 12), Vector2(12, 6)])
+				line.call([Vector2(12, 18), Vector2(12, 21)])
+				line.call([Vector2(12, 1.5), Vector2(12, 4)])
+				line.call([Vector2(10.8, 2.75), Vector2(13.2, 2.75)])
 			"sky":
 				# A sun half over the horizon, with three rays.
 				arc.call(Vector2(12, 16), 5.0, PI, TAU)
