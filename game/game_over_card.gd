@@ -1,16 +1,16 @@
 extends Control
 ## Game-over card (#19): the tower dims and a card slides up from the bottom
 ## with the final score, the best score and this game's lines, best combo and
-## longest streak, over a single Play again button.
+## longest streak, over a Play again button and a quieter Home button (#163).
 ##
-## There is no Home button: Home stays one tap away through the settings button
-## once the next game starts. The "Score saved to Game Center" line stays
+## The "Score saved to Game Center" line stays
 ## hidden until the leaderboard (#30) reports a submit with
 ## show_score_saved().
 
 const UI := preload("res://game/ui_style.gd")
 
 signal play_again_pressed
+signal home_pressed
 
 ## Colours from the Qubist game-over design.
 const INK := Color("#22313F")
@@ -37,6 +37,7 @@ var lines_label: Label
 var combo_label: Label
 var streak_label: Label
 var play_again_button: Button
+var home_button: Button
 var score_saved_row: HBoxContainer
 var _tween: Tween
 
@@ -100,6 +101,10 @@ func _init() -> void:
 	play_again_button = _play_again_button()
 	play_again_button.pressed.connect(func(): play_again_pressed.emit())
 	column.add_child(play_again_button)
+
+	home_button = _home_button()
+	home_button.pressed.connect(func(): home_pressed.emit())
+	column.add_child(home_button)
 
 	var saved := UI.label("Score saved to Game Center", 13, SUBTLE)
 	saved.add_theme_font_override("font", UI.body_font(500))
@@ -182,6 +187,23 @@ func _play_again_button() -> Button:
 	b.add_theme_stylebox_override("hover", _button_box(BUTTON.lightened(0.06), 4))
 	# Pressed sinks onto its edge.
 	b.add_theme_stylebox_override("pressed", _button_box(BUTTON.darkened(0.08), 0, 4))
+	return b
+
+
+## A plain text button under Play again, so it doesn't compete with it.
+func _home_button() -> Button:
+	var b := Button.new()
+	b.text = "Home"
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size.y = 44
+	b.add_theme_font_override("font", UI.body_font(600))
+	b.add_theme_font_size_override("font_size", 16)
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(state, BUTTON)
+	var clear := Color(0, 0, 0, 0)
+	b.add_theme_stylebox_override("normal", UI.box(clear, clear, 20, 0))
+	b.add_theme_stylebox_override("hover", UI.box(TILE, clear, 20, 0))
+	b.add_theme_stylebox_override("pressed", UI.box(TILE.darkened(0.04), clear, 20, 0))
 	return b
 
 

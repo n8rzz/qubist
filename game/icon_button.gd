@@ -1,7 +1,7 @@
 extends Button
 ## A button that draws a line icon instead of text, so the UI needs no icon
-## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "pause", "settings", "stats",
-## "back", "close", "rotate_left" or "rotate_right".
+## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "pause", "home", "settings",
+## "stats", "back", "close", "rotate_left" or "rotate_right".
 
 var kind := "pause"
 var icon_color := Color("#22313F")
@@ -23,6 +23,12 @@ func _draw() -> void:
 			bar.anti_aliasing = true
 			draw_style_box(bar, Rect2(c + Vector2(-5.5, -7), Vector2(3.5, 14)))
 			draw_style_box(bar, Rect2(c + Vector2(2, -7), Vector2(3.5, 14)))
+		"home":
+			# A roof over an open-bottomed house, as on the Settings sheet's Home row.
+			draw_polyline(PackedVector2Array([c + Vector2(-8, -1), c + Vector2(0, -8), c + Vector2(8, -1)]),
+				icon_color, 2.0, true)
+			draw_polyline(PackedVector2Array([c + Vector2(-6, -2.5), c + Vector2(-6, 8),
+				c + Vector2(6, 8), c + Vector2(6, -2.5)]), icon_color, 2.0, true)
 		"settings":
 			draw_line(c + Vector2(-8, -4), c + Vector2(8, -4), icon_color, 2.0)
 			draw_line(c + Vector2(-8, 4), c + Vector2(8, 4), icon_color, 2.0)

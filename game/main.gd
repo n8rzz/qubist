@@ -93,6 +93,8 @@ var axis_buttons: Array[Button] = []
 var rotate_buttons: Array[Button] = []
 var swiper_bar: PanelContainer
 var settings_button: Button
+## Back to Home from the game (#163); the game stays saved for Continue.
+var home_button: Button
 ## Axis labels on the tower, indexed by ViewMath mode.
 var axis_labels: Array[Label] = []
 var overlay: Control
@@ -630,6 +632,7 @@ func _build_ui() -> void:
 	add_child(overlay)
 	game_over_card = GameOverCard.new()
 	game_over_card.play_again_pressed.connect(new_game)
+	game_over_card.home_pressed.connect(show_home)
 	add_child(game_over_card)
 	# Under Home and the menus, so they cover it.
 	hint_toast = HintToast.new()
@@ -666,15 +669,14 @@ func _build_header() -> Control:
 	row.custom_minimum_size.y = HEADER_HEIGHT
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	var pause := UI.icon_button("pause", "Pause")
-	pause.pressed.connect(_show_pause)
-	if not SHOW_PAUSE_BUTTON:
-		# Keep the slot so the score stays centered, but make it inert.
-		pause.modulate.a = 0.0
-		pause.disabled = true
-		pause.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pause.focus_mode = Control.FOCUS_NONE
-	row.add_child(pause)
+	# Home sits opposite Settings, so the score stays centered (#163).
+	home_button = UI.icon_button("home", "Home")
+	home_button.pressed.connect(show_home)
+	row.add_child(home_button)
+	if SHOW_PAUSE_BUTTON:
+		var pause := UI.icon_button("pause", "Pause")
+		pause.pressed.connect(_show_pause)
+		row.add_child(pause)
 	row.add_child(UI.spacer())
 
 	var scores := VBoxContainer.new()

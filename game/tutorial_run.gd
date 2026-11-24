@@ -60,12 +60,22 @@ func start(on_done := Callable()) -> void:
 	host.tutorial_overlay.visible = true
 	# Skip sits where the settings button is, so that button makes way.
 	host.settings_button.modulate.a = 0.0
+	# Home would leave the tutorial running behind it, so it is hidden too.
+	_show_home_button(false)
 	_load_step(0)
 
 
 ## Ends the tutorial early, as with Skip.
 func skip() -> void:
 	_end(false)
+
+
+## Hides the header's Home button in place, keeping its slot so the score
+## doesn't move.
+func _show_home_button(on: bool) -> void:
+	host.home_button.modulate.a = 1.0 if on else 0.0
+	host.home_button.disabled = not on
+	host.home_button.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
 
 
 func _end(completed: bool) -> void:
@@ -78,6 +88,7 @@ func _end(completed: bool) -> void:
 	host.tutorial_overlay.hide_hand()
 	host.tutorial_overlay.visible = false
 	host.settings_button.modulate.a = 1.0
+	_show_home_button(true)
 	host.onboarding_done()
 	_reset_view(_saved_view_step, _saved_zoom)
 	host._use_game(_saved_game)
