@@ -91,6 +91,62 @@ func test_crossing_lines_share_one_cube() -> void:
 	check(game.grid.is_filled(Vector3i(0, 0, 1)), "upper half of the bar is left floating")
 
 
+func test_piece_placed_carries_the_slot_piece_and_origin() -> void:
+	var game = _game()
+	var piece = game.tray[1]
+	var origin := Vector3i(1, 2, 0)
+	var calls: Array = []
+	game.piece_placed.connect(func(index, p, at): calls.append([index, p, at]))
+	check(game.place(1, origin).ok)
+	check_eq(calls.size(), 1, "piece_placed fired once")
+	if calls.size() == 1:
+		check_eq(calls[0][0], 1, "tray index")
+		check(is_same(calls[0][1], piece), "the piece that was in the slot")
+		check_eq(calls[0][2], origin, "origin")
+
+
+func test_lines_cleared_carries_lines_and_cells_once() -> void:
+	# Same crossing as above: two lines sharing the corner cube.
+	var game = _game([BAR2_UP, BAR4_X, "cube2"])
+	fill(game.grid, _row(0, 0, [1, 2, 3, 4, 5]))
+	for y in range(1, 6):
+		fill(game.grid, [Vector3i(0, y, 0)])
+	var calls: Array = []
+	game.lines_cleared.connect(func(lines, cells): calls.append([lines, cells]))
+	var result: Dictionary = game.place(0, Vector3i(0, 0, 0))
+	check_eq(calls.size(), 1, "lines_cleared fired once")
+	if calls.size() != 1:
+		return
+	var lines: Array = calls[0][0]
+	var cells: Array = calls[0][1]
+	check_eq(lines, result.lines, "the lines that were cleared")
+	check_eq(lines.size(), 2)
+	var in_lines := {}
+	for line in lines:
+		for c in line.cells:
+			in_lines[c] = true
+	var listed := {}
+	for c in cells:
+		check(not listed.has(c), "%s is listed twice" % c)
+		listed[c] = true
+	check_eq(cells.size(), 11, "the shared corner cube is listed once")
+	check(listed.has(Vector3i(0, 0, 0)), "the shared corner cube is listed")
+	check_eq(listed.size(), in_lines.size(), "every cell of both lines is listed")
+	for c in in_lines:
+		check(listed.has(c), "%s from a cleared line is missing" % c)
+
+
+func test_lines_cleared_does_not_fire_without_a_clear() -> void:
+	var game = _game()
+	var placed := [0]
+	var cleared := [0]
+	game.piece_placed.connect(func(_index, _p, _at): placed[0] += 1)
+	game.lines_cleared.connect(func(_lines, _cells): cleared[0] += 1)
+	check(game.place(0, Vector3i(0, 0, 0)).ok)
+	check_eq(placed[0], 1, "the move went through")
+	check_eq(cleared[0], 0, "lines_cleared stayed quiet")
+
+
 func test_streak_builds_and_resets() -> void:
 	var game = _game([BAR2_X, BAR2_X, "cube2"])
 	fill(game.grid, _row(0, 0, [0, 1, 2, 3]))
