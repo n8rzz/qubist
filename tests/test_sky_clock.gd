@@ -74,3 +74,13 @@ func test_view_at_a_moment() -> void:
 	check_eq(SkyClock.view_at(july_evening, "en_AU"), ["winter", "night"] as Array[String], "Australia, July 22:00")
 	var spring_noon := {"year": 2026, "month": 4, "day": 1, "hour": 12, "minute": 0}
 	check_eq(SkyClock.view_at(spring_noon, "fr_FR"), ["spring", "day"] as Array[String], "France, April noon")
+
+
+func test_christmas_runs_from_the_20th_to_the_26th_of_december() -> void:
+	check(not SkyClock.is_christmas({"month": 12, "day": 19}), "19 December is too early")
+	check(SkyClock.is_christmas({"month": 12, "day": 20}), "20 December")
+	check(SkyClock.is_christmas({"month": 12, "day": 25}), "Christmas Day")
+	check(SkyClock.is_christmas({"month": 12, "day": 26}), "Boxing Day")
+	check(not SkyClock.is_christmas({"month": 12, "day": 27}), "27 December is too late")
+	check(not SkyClock.is_christmas({"month": 6, "day": 25}), "25 June isn't Christmas")
+	check(not SkyClock.is_christmas({}), "an empty date isn't Christmas")

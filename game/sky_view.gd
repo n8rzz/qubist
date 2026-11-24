@@ -88,6 +88,9 @@ static var _changed_msec := -1000000
 static var version := 0
 ## Reduce Motion: the sky stands still (clouds, sun, particles).
 static var still := false
+## Christmas (#198): Santa's sleigh flies across the sky. Set from the date
+## whatever the sky shows, so a player who picked their own sky sees it too.
+static var christmas := false
 
 
 ## Shows this season and time of day, fading from the current one unless
@@ -121,8 +124,9 @@ static func view_for(settings) -> Array[String]:
 	return [settings.sky_season, settings.sky_time]
 
 
-## Shows what `settings` asks for.
+## Shows what `settings` asks for, and Santa at Christmas.
 static func follow(settings, instant := false) -> void:
+	christmas = SkyClock.christmas_now()
 	var view := view_for(settings)
 	show(view[0], view[1], instant)
 

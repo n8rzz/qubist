@@ -266,8 +266,8 @@ func update_sky(delta: float) -> void:
 	_sky_check_in -= delta
 	if _sky_check_in <= 0.0 and not drag.is_dragging():
 		_sky_check_in = SKY_CHECK_SECONDS
-		if settings.sky_follows_day:
-			SkyView.follow(settings)
+		# A picked sky stays put, but Christmas still comes and goes (#198).
+		SkyView.follow(settings)
 	viewport_box.modulate = SkyView.tint()
 	var snow := SkyView.snow_amount()
 	if not is_equal_approx(tower.snow_amount(), snow):
