@@ -124,6 +124,57 @@ func test_symmetric_shapes_have_fewer_orientations() -> void:
 	check_eq(Piece.orientations([Vector3i(0, 0, 0)]).size(), 1)
 
 
+## A 4-cube screw: two cubes along x, a third along y, the fourth stacked on
+## top. Its turns run along all three axes, so no rotation matches its mirror
+## image.
+const SCREW: Array[Vector3i] = [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(1, 1, 0), Vector3i(1, 1, 1)]
+## A flat L. Flipping it over is a rotation, so its mirror image is one of
+## its orientations.
+const FLAT_L: Array[Vector3i] = [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(0, 1, 0)]
+
+
+func test_orientations_never_include_mirror_images() -> void:
+	var turns := _orientation_keys(SCREW)
+	check_eq(turns.size(), 12, "a screw has 12 rotations; with mirror images it would have 24")
+	for axis in 3:
+		var mirror := _mirror_key(SCREW, axis)
+		check(not turns.has(mirror), "the screw mirrored on axis %d is among its orientations" % axis)
+
+
+## Shows the check above can fail: a mirror image that is also a rotation is
+## found among the orientations.
+func test_mirror_check_finds_a_mirror_that_is_a_rotation() -> void:
+	var turns := _orientation_keys(FLAT_L)
+	for axis in 3:
+		check(turns.has(_mirror_key(FLAT_L, axis)), "the flat L mirrored on axis %d is a rotation of it" % axis)
+
+
+## Piece.orientations(), as a set of their printed cells.
+func _orientation_keys(cells: Array[Vector3i]) -> Dictionary:
+	var keys := {}
+	for turned in Piece.orientations(cells):
+		keys[str(turned)] = true
+	return keys
+
+
+## `cells` reflected across the x (0), y (1) or h (2) axis, shifted so the
+## smallest x, y and h are 0 and sorted, then printed like an orientation.
+func _mirror_key(cells: Array[Vector3i], axis: int) -> String:
+	var mirrored: Array[Vector3i] = []
+	for c in cells:
+		var m := c
+		m[axis] = -m[axis]
+		mirrored.append(m)
+	var lo := mirrored[0]
+	for c in mirrored:
+		lo = lo.min(c)
+	var out: Array[Vector3i] = []
+	for c in mirrored:
+		out.append(c - lo)
+	out.sort()
+	return str(out)
+
+
 func test_plain_entries_are_not_expanded() -> void:
 	var cfg := Config.new({}, {"pieces": [{"id": "dot", "cells": [[0, 0, 0]]}]})
 	check_eq(cfg.pieces.size(), 1)
