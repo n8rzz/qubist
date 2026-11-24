@@ -92,6 +92,18 @@ func test_night_light_keeps_the_tower_readable() -> void:
 	_reset()
 
 
+func test_cube_tops_turn_snowy_in_winter() -> void:
+	var top := Color("#ECE7DD")
+	var inset := Color("#F6F2EA")
+	SkyView.show("winter", "day", true)
+	check(SkyView.snowy_top(top).is_equal_approx(SkyView.SNOW_TOP), "snow on top in winter")
+	check(SkyView.snowy_top_inset(inset).is_equal_approx(SkyView.SNOW_TOP_INSET), "snow on the inset in winter")
+	SkyView.show("summer", "day", true)
+	check(SkyView.snowy_top(top).is_equal_approx(top), "bare top in summer")
+	check(SkyView.snowy_top_inset(inset).is_equal_approx(inset), "bare inset in summer")
+	_reset()
+
+
 func test_night_text_turns_light() -> void:
 	SkyView.show("summer", "night", true)
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at night")

@@ -193,6 +193,16 @@ static func snow_amount() -> float:
 	return _mixf(func(s, _t): return 1.0 if s == "winter" else 0.0)
 
 
+## A cube's top `color`, blended towards snow as far as it's winter (#206).
+static func snowy_top(color: Color) -> Color:
+	return color.lerp(SNOW_TOP, snow_amount())
+
+
+## A cube top's inset `color`, blended towards snow as far as it's winter.
+static func snowy_top_inset(color: Color) -> Color:
+	return color.lerp(SNOW_TOP_INSET, snow_amount())
+
+
 ## Colour for text on the sky: `day` by day, `night` at night.
 static func text_color(day: Color, night: Color) -> Color:
 	return day.lerp(night, night_amount())
