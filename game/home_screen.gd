@@ -1,12 +1,13 @@
 extends Control
 ## Home screen (#72): the first screen on launch. Sky and clouds, Stats and
 ## Settings in the top bar, the Qubist wordmark over the best score, the
-## tower on its island, then New game, Continue and How to play.
+## tower on its island, then New game, Continue and How to play. With no game
+## to continue, the island builds and crumbles towers on a loop (#186).
 
 const UI := preload("res://game/ui_style.gd")
 const IconButton := preload("res://game/icon_button.gd")
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
-const IslandArt := preload("res://game/island_art.gd")
+const HomeTowerArt := preload("res://game/home_tower_art.gd")
 
 signal new_game_pressed
 signal continue_pressed
@@ -21,7 +22,8 @@ const CROWN_EDGE := Color("#C98A1E")
 const SIDE_MARGIN := 20
 const GAP := 16
 
-## A stack shown on the island when there's no game to continue.
+## The stack shown on the island when there's no game to continue and
+## Reduce Motion is on.
 const SAMPLE_CELLS: Array[Vector3i] = [
 	Vector3i(1, 1, 0), Vector3i(2, 1, 0), Vector3i(3, 1, 0), Vector3i(1, 2, 0),
 	Vector3i(1, 3, 0), Vector3i(3, 3, 0), Vector3i(4, 3, 0), Vector3i(4, 4, 0),
@@ -32,7 +34,7 @@ const SAMPLE_CELLS: Array[Vector3i] = [
 var stats_button: IconButton
 var settings_button: IconButton
 var best_label: Label
-var island: IslandArt
+var island: HomeTowerArt
 var new_game_button: Button
 var continue_button: Button
 var continue_score: Label
@@ -75,9 +77,11 @@ func _init() -> void:
 	title.add_child(_best_pill())
 	column.add_child(title)
 
-	island = IslandArt.new()
+	island = HomeTowerArt.new()
 	island.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	island.cells = SAMPLE_CELLS
+	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
+	island.still = DisplayServer.accessibility_should_reduce_animation() == 1
 	column.add_child(island)
 
 	var buttons := VBoxContainer.new()
@@ -124,13 +128,17 @@ func _init() -> void:
 
 
 ## Shows Home with the best score. `resume_score` is the score of the game
-## Continue resumes, or -1 to hide Continue; `cells` fill the island's tower
-## (the sample stack when empty).
+## Continue resumes, or -1 to hide Continue; `cells` fill the island's tower.
+## With no `cells`, the island plays its build-and-crumble loop (the sample
+## stack, standing still, under Reduce Motion).
 func open(best: int, resume_score: int = -1, cells: Array = []) -> void:
 	best_label.text = "BEST %s" % UI.format_number(best)
 	continue_button.visible = resume_score >= 0
 	continue_score.text = "· %s" % UI.format_number(maxi(resume_score, 0))
-	island.set_cells(cells if not cells.is_empty() else SAMPLE_CELLS)
+	if cells.is_empty():
+		island.play(SAMPLE_CELLS)
+	else:
+		island.show_cells(cells)
 	visible = true
 
 
