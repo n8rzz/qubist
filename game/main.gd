@@ -266,8 +266,8 @@ func update_sky(delta: float) -> void:
 	_sky_check_in -= delta
 	if _sky_check_in <= 0.0 and not drag.is_dragging():
 		_sky_check_in = SKY_CHECK_SECONDS
-		# A picked sky stays put, but Christmas still comes and goes (#198).
-		SkyView.follow(settings)
+		if settings.sky_follows_day:
+			SkyView.follow(settings)
 	viewport_box.modulate = SkyView.tint()
 	var snow := SkyView.snow_amount()
 	if not is_equal_approx(tower.snow_amount(), snow):
@@ -649,6 +649,10 @@ func set_setting(key: String, on: bool) -> void:
 			for choice in [["sky_season", SkyView.season], ["sky_time", SkyView.time_of_day]]:
 				settings.set(choice[0], choice[1])
 				settings_sheet.set_choice(choice[0], choice[1])
+			settings.sky_christmas = SkyView.christmas
+			settings_sheet.set_switch("sky_christmas", SkyView.christmas)
+		SkyView.follow(settings)
+	elif key == "sky_christmas":
 		SkyView.follow(settings)
 	SaveFile.write(settings_path, settings.to_dict())
 

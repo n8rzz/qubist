@@ -84,7 +84,8 @@ func test_older_save_shows_tips() -> void:
 	check_eq(settings.tips, true, "tips")
 
 
-## The sky (#168) follows the day by default; a manual pick is saved, and a
+## The sky (#168) follows the day by default; a manual pick (and its
+## Christmas switch, #198) is saved, and a
 ## pick that isn't a season or time of day falls back.
 func test_sky() -> void:
 	var settings := Settings.new()
@@ -92,14 +93,17 @@ func test_sky() -> void:
 	settings.sky_follows_day = false
 	settings.sky_season = "winter"
 	settings.sky_time = "night"
+	settings.sky_christmas = true
 	check(SaveFile.write(TEST_PATH, settings.to_dict()), "settings were written")
 	var loaded := Settings.new()
 	loaded.from_dict(SaveFile.read(TEST_PATH))
 	check_eq(loaded.sky_follows_day, false, "follows the day")
 	check_eq(loaded.sky_season, "winter", "season")
 	check_eq(loaded.sky_time, "night", "time")
+	check_eq(loaded.sky_christmas, true, "Christmas")
 	SaveFile.remove(TEST_PATH)
 	loaded.from_dict({"sky_season": "monsoon", "sky_time": 3})
 	check_eq(loaded.sky_season, "spring", "unknown season")
 	check_eq(loaded.sky_time, "day", "not a string")
 	check_eq(loaded.sky_follows_day, true, "missing")
+	check_eq(loaded.sky_christmas, false, "Christmas is off when missing")

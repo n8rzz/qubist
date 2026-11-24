@@ -138,6 +138,29 @@ func test_settings_sheet_pickers() -> void:
 	check_eq(chosen, [["sky_time", "night"]], "picking a time reports it")
 	sheet.set_switch("sky_follows_day", true)
 	check(not sheet.sky_choices.get_parent().visible, "hidden while following the day")
+	check(not sheet.christmas_button.visible, "no Christmas switch while following the day")
 	sheet.set_switch("sky_follows_day", false)
 	check(sheet.sky_choices.get_parent().visible, "shown when not")
+	check(sheet.christmas_button.visible, "the Christmas switch shows with the pickers")
+	var toggled := []
+	sheet.setting_toggled.connect(func(key, on): toggled.append([key, on]))
+	sheet.christmas_button.button_pressed = true
+	check_eq(toggled, [["sky_christmas", true]], "turning Christmas on reports it")
 	sheet.free()
+
+
+## Christmas (#198): the date decides while the sky follows the day, and the
+## player's switch decides while it doesn't.
+func test_christmas_follows_settings() -> void:
+	var settings := Settings.new()
+	check_eq(SkyView.christmas_for(settings), SkyClock.christmas_now(), "the date decides by default")
+	settings.sky_christmas = true
+	check_eq(SkyView.christmas_for(settings), SkyClock.christmas_now(), "the switch is ignored while following the day")
+	settings.sky_follows_day = false
+	check(SkyView.christmas_for(settings), "the switch turns Santa on")
+	SkyView.follow(settings, true)
+	check(SkyView.christmas, "follow puts Santa in the sky")
+	settings.sky_christmas = false
+	SkyView.follow(settings, true)
+	check(not SkyView.christmas, "and takes him out")
+	_reset()
