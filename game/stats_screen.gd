@@ -4,6 +4,7 @@ extends Control
 
 const UI := preload("res://game/ui_style.gd")
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
+const SkyView := preload("res://game/sky_view.gd")
 
 signal back_pressed
 
@@ -11,6 +12,9 @@ const CARD_RADIUS := 22
 
 ## Value labels by stat name, filled in by open().
 var values := {}
+## Text on the sky, light at night (#168).
+var heading: Label
+var footer: Label
 
 
 func _init() -> void:
@@ -38,7 +42,7 @@ func _init() -> void:
 	var back := UI.icon_button("back", "Back")
 	back.pressed.connect(func(): back_pressed.emit())
 	header.add_child(back)
-	var heading := UI.label("Stats", 30, UI.SKY_INK)
+	heading = UI.label("Stats", 30, UI.SKY_INK)
 	heading.add_theme_font_override("font", UI.title_font(600))
 	header.add_child(heading)
 	column.add_child(header)
@@ -61,8 +65,14 @@ func _init() -> void:
 		grid.add_child(card)
 	column.add_child(grid)
 
-	var footer := UI.label("Stats are kept on this device.", 13, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	footer = UI.label("Stats are kept on this device.", 13, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(footer)
+
+
+func _process(_delta: float) -> void:
+	if visible:
+		SkyView.color_text(heading, UI.SKY_INK, SkyView.NIGHT_INK)
+		SkyView.color_text(footer, UI.SKY_MUTED, SkyView.NIGHT_MUTED)
 
 
 ## Shows the screen with `stats` (a core/stats.gd instance).

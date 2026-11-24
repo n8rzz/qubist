@@ -3,7 +3,9 @@ extends Control
 ##
 ## Sound and feel: Music, Sound effects and Haptics switches, with a volume
 ## slider under Music and Sound effects (#165). Display: the Grid ticks switch
-## (#56), which the design doesn't show yet; it sits above Game (#183). Game:
+## (#56), which the design doesn't show yet; it sits above Game (#183), and
+## the Sky follows my day switch (#168), with Season and Time of day pickers
+## under it while it's off. Game:
 ## Stats (#32), Replay tutorial (#29), the Tips switch (#164), the Share usage
 ## data switch (#31) and Home (#72, only when opened from a game). Pause stays
 ## a separate menu (#42).
@@ -13,6 +15,7 @@ extends Control
 
 const UI := preload("res://game/ui_style.gd")
 const IconButton := preload("res://game/icon_button.gd")
+const SkyClock := preload("res://core/sky_clock.gd")
 
 signal stats_pressed
 signal tutorial_pressed
@@ -22,6 +25,9 @@ signal setting_toggled(key: String, on: bool)
 ## A volume slider was moved by the player. `key` is a Settings field name;
 ## `value` is 0–1.
 signal volume_changed(key: String, value: float)
+## A choice was picked by the player. `key` is a Settings field name;
+## `value` is one of Settings.CHOICES[key].
+signal choice_changed(key: String, value: String)
 signal closed
 
 ## Colours from the Qubist Settings design.
@@ -40,11 +46,19 @@ const ROW_HEIGHT := 56
 const ROW_GAP := 14
 const TILE_SIDE := 36
 const SLIDER_HEIGHT := 36
+## The segmented pickers, as on the game's swiper axis buttons.
+const SEGMENT_TRACK := Color("#EAF1F5")
+const SEGMENT_ON := Color("#22313F")
+const SEGMENT_HEIGHT := 36
 
 var music_button: Button
 var sound_effects_button: Button
 var haptics_button: Button
 var grid_ticks_button: Button
+var sky_button: Button
+## Holds the Season and Time of day pickers; shown while the sky doesn't
+## follow the day.
+var sky_choices: VBoxContainer
 var music_volume_slider: HSlider
 var sound_effects_volume_slider: HSlider
 var stats_button: Button
@@ -57,6 +71,8 @@ var home_button: Button
 var _switches := {}
 ## Settings key -> its volume slider.
 var _sliders := {}
+## Settings key -> {value: its segment button}.
+var _choices := {}
 ## Each card's rows, so dividers can follow which rows are visible.
 var _cards: Array[VBoxContainer] = []
 var _sheet: PanelContainer
@@ -133,6 +149,10 @@ func _init() -> void:
 	var display := _card(column, "DISPLAY")
 	grid_ticks_button = _switch_row(display, "grid_ticks", "Grid ticks", "grid")
 	grid_ticks_button.tooltip_text = "Marks each cell along the tower's edges"
+	sky_button = _switch_row(display, "sky_follows_day", "Sky follows my day", "sky")
+	sky_button.tooltip_text = "Match the background to the season and time of day"
+	sky_choices = _sky_choices(display)
+	sky_button.toggled.connect(func(_on): _sync_sky_choices())
 
 	var game := _card(column, "GAME")
 	stats_button = _link_row(game, "Stats", "stats")
@@ -158,6 +178,18 @@ func show_settings(settings) -> void:
 		set_switch(key, settings.get(key))
 	for key in _sliders:
 		set_volume(key, settings.get(key))
+	for key in _choices:
+		set_choice(key, settings.get(key))
+
+
+## Shows `value` picked in one picker, without emitting choice_changed.
+func set_choice(key: String, value: String) -> void:
+	var buttons: Dictionary = _choices[key]
+	if not buttons.has(value):
+		return
+	# Without signals the button group doesn't release the others itself.
+	for v in buttons:
+		(buttons[v] as Button).set_pressed_no_signal(v == value)
 
 
 ## Shows one switch as `on`, without emitting setting_toggled.
@@ -166,6 +198,7 @@ func set_switch(key: String, on: bool) -> void:
 	row.set_pressed_no_signal(on)
 	row.queue_redraw()
 	_sync_sliders()
+	_sync_sky_choices()
 
 
 ## Shows one volume slider at `value` (0–1), without emitting volume_changed.
@@ -296,6 +329,75 @@ func _sync_sliders() -> void:
 		var on: bool = (slider.get_meta("switch_row") as Button).button_pressed
 		slider.editable = on
 		slider.modulate.a = 1.0 if on else 0.4
+
+
+## The Season and Time of day pickers, indented under the sky switch.
+func _sky_choices(rows: VBoxContainer) -> VBoxContainer:
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", TILE_SIDE + ROW_GAP)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	rows.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	margin.add_child(column)
+	_picker(column, "sky_season", "Season", SkyClock.SEASONS)
+	_picker(column, "sky_time", "Time of day", SkyClock.TIMES)
+	return column
+
+
+## A caption over a row of segments, one per value; exactly one is picked.
+func _picker(column: VBoxContainer, key: String, caption: String, values: Array[String]) -> void:
+	var title := UI.label(caption, 13, UI.SKY_MUTED)
+	title.add_theme_font_override("font", UI.body_font(600))
+	column.add_child(title)
+	var track := PanelContainer.new()
+	var track_style := UI.box(SEGMENT_TRACK, Color(0, 0, 0, 0), SEGMENT_HEIGHT / 2 + 2, 0)
+	track_style.set_content_margin_all(2)
+	track.add_theme_stylebox_override("panel", track_style)
+	column.add_child(track)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 0)
+	track.add_child(row)
+	var group := ButtonGroup.new()
+	var buttons := {}
+	for value in values:
+		var b := Button.new()
+		b.text = value.capitalize()
+		b.toggle_mode = true
+		b.button_group = group
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size.y = SEGMENT_HEIGHT
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_font_size_override("font_size", 14)
+		b.add_theme_font_override("font", UI.body_font(600))
+		var off := StyleBoxEmpty.new()
+		var on := UI.box(SEGMENT_ON, Color(0, 0, 0, 0), SEGMENT_HEIGHT / 2, 0)
+		for state in ["normal", "hover", "disabled", "focus"]:
+			b.add_theme_stylebox_override(state, off)
+		for state in ["pressed", "hover_pressed"]:
+			b.add_theme_stylebox_override(state, on)
+		for state in ["font_color", "font_hover_color", "font_focus_color"]:
+			b.add_theme_color_override(state, UI.SKY_INK)
+		for state in ["font_pressed_color", "font_hover_pressed_color"]:
+			b.add_theme_color_override(state, UI.WHITE)
+		b.toggled.connect(func(pressed):
+			if pressed:
+				choice_changed.emit(key, value))
+		row.add_child(b)
+		buttons[value] = b
+	_choices[key] = buttons
+
+
+## The pickers show only while the sky doesn't follow the day.
+func _sync_sky_choices() -> void:
+	if sky_choices == null:
+		return
+	var follows := sky_button.button_pressed
+	if sky_choices.get_parent().visible == not follows:
+		return
+	sky_choices.get_parent().visible = not follows
+	if visible:
+		_fit_scroll.call_deferred()
 
 
 ## A thin rounded track, filled in the switch colour up to a white knob.
@@ -509,3 +611,11 @@ class Icon:
 					line.call([Vector2(4, t), Vector2(4 + tick, t)])
 			"chevron":
 				line.call([Vector2(9, 5), Vector2(16, 12), Vector2(9, 19)])
+			"sky":
+				# A sun half over the horizon, with three rays.
+				arc.call(Vector2(12, 16), 5.0, PI, TAU)
+				line.call([Vector2(3, 16), Vector2(21, 16)])
+				line.call([Vector2(6, 20), Vector2(18, 20)])
+				line.call([Vector2(12, 4), Vector2(12, 7)])
+				line.call([Vector2(4.8, 8.8), Vector2(6.9, 10.9)])
+				line.call([Vector2(19.2, 8.8), Vector2(17.1, 10.9)])

@@ -181,6 +181,8 @@ var _sweep := MeshInstance3D.new()
 var _sweep_material := _sweep_plane_material()
 var _ticks := MeshInstance3D.new()
 var _sun := DirectionalLight3D.new()
+## Snow on the cubes' tops (#168), as set_snow() last set it.
+var _snow := 0.0
 
 
 func setup(size: Vector3i) -> void:
@@ -258,6 +260,17 @@ func _follow_view() -> void:
 ## Shows or hides the grid ticks on the tower's border (#56).
 func set_grid_ticks(on: bool) -> void:
 	_ticks.visible = on
+
+
+## Lays snow on the placed cubes' tops (#168), 0 for none to 1 for winter.
+func set_snow(amount: float) -> void:
+	_snow = amount
+	for node in [_solid, _behind]:
+		(node.material_override as ShaderMaterial).set_shader_parameter("snow", amount)
+
+
+func snow_amount() -> float:
+	return _snow
 
 
 func grid_ticks_visible() -> bool:
