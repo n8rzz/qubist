@@ -372,6 +372,42 @@ func _check_home_menus() -> void:
 	if not main.home.visible or main.settings_sheet.visible:
 		failures.append("Settings › Home did not return to Home")
 	main.home.new_game_button.pressed.emit()
+	_check_home_buttons()
+
+
+## The header's Home button leaves a game for Home with Continue on offer,
+## is hidden during the tutorial, and the game-over card's Home button
+## returns to Home with nothing to continue (#163).
+func _check_home_buttons() -> void:
+	main.autoplay_one_move()
+	main.finish_animations()
+	var playing = main.game
+	main.home_button.pressed.emit()
+	if not main.home.visible or not main.home.continue_button.visible:
+		failures.append("the header's Home button did not open Home with Continue")
+	main.home.continue_button.pressed.emit()
+	if main.game != playing or main.menu_open():
+		failures.append("Continue after the header's Home button did not return to the game")
+
+	main.start_tutorial()
+	if main.home_button.modulate.a != 0.0 or not main.home_button.disabled:
+		failures.append("the header's Home button stayed usable during the tutorial")
+	main.tutorial_overlay.skip_button.pressed.emit()
+	if main.home_button.modulate.a != 1.0 or main.home_button.disabled:
+		failures.append("the header's Home button did not come back after the tutorial")
+
+	while not main.game.is_over and main.autoplay_one_move():
+		main.finish_animations()
+	main.finish_animations()
+	if not main.game_over_card.visible:
+		failures.append("could not finish a game to test the game-over card's Home button")
+		return
+	main.game_over_card.home_button.pressed.emit()
+	if not main.home.visible or main.game_over_card.visible:
+		failures.append("the game-over card's Home button did not return to Home")
+	if main.home.continue_button.visible:
+		failures.append("Home offered Continue for a finished game")
+	main.home.new_game_button.pressed.emit()
 
 
 ## Settings › Display › Grid ticks shows the ticks, saves the choice and a
