@@ -28,10 +28,14 @@ const CHIME: AudioStream = preload("res://assets/audio/759839__noisyredfox__sing
 ## CREDITS.md for each new track.
 const TRACKS: Array[AudioStream] = [
 	preload("res://assets/audio/velariomusic-tech-ambient-612419.mp3"),
+	preload("res://assets/audio/velariomusic-technology-ambient-613800.mp3"),
+	preload("res://assets/audio/zephiramusic-lofi-loop-589689.mp3"),
 ]
 ## Each track's title and artist, in TRACKS order, for Settings (#166).
 const TRACK_INFO: Array[Dictionary] = [
 	{"title": "Tech Ambient", "artist": "VelarioMusic"},
+	{"title": "Technology Ambient", "artist": "VelarioMusic"},
+	{"title": "Lofi Loop", "artist": "ZephiraMusic"},
 ]
 
 ## A new track started: `title` and `artist` are from TRACK_INFO.
