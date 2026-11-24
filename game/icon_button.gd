@@ -1,7 +1,7 @@
 extends Button
 ## A button that draws a line icon instead of text, so the UI needs no icon
 ## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "pause", "home", "settings",
-## "stats", "back", "close", "undo", "rotate_left" or "rotate_right".
+## "stats", "back", "close", "undo", "next", "rotate_left" or "rotate_right".
 ## A disabled button draws its icon faded.
 
 var kind := "pause"
@@ -52,6 +52,11 @@ func _draw() -> void:
 			draw_line(c + Vector2(1, 7), c + Vector2(-4, 7), ink, 2.0, true)
 			draw_polyline(PackedVector2Array([c + Vector2(-3, -9), c + Vector2(-7, -5), c + Vector2(-3, -1)]),
 				ink, 2.0, true)
+		"next":
+			# Skip to the next track (#166): a play triangle up against a bar.
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-6, -6.5), c + Vector2(3, 0),
+				c + Vector2(-6, 6.5)]), ink)
+			draw_line(c + Vector2(5.5, -6.5), c + Vector2(5.5, 6.5), ink, 2.4, true)
 		"close":
 			draw_line(c + Vector2(-6, -6), c + Vector2(6, 6), ink, 2.0, true)
 			draw_line(c + Vector2(6, -6), c + Vector2(-6, 6), ink, 2.0, true)

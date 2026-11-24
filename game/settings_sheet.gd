@@ -2,7 +2,8 @@ extends Control
 ## Settings bottom sheet (#20), opened from the header settings button and from Home.
 ##
 ## Sound and feel: Music, Sound effects and Haptics switches, with a volume
-## slider under Music and Sound effects (#165). Display: the Grid ticks switch
+## slider under Music and Sound effects (#165), and under the music slider the
+## track playing with a button to skip to the next (#166). Display: the Grid ticks switch
 ## (#56), which the design doesn't show yet; it sits above Game (#183). Game:
 ## Stats (#32), Replay tutorial (#29), the Tips switch (#164), the Share usage
 ## data switch (#31) and Home (#72, only when opened from a game). Pause stays
@@ -16,6 +17,8 @@ const IconButton := preload("res://game/icon_button.gd")
 
 signal stats_pressed
 signal tutorial_pressed
+## The skip button under the music was pressed (#166).
+signal next_track_pressed
 signal home_pressed
 ## A switch was flipped by the player. `key` is a Settings field name.
 signal setting_toggled(key: String, on: bool)
@@ -47,6 +50,10 @@ var haptics_button: Button
 var grid_ticks_button: Button
 var music_volume_slider: HSlider
 var sound_effects_volume_slider: HSlider
+## The track playing and its artist, and the button that skips it (#166).
+var track_title_label: Label
+var track_artist_label: Label
+var next_track_button: IconButton
 var stats_button: Button
 var tutorial_button: Button
 var tips_button: Button
@@ -57,6 +64,8 @@ var home_button: Button
 var _switches := {}
 ## Settings key -> its volume slider.
 var _sliders := {}
+## The now-playing row under the music slider (#166).
+var _now_playing: Control
 ## Each card's rows, so dividers can follow which rows are visible.
 var _cards: Array[VBoxContainer] = []
 var _sheet: PanelContainer
@@ -125,6 +134,7 @@ func _init() -> void:
 	var sound := _card(column, "SOUND AND FEEL")
 	music_button = _switch_row(sound, "music", "Music", "music")
 	music_volume_slider = _volume_row(sound, "music_volume", music_button, "Music volume")
+	_now_playing_row(sound)
 	sound_effects_button = _switch_row(sound, "sound_effects", "Sound effects", "sound")
 	sound_effects_volume_slider = _volume_row(sound, "sound_effects_volume",
 		sound_effects_button, "Sound effects volume")
@@ -166,6 +176,14 @@ func set_switch(key: String, on: bool) -> void:
 	row.set_pressed_no_signal(on)
 	row.queue_redraw()
 	_sync_sliders()
+
+
+## Shows the track playing under the music slider (#166). An empty title
+## (no track yet) shows nothing.
+func set_now_playing(title: String, artist: String) -> void:
+	track_title_label.text = title
+	track_artist_label.text = artist
+	track_artist_label.visible = artist != ""
 
 
 ## Shows one volume slider at `value` (0–1), without emitting volume_changed.
@@ -289,13 +307,56 @@ func _volume_row(rows: VBoxContainer, key: String, switch_row: Button, label: St
 	return slider
 
 
-## Each slider is usable only while its switch is on.
+## The track playing and a skip button, under the music slider and lined up
+## with it. Like the slider, it dims and the button stops while Music is off.
+func _now_playing_row(rows: VBoxContainer) -> void:
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", TILE_SIDE + ROW_GAP)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	rows.add_child(margin)
+
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", ROW_GAP)
+	margin.add_child(line)
+
+	var names := VBoxContainer.new()
+	names.add_theme_constant_override("separation", 0)
+	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	names.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(names)
+	track_title_label = UI.label("", 15, UI.SKY_INK)
+	track_title_label.add_theme_font_override("font", UI.body_font(500))
+	track_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	names.add_child(track_title_label)
+	track_artist_label = UI.label("", 13, UI.SKY_MUTED)
+	track_artist_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	names.add_child(track_artist_label)
+
+	next_track_button = IconButton.new("next", "Next song")
+	next_track_button.icon_color = UI.SKY_ACCENT
+	next_track_button.custom_minimum_size = Vector2(44, 44)
+	next_track_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for state in ["normal", "hover", "disabled"]:
+		next_track_button.add_theme_stylebox_override(state, UI.box(TILE, Color(0, 0, 0, 0), 22, 0))
+	next_track_button.add_theme_stylebox_override("pressed", UI.box(DIVIDER, Color(0, 0, 0, 0), 22, 0))
+	next_track_button.pressed.connect(func(): next_track_pressed.emit())
+	line.add_child(next_track_button)
+	_now_playing = margin
+	_sync_sliders()
+
+
+## Each slider, and the skip button under the music, is usable only while
+## its switch is on.
 func _sync_sliders() -> void:
 	for key in _sliders:
 		var slider: HSlider = _sliders[key]
 		var on: bool = (slider.get_meta("switch_row") as Button).button_pressed
 		slider.editable = on
 		slider.modulate.a = 1.0 if on else 0.4
+	if _now_playing != null:
+		var music_on := music_button.button_pressed
+		next_track_button.disabled = not music_on
+		_now_playing.modulate.a = 1.0 if music_on else 0.4
 
 
 ## A thin rounded track, filled in the switch colour up to a white knob.

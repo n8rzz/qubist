@@ -119,3 +119,27 @@ func test_next_track_starts_a_track_on_the_music_player() -> void:
 	audio._music.finished.emit()
 	check_eq(pair[1].size(), 2, "the next starts when one ends")
 	audio.free()
+
+
+## Settings names the track playing (#166): every track has a title and an
+## artist, and each new track says so.
+func test_every_track_has_a_title_and_artist() -> void:
+	check_eq(Audio.TRACK_INFO.size(), Audio.TRACKS.size(), "one entry per track")
+	for info in Audio.TRACK_INFO:
+		check(info.get("title", "") != "", "a title")
+		check(info.get("artist", "") != "", "an artist")
+
+
+func test_next_track_announces_its_title() -> void:
+	var pair := _recording()
+	var audio: Audio = pair[0]
+	check_eq(audio.track_title(), "", "no title before the first track")
+	var heard: Array = []
+	audio.track_changed.connect(func(title, artist): heard.append([title, artist]))
+	audio.next_track()
+	var info: Dictionary = Audio.TRACK_INFO[Audio.TRACKS.find(audio.music_track())]
+	check_eq(heard, [[info.title, info.artist]], "announces the track it started")
+	check_eq(audio.track_title(), info.title)
+	check_eq(audio.track_artist(), info.artist)
+	audio.free()
+
