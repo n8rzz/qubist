@@ -2,10 +2,10 @@ extends Control
 ## Settings bottom sheet (#20), opened from the header settings button and from Home.
 ##
 ## Sound and feel: Music, Sound effects and Haptics switches, with a volume
-## slider under Music and Sound effects (#165). Game: Stats
-## (#32), Replay tutorial (#29), the Tips switch (#164) and Home
-## (#72, only when opened from a game). Display: the Grid ticks switch (#56),
-## which the design doesn't show yet. Pause stays a separate menu (#42).
+## slider under Music and Sound effects (#165). Display: the Grid ticks switch
+## (#56), which the design doesn't show yet; it sits above Game (#183). Game:
+## Stats (#32), Replay tutorial (#29), the Tips switch (#164) and Home (#72,
+## only when opened from a game). Pause stays a separate menu (#42).
 
 const UI := preload("res://game/ui_style.gd")
 const IconButton := preload("res://game/icon_button.gd")
@@ -108,6 +108,10 @@ func _init() -> void:
 		sound_effects_button, "Sound effects volume")
 	haptics_button = _switch_row(sound, "haptics", "Haptics", "haptics")
 
+	var display := _card(column, "DISPLAY")
+	grid_ticks_button = _switch_row(display, "grid_ticks", "Grid ticks", "grid")
+	grid_ticks_button.tooltip_text = "Marks each cell along the tower's edges"
+
 	var game := _card(column, "GAME")
 	stats_button = _link_row(game, "Stats", "stats")
 	stats_button.pressed.connect(func(): stats_pressed.emit())
@@ -118,10 +122,6 @@ func _init() -> void:
 	home_button = _link_row(game, "Home", "home")
 	home_button.tooltip_text = "Back to the home screen; your game is saved"
 	home_button.pressed.connect(func(): home_pressed.emit())
-
-	var display := _card(column, "DISPLAY")
-	grid_ticks_button = _switch_row(display, "grid_ticks", "Grid ticks", "grid")
-	grid_ticks_button.tooltip_text = "Marks each cell along the tower's edges"
 
 	_update_dividers()
 
