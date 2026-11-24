@@ -90,3 +90,32 @@ func test_volume_offset_rises_with_the_slider() -> void:
 	check_eq(Audio.volume_offset_db(1.0), 0.0, "full")
 	check_eq(Audio.volume_offset_db(0.0), -80.0, "silent")
 	check(Audio.volume_offset_db(0.25) < Audio.volume_offset_db(0.75), "louder further along")
+
+
+## The music order (#196): random, but never the same track twice in a row.
+func test_pick_track_never_repeats_the_last() -> void:
+	var roll := RandomNumberGenerator.new()
+	roll.seed = 196
+	check_eq(Audio.pick_track(1, 0, roll), 0, "one track comes round again")
+	check_eq(Audio.pick_track(0, -1, roll), 0, "no tracks still gives an index")
+	var seen := {}
+	var last := -1
+	for i in 200:
+		var pick := Audio.pick_track(4, last, roll)
+		check(pick >= 0 and pick < 4, "in range")
+		check(pick != last, "not the track that just played")
+		seen[pick] = true
+		last = pick
+	check_eq(seen.size(), 4, "every track gets a turn")
+
+
+func test_next_track_starts_a_track_on_the_music_player() -> void:
+	var pair := _recording()
+	var audio: Audio = pair[0]
+	audio.next_track()
+	check_eq(pair[1].size(), 1, "starts one track")
+	check_eq(pair[1][0][0], audio._music, "on the music player")
+	check(Audio.TRACKS.has(audio.music_track()), "one of the tracks")
+	audio._music.finished.emit()
+	check_eq(pair[1].size(), 2, "the next starts when one ends")
+	audio.free()
