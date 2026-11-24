@@ -16,6 +16,7 @@ const ScoreFeedback := preload("res://game/score_feedback.gd")
 const Tutorial := preload("res://core/tutorial.gd")
 const Analytics := preload("res://core/analytics.gd")
 const HintToast := preload("res://game/hint_toast.gd")
+const SettingsSheet := preload("res://game/settings_sheet.gd")
 
 var main
 var frame := 0
@@ -23,6 +24,8 @@ var failures: Array[String] = []
 ## Keeps the smoke test's stats, auto-saved game (#18) and settings (#56) out
 ## of the real save files.
 var saves := SmokeSaves.new("smoke")
+## A Settings sheet on a short screen, so its cards have to scroll (#213).
+var short_sheet: SettingsSheet
 
 
 func _initialize() -> void:
@@ -45,8 +48,10 @@ func _process(_delta: float) -> bool:
 	frame += 1
 	if frame == 5:
 		_check_layout()
+		_open_short_sheet()
 	elif frame == 7:
 		_check_home()
+		_check_settings_swipe()
 	elif frame == 10:
 		_play()
 	elif frame == 15:
@@ -79,6 +84,95 @@ func _check_layout() -> void:
 	var screen_mid: float = main.get_global_rect().get_center().x
 	if absf(score_mid - screen_mid) > 1.0:
 		failures.append("score is off center: %.1f vs %.1f" % [score_mid, screen_mid])
+
+
+func _open_short_sheet() -> void:
+	var screen := Control.new()
+	screen.size = Vector2(390, 560)
+	root.add_child(screen)
+	short_sheet = SettingsSheet.new()
+	screen.add_child(short_sheet)
+	short_sheet.open(true)
+
+
+## Settings › a swipe scrolls the cards, even one that starts on a switch,
+## and doesn't flip it; a tap still does; and the bottom row, Home, can be
+## scrolled to and tapped (#213). Driven through the viewport, like a finger;
+## it waits a frame where Godot updates hover and scrolled rows on the next.
+func _check_settings_swipe() -> void:
+	var sheet := short_sheet
+	var scroll: ScrollContainer = sheet._scroll
+	if scroll.get_v_scroll_bar().max_value <= scroll.size.y:
+		failures.append("the short Settings sheet fits without scrolling, so the swipe check proves nothing")
+	var flips := []
+	sheet.setting_toggled.connect(func(key, on): flips.append([key, on]))
+	var music_on := sheet.music_button.button_pressed
+	var start := sheet.music_button.get_global_rect().get_center()
+	await _swipe(start, start + Vector2(0, -250))
+	if scroll.scroll_vertical <= 0:
+		failures.append("a swipe up on Settings did not scroll it")
+	if not flips.is_empty() or sheet.music_button.button_pressed != music_on:
+		failures.append("a swipe that started on the Music switch flipped it")
+	var scrolled := scroll.scroll_vertical
+	await _swipe(start, start + Vector2(0, 120))
+	if scroll.scroll_vertical >= scrolled:
+		failures.append("a swipe down on Settings did not scroll it back")
+	await _swipe(start, start + Vector2(0, 250))
+
+	await _tap(sheet.music_button.get_global_rect().get_center())
+	if flips != [["music", not music_on]]:
+		failures.append("tapping the Music switch did not flip it: %s" % [flips])
+	sheet.set_switch("music", music_on)
+
+	for i in range(6):
+		await _swipe(start, start + Vector2(0, -300))
+	var home: Rect2 = sheet.home_button.get_global_rect()
+	if not scroll.get_global_rect().encloses(home):
+		failures.append("Home, the bottom row, could not be scrolled into view: %s in %s" \
+			% [home, scroll.get_global_rect()])
+	var went_home := [false]
+	sheet.home_pressed.connect(func(): went_home[0] = true)
+	await _tap(home.get_center())
+	if not went_home[0]:
+		failures.append("tapping Home after scrolling to it did nothing")
+	sheet.get_parent().queue_free()
+
+
+## A finger down at `from`, moved to `to` in steps, and lifted.
+func _swipe(from: Vector2, to: Vector2) -> void:
+	_mouse_move(from, false)
+	await process_frame
+	_mouse_button(from, true)
+	for i in range(1, 11):
+		_mouse_move(from.lerp(to, i / 10.0), true)
+	_mouse_button(to, false)
+	await process_frame
+
+
+func _tap(at: Vector2) -> void:
+	_mouse_move(at, false)
+	await process_frame
+	_mouse_button(at, true)
+	_mouse_button(at, false)
+	await process_frame
+
+
+func _mouse_move(at: Vector2, held: bool) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = at
+	event.global_position = at
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if held else 0
+	root.push_input(event, true)
+
+
+func _mouse_button(at: Vector2, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.position = at
+	event.global_position = at
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+	root.push_input(event, true)
 
 
 ## Launch opens Home with no Continue (nothing saved yet); New game leaves

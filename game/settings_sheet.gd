@@ -12,7 +12,8 @@ extends Control
 ## a separate menu (#42).
 ##
 ## The cards scroll under the header when they don't fit below the status
-## bar (UI.SAFE_TOP).
+## bar (UI.SAFE_TOP). A vertical swipe anywhere on them scrolls (#213), even
+## when it starts on a row, and the row it started on isn't tapped.
 
 const UI := preload("res://game/ui_style.gd")
 const IconButton := preload("res://game/icon_button.gd")
@@ -53,6 +54,9 @@ const SLIDER_HEIGHT := 36
 const SEGMENT_TRACK := Color("#EAF1F5")
 const SEGMENT_ON := Color("#22313F")
 const SEGMENT_HEIGHT := 36
+## How far a finger moves up or down before a press on the cards becomes a
+## swipe that scrolls them (#213).
+const SWIPE_START := 10.0
 
 var music_button: Button
 var sound_effects_button: Button
@@ -91,6 +95,14 @@ var _sheet: PanelContainer
 ## past UI.SAFE_TOP.
 var _scroll: ScrollContainer
 var _card_column: VBoxContainer
+## Where the finger went down on the cards, and the scroll then; INF while
+## no finger is down on them. Moves once a swipe starts, so it doesn't jump.
+var _press_at := Vector2.INF
+var _press_scroll := 0
+## The button the finger went down on, if any; its press is let go when a
+## swipe starts.
+var _pressed_button: BaseButton
+var _swiping := false
 
 
 func _init() -> void:
@@ -246,6 +258,60 @@ func _fit_scroll() -> void:
 	var chrome := _sheet.get_combined_minimum_size().y
 	var room := maxf(size.y - UI.SAFE_TOP - chrome, ROW_HEIGHT)
 	_scroll.custom_minimum_size.y = minf(_card_column.get_combined_minimum_size().y, room)
+
+
+## Swipes on the cards scroll them. The rows are buttons, which keep presses
+## from the ScrollContainer (and it only drags on a detected touchscreen), so
+## the sheet watches the finger before the buttons see it. Touches arrive as
+## mouse events (input_devices/pointing/emulate_mouse_from_touch).
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_swiping = false
+		_press_at = Vector2.INF
+		_pressed_button = null
+		if event.pressed and _scroll.get_global_rect().has_point(event.position):
+			var hit := _control_at(_card_column, event.position)
+			# A slider drags its knob, not the cards.
+			if not hit is Range:
+				_press_at = event.position
+				_press_scroll = _scroll.scroll_vertical
+				_pressed_button = hit as BaseButton
+	elif event is InputEventMouseMotion and _press_at != Vector2.INF:
+		var moved: Vector2 = event.position - _press_at
+		if not _swiping and absf(moved.y) > SWIPE_START and absf(moved.y) > absf(moved.x):
+			_swiping = true
+			_press_at = event.position
+			_press_scroll = _scroll.scroll_vertical
+			_let_go_of_button()
+		if _swiping:
+			_scroll.scroll_vertical = _press_scroll - roundi(event.position.y - _press_at.y)
+			get_viewport().set_input_as_handled()
+
+
+## Lets go of the press on the button the swipe started on, so lifting the
+## finger doesn't tap it. Disabling a button drops its press; it's enabled
+## again straight away, before it's drawn.
+func _let_go_of_button() -> void:
+	if _pressed_button == null or _pressed_button.disabled:
+		return
+	_pressed_button.disabled = true
+	_pressed_button.disabled = false
+
+
+## The innermost visible button or slider under `point`, or null.
+static func _control_at(node: Node, point: Vector2) -> Control:
+	for child in node.get_children():
+		if not (child is Control and child.is_visible_in_tree()
+				and child.get_global_rect().has_point(point)):
+			continue
+		if child is BaseButton or child is Range:
+			return child
+		var inner := _control_at(child, point)
+		if inner != null:
+			return inner
+	return null
 
 
 func close_sheet() -> void:
