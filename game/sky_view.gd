@@ -10,6 +10,7 @@ extends RefCounted
 ## in Notion.
 
 const SkyClock := preload("res://core/sky_clock.gd")
+const UI := preload("res://game/ui_style.gd")
 
 ## How long a change of season or time of day takes to fade in.
 const CROSSFADE_SECONDS := 3.0
@@ -78,6 +79,11 @@ const SNOW_TOP_INSET := Color.WHITE
 ## turns white). Cards keep their own colours.
 const NIGHT_INK := Color.WHITE
 const NIGHT_MUTED := Color("#C9D8E6")
+## Controls whose text sits on the sky (#204), tagged by ink(), muted() or
+## on_sky(). The sky backdrop recolours them all through recolor_text().
+const TEXT_GROUP := &"sky_text"
+## Each tagged control's [day, night] colours.
+const TEXT_META := &"sky_text_colors"
 
 static var season := "spring"
 static var time_of_day := "day"
@@ -92,6 +98,9 @@ static var still := false
 ## Christmas (#198): Santa's sleigh flies across the sky. Set from the date,
 ## or from the player's Christmas switch while the sky doesn't follow the day.
 static var christmas := false
+## night_amount() when recolor_text() last ran, so it only recolours on a
+## change.
+static var _text_night := -1.0
 
 
 ## Shows this season and time of day, fading from the current one unless
@@ -207,6 +216,53 @@ static func color_text(control: Control, day: Color, night: Color) -> void:
 			control.add_theme_color_override(state, color)
 	else:
 		control.add_theme_color_override("font_color", color)
+
+
+## Tags `control` as sky text in SKY_INK by day and NIGHT_INK at night.
+## Returns it, so it can wrap UI.label().
+static func ink(control: Control) -> Control:
+	return on_sky(control, UI.SKY_INK, NIGHT_INK)
+
+
+## Tags `control` as sky text in SKY_MUTED by day and NIGHT_MUTED at night.
+static func muted(control: Control) -> Control:
+	return on_sky(control, UI.SKY_MUTED, NIGHT_MUTED)
+
+
+## Tags `control` as sky text in `day` by day and `night` at night, and
+## colours it now and whenever it enters the tree. The sky backdrop keeps it
+## in step from then on.
+static func on_sky(control: Control, day: Color, night: Color) -> Control:
+	if not control.has_meta(TEXT_META):
+		# The sky may have changed while it was out of the tree.
+		control.tree_entered.connect(_on_sky_text_entered.bind(control))
+	control.set_meta(TEXT_META, [day, night])
+	control.add_to_group(TEXT_GROUP)
+	color_text(control, day, night)
+	return control
+
+
+static func _on_sky_text_entered(control: Control) -> void:
+	recolor([control])
+
+
+## Recolours every tagged control in `tree`, when the night amount has
+## changed since last time. Every sky backdrop calls this each frame; only
+## the first call after a change does any work.
+static func recolor_text(tree: SceneTree) -> void:
+	var night := night_amount()
+	if night == _text_night:
+		return
+	_text_night = night
+	recolor(tree.get_nodes_in_group(TEXT_GROUP))
+
+
+## Colours each tagged control in `controls` for the sky as it is now.
+static func recolor(controls: Array) -> void:
+	for control in controls:
+		var colors = control.get_meta(TEXT_META, null)
+		if colors is Array:
+			color_text(control, colors[0], colors[1])
 
 
 ## The light on the island and tower.

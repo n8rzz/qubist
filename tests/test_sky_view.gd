@@ -6,6 +6,7 @@ const SkyClock := preload("res://core/sky_clock.gd")
 const SkyWeather := preload("res://game/sky_weather.gd")
 const Settings := preload("res://core/settings.gd")
 const IslandArt := preload("res://game/island_art.gd")
+const UI := preload("res://game/ui_style.gd")
 
 
 func _reset() -> void:
@@ -97,6 +98,46 @@ func test_night_text_turns_light() -> void:
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at night")
 	SkyView.show("summer", "day", true)
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.BLACK), "dark by day")
+	_reset()
+
+
+func test_sky_text_is_tagged_and_coloured_now() -> void:
+	SkyView.show("summer", "night", true)
+	var label := Label.new()
+	check(SkyView.ink(label) == label, "returns the control")
+	check(label.is_in_group(SkyView.TEXT_GROUP), "tagged")
+	check(label.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "coloured for night at once")
+	label.free()
+	_reset()
+
+
+func test_sky_text_follows_the_time_of_day() -> void:
+	_reset()
+	var ink := SkyView.ink(Label.new())
+	var muted := SkyView.muted(Label.new())
+	var button := SkyView.on_sky(Button.new(), Color.RED, Color.BLUE)
+	SkyView.show("winter", "night", true)
+	SkyView.recolor([ink, muted, button])
+	check(ink.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "ink at night")
+	check(muted.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "muted at night")
+	check(button.get_theme_color("font_pressed_color").is_equal_approx(Color.BLUE), "button states at night")
+	SkyView.show("winter", "day", true)
+	SkyView.recolor([ink, muted, button])
+	check(ink.get_theme_color("font_color").is_equal_approx(UI.SKY_INK), "ink by day")
+	check(muted.get_theme_color("font_color").is_equal_approx(UI.SKY_MUTED), "muted by day")
+	check(button.get_theme_color("font_color").is_equal_approx(Color.RED), "button by day")
+	for control in [ink, muted, button]:
+		control.free()
+	_reset()
+
+
+func test_recolor_skips_untagged_controls() -> void:
+	SkyView.show("summer", "night", true)
+	var label := Label.new()
+	label.add_theme_color_override("font_color", Color.GREEN)
+	SkyView.recolor([label])
+	check(label.get_theme_color("font_color").is_equal_approx(Color.GREEN), "left alone")
+	label.free()
 	_reset()
 
 
