@@ -30,12 +30,13 @@ const CLOUD_COLORS := {
 }
 const CLOUD_OPACITY := {"sunrise": 0.94, "day": 1.0, "sunset": 0.88, "night": 0.65}
 ## Light on the island and tower: multiplied over them, as the design's
-## filters warm, dim and cool them.
+## filters warm, dim and cool them. Night stays light enough that the
+## tower's blocks read clearly (#214).
 const TINTS := {
 	"sunrise": Color(1.0, 0.96, 0.88),
 	"day": Color.WHITE,
 	"sunset": Color(0.98, 0.83, 0.74),
-	"night": Color(0.52, 0.58, 0.76),
+	"night": Color(0.78, 0.82, 0.94),
 }
 
 ## Island colours (as in island_art.gd) swapped for each season. Colours a
