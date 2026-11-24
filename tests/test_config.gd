@@ -92,13 +92,14 @@ func test_overrides_fall_back_to_defaults() -> void:
 
 func test_all_orientations_expand_into_rotations() -> void:
 	var cfg := Config.new()
+	var expected_turns := {"L4": 24, "corner3": 12, "T4": 12, "slab4": 3, "tripod4": 8, "bar3": 3, "S4": 12}
 	var by_shape := {}
 	for piece in cfg.pieces:
-		if piece.id.begins_with("L4_") or piece.id.begins_with("corner3_"):
-			var key: String = piece.id.split("_")[0]
+		var key: String = piece.id.split("_")[0]
+		if expected_turns.has(key):
 			by_shape[key] = by_shape.get(key, []) + [piece]
-	check_eq(by_shape["L4"].size(), 24)
-	check_eq(by_shape["corner3"].size(), 12)
+	for key in expected_turns:
+		check_eq(by_shape.get(key, []).size(), expected_turns[key], "%s rotations dealt" % key)
 	for key in by_shape:
 		var total := 0.0
 		var seen := {}
