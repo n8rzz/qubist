@@ -84,6 +84,14 @@ func test_island_colours_by_season() -> void:
 	check(is_equal_approx(strata.a, IslandArt.EARTH_STRATA.a), "alpha is kept")
 
 
+func test_night_light_keeps_the_tower_readable() -> void:
+	SkyView.show("summer", "night", true)
+	var night := SkyView.tint()
+	check(night.get_luminance() >= 0.75, "night light isn't too dark (#214)")
+	check(night.b > night.r, "night light stays cool")
+	_reset()
+
+
 func test_night_text_turns_light() -> void:
 	SkyView.show("summer", "night", true)
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at night")
