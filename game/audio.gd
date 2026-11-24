@@ -4,7 +4,8 @@ extends Node
 ##
 ## The clacks take turns so repeated landings don't sound identical, the two
 ## crumbles alternate, and the chime climbs a major arpeggio as more lines
-## clear at once. `sound_effects` and `music` follow the Settings switches.
+## clear at once. `sound_effects` and `music` follow the Settings switches,
+## and `sound_effects_volume` and `music_volume` follow its sliders (#165).
 ## Credits and licenses are in assets/audio/CREDITS.md.
 
 const CLACKS: Array[AudioStream] = [
@@ -40,6 +41,20 @@ var music := true:
 		music = on
 		if _music:
 			_music.stream_paused = not on
+
+## 0 (silent) to 1 (full): scales the effects below their levels above.
+var sound_effects_volume := 1.0:
+	set(value):
+		sound_effects_volume = clampf(value, 0.0, 1.0)
+		var offset := volume_offset_db(sound_effects_volume)
+		clack_player.volume_db = CLACK_DB + offset
+		crumble_player.volume_db = CRUMBLE_DB + offset
+		chime_player.volume_db = CHIME_DB + offset
+## 0 (silent) to 1 (full): scales the music below MUSIC_DB.
+var music_volume := 1.0:
+	set(value):
+		music_volume = clampf(value, 0.0, 1.0)
+		_music.volume_db = MUSIC_DB + volume_offset_db(music_volume)
 
 ## Starts one effect player. Tests swap this out, since they run without a tree.
 var play: Callable = func(player: AudioStreamPlayer) -> void: player.play()
@@ -98,9 +113,20 @@ func clear(lines: int) -> void:
 	play.call(chime_player)
 
 
+## The music player's level in dB, after the music volume.
+func music_db() -> float:
+	return _music.volume_db
+
+
 ## True while the music track is playing and not paused.
 func is_music_playing() -> bool:
 	return _music != null and _music.playing and not _music.stream_paused
+
+
+## dB to add to a player's level for a 0–1 slider volume. Squared, so the
+## slider sounds even across its length; 0 is as quiet as Godot plays.
+static func volume_offset_db(volume: float) -> float:
+	return maxf(linear_to_db(volume * volume), -80.0)
 
 
 static func _player(volume_db: float, polyphony: int) -> AudioStreamPlayer:

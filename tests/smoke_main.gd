@@ -323,6 +323,7 @@ func _check_stats() -> void:
 		failures.append("Back from Stats did not return to Settings")
 	_check_grid_ticks()
 	_check_sound_switches()
+	_check_volume_sliders()
 	main.settings_sheet.close_sheet()
 	if main.menu_open():
 		failures.append("closing Settings left a menu open")
@@ -443,6 +444,44 @@ func _check_sound_switches() -> void:
 		failures.append("turning haptics back on left them off")
 	if not main.audio.sound_effects or not main.audio.is_music_playing():
 		failures.append("turning sound back on left it off")
+	SaveFile.remove(saves.settings_path)
+
+
+## Settings › Sound and feel: each volume slider starts full, sets its own
+## audio and saves, a fresh screen picks it up, and it dims while its
+## switch is off (#165).
+func _check_volume_sliders() -> void:
+	var sheet = main.settings_sheet
+	var sliders := {
+		"music_volume": sheet.music_volume_slider,
+		"sound_effects_volume": sheet.sound_effects_volume_slider,
+	}
+	for key in sliders:
+		if sliders[key].value != 1.0:
+			failures.append("%s slider did not start full" % key)
+	sheet.music_volume_slider.value = 0.3
+	sheet.sound_effects_volume_slider.value = 0.7
+	if not is_equal_approx(main.audio.music_volume, 0.3) or not is_equal_approx(main.audio.sound_effects_volume, 0.7):
+		failures.append("moving a volume slider did not set the audio")
+	if main.audio.music_db() >= main.audio.MUSIC_DB:
+		failures.append("lowering the music volume left the music as loud")
+	var saved: Dictionary = SaveFile.read(saves.settings_path)
+	if not is_equal_approx(saved.get("music_volume", 0.0), 0.3) or not is_equal_approx(saved.get("sound_effects_volume", 0.0), 0.7):
+		failures.append("the volumes were not saved")
+	var reopened = _make_main()
+	root.add_child(reopened)
+	if not is_equal_approx(reopened.settings_sheet.music_volume_slider.value, 0.3) \
+			or not is_equal_approx(reopened.audio.sound_effects_volume, 0.7):
+		failures.append("a fresh screen did not pick up the saved volumes")
+	reopened.queue_free()
+	sheet.music_button.button_pressed = false
+	if sheet.music_volume_slider.editable or not sheet.sound_effects_volume_slider.editable:
+		failures.append("the music slider did not follow its switch alone")
+	sheet.music_button.button_pressed = true
+	if not sheet.music_volume_slider.editable:
+		failures.append("the music slider stayed off with its switch back on")
+	for key in sliders:
+		sliders[key].value = 1.0
 	SaveFile.remove(saves.settings_path)
 
 
