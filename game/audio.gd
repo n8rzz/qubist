@@ -1,10 +1,12 @@
 extends Node
 ## Sound effects and music (#26): a stone clack when a piece lands, a crumble
-## and a chime when lines clear, and one soft ambient track on a loop.
+## and a chime when lines clear, and soft ambient music.
 ##
 ## The clacks take turns so repeated landings don't sound identical, the two
 ## takes of the stone tumble crumble alternate (#170), and the chime climbs a
-## major arpeggio as more lines clear at once. `sound_effects` and `music` follow the Settings switches,
+## major arpeggio as more lines clear at once. The music plays TRACKS in a
+## random order, never the same one twice in a row (#196). `sound_effects` and
+## `music` follow the Settings switches,
 ## and `sound_effects_volume` and `music_volume` follow its sliders (#165).
 ## Credits and licenses are in assets/audio/CREDITS.md.
 
@@ -20,8 +22,12 @@ const CRUMBLES: Array[AudioStream] = [
 	preload("res://assets/audio/stone_tumble_b.wav"),
 ]
 const CHIME: AudioStream = preload("res://assets/audio/759839__noisyredfox__singleding.ogg")
-## Loops: the import has loop on, and the track fades softly at both ends.
-const MUSIC: AudioStream = preload("res://assets/audio/velariomusic-tech-ambient-612419.mp3")
+## The music, picked at random when one ends (#196). Each import has loop off,
+## so the player's `finished` signal moves on to the next track. Add a row to
+## CREDITS.md for each new track.
+const TRACKS: Array[AudioStream] = [
+	preload("res://assets/audio/velariomusic-tech-ambient-612419.mp3"),
+]
 
 ## Semitones above the chime's own pitch for 1, 2, 3… lines cleared at once
 ## (a major arpeggio). Bigger combos stay on the top note.
@@ -56,7 +62,7 @@ var music_volume := 1.0:
 		music_volume = clampf(value, 0.0, 1.0)
 		_music.volume_db = MUSIC_DB + volume_offset_db(music_volume)
 
-## Starts one effect player. Tests swap this out, since they run without a tree.
+## Starts one player. Tests swap this out, since they run without a tree.
 var play: Callable = func(player: AudioStreamPlayer) -> void: player.play()
 
 var clack_player := _player(CLACK_DB, 3)
@@ -65,6 +71,10 @@ var chime_player := _player(CHIME_DB, 2)
 var _music: AudioStreamPlayer
 var _next_clack := 0
 var _next_crumble := 0
+## Index into TRACKS of the track playing, or -1 before the first.
+var _track := -1
+## Picks the music order. Tests seed it.
+var rng := RandomNumberGenerator.new()
 
 
 ## The chime's pitch_scale for clearing `lines` lines at once.
@@ -74,15 +84,39 @@ static func chime_pitch(lines: int) -> float:
 
 
 func _init() -> void:
+	rng.randomize()
 	_music = _player(MUSIC_DB, 1)
-	_music.stream = MUSIC
+	_music.finished.connect(next_track)
 	for player in [clack_player, crumble_player, chime_player, _music]:
 		add_child(player)
 
 
 func _ready() -> void:
-	_music.play()
+	next_track()
 	_music.stream_paused = not music
+
+
+## A random index into `count` tracks other than `last` (any if `last` is -1).
+## With one track there is nothing else, so it comes round again.
+static func pick_track(count: int, last: int, roll: RandomNumberGenerator) -> int:
+	if count <= 1:
+		return 0
+	if last < 0 or last >= count:
+		return roll.randi_range(0, count - 1)
+	var pick := roll.randi_range(0, count - 2)
+	return pick + 1 if pick >= last else pick
+
+
+## Starts a randomly picked track, other than the one that just played.
+func next_track() -> void:
+	_track = pick_track(TRACKS.size(), _track, rng)
+	_music.stream = TRACKS[_track]
+	play.call(_music)
+
+
+## The track playing now.
+func music_track() -> AudioStream:
+	return _music.stream
 
 
 ## Stops everything, so no sound outlives the screen (or leaks at quit).
