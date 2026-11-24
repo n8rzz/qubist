@@ -14,6 +14,7 @@ const SmokeSaves := preload("res://tests/smoke_saves.gd")
 const UI := preload("res://game/ui_style.gd")
 const ScoreFeedback := preload("res://game/score_feedback.gd")
 const Tutorial := preload("res://core/tutorial.gd")
+const Analytics := preload("res://core/analytics.gd")
 const HintToast := preload("res://game/hint_toast.gd")
 
 var main
@@ -30,6 +31,7 @@ func _initialize() -> void:
 	# is the same; check real sizes on a device.
 	saves.clear()
 	main = _make_main()
+	main.analytics.backend = Analytics.MemoryBackend.new()
 	root.add_child(main)
 
 
@@ -228,6 +230,25 @@ func _play() -> void:
 			failures.append("new game left the move animation running")
 
 
+## The tutorial and the games played so far sent their events (#31): the
+## finished game's game_over once, despite the repeated signal.
+func _check_analytics() -> void:
+	var sent: Array = main.analytics.backend.events
+	var names: Array = main.analytics.backend.names()
+	for i in Tutorial.step_count():
+		if not sent.has(["tutorial_step", {"step": i + 1, "of": Tutorial.step_count()}]):
+			failures.append("analytics: no tutorial_step %d" % (i + 1))
+	if not sent.has(["tutorial_end", {"completed": true, "step": Tutorial.step_count()}]):
+		failures.append("analytics: no tutorial_end for the finished tutorial")
+	for event in ["game_start", "game_over", "game_quit"]:
+		if not names.has(event):
+			failures.append("analytics: no %s in %s" % [event, names])
+	if names.count("game_over") != 1:
+		failures.append("analytics: game_over sent %d times" % names.count("game_over"))
+	if names.count("game_start") != names.count("game_over") + names.count("game_quit"):
+		failures.append("analytics: every started game should end or be quit once: %s" % [names])
+
+
 ## The header counts up to a new score instead of jumping (#25).
 func _check_score_tick() -> void:
 	main.score_feedback.snap()
@@ -328,6 +349,7 @@ func _check_stats() -> void:
 	main.game.game_over.emit(main.game.score)
 	if main.stats.games_played != before + 1:
 		failures.append("finished game counted %d times" % (main.stats.games_played - before))
+	_check_analytics()
 	if main.stats.best_score < main.game.score:
 		failures.append("best score %d is below the finished score %d" % [main.stats.best_score, main.game.score])
 	if FileAccess.file_exists(saves.game_path):
