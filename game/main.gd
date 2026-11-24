@@ -95,6 +95,8 @@ var swiper_bar: PanelContainer
 var settings_button: Button
 ## Back to Home from the game (#163); the game stays saved for Continue.
 var home_button: Button
+## Takes back the last move (#184). Dimmed when there is nothing to undo.
+var undo_button: Button
 ## Axis labels on the tower, indexed by ViewMath mode.
 var axis_labels: Array[Label] = []
 var overlay: Control
@@ -214,6 +216,8 @@ func _use_game(next: Game) -> void:
 func _process(delta: float) -> void:
 	_update_axis_labels(delta)
 	tutorial.update()
+	# Undo depends on drags, menus and animations, so it is checked each frame.
+	undo_button.disabled = not can_undo()
 	if swiper.update_sweep(delta, tower.rig.is_turning()):
 		tower.set_sweep_alpha(swiper.sweep_alpha())
 
@@ -322,6 +326,26 @@ func _place(index: int, origin: Vector3i) -> void:
 		if tutorial.is_active():
 			tutorial.placed()
 		save_game()
+
+
+## True when the Undo button may take back the last move: not during the
+## tutorial, a drag or a move animation, and not with anything covering the
+## game.
+func can_undo() -> bool:
+	return game != null and game.can_undo() and not tutorial.is_active() \
+		and not drag.is_dragging() and not tower.is_animating() \
+		and not overlay.visible and not game_over_card.visible and not menu_open()
+
+
+## Takes back the last move (#184): the piece goes back to its slot and the
+## tower, score and tray are redrawn as they were, without animation.
+func undo() -> void:
+	if not can_undo() or not game.undo():
+		return
+	haptics.tap()
+	score_feedback.snap()
+	_refresh()
+	save_game()
 
 
 # --- View controls ---
@@ -669,15 +693,20 @@ func _build_header() -> Control:
 	row.custom_minimum_size.y = HEADER_HEIGHT
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	# Home sits opposite Settings, so the score stays centered (#163).
+	# Home and Undo sit opposite Settings. Both sides get the same width,
+	# so the score stays centered (#163).
+	var left := _header_side(BoxContainer.ALIGNMENT_BEGIN)
 	home_button = UI.icon_button("home", "Home")
 	home_button.pressed.connect(show_home)
-	row.add_child(home_button)
+	left.add_child(home_button)
+	undo_button = UI.icon_button("undo", "Undo")
+	undo_button.pressed.connect(undo)
+	left.add_child(undo_button)
 	if SHOW_PAUSE_BUTTON:
 		var pause := UI.icon_button("pause", "Pause")
 		pause.pressed.connect(_show_pause)
-		row.add_child(pause)
-	row.add_child(UI.spacer())
+		left.add_child(pause)
+	row.add_child(left)
 
 	var scores := VBoxContainer.new()
 	scores.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -699,11 +728,22 @@ func _build_header() -> Control:
 	scores.add_child(best_row)
 	row.add_child(scores)
 
-	row.add_child(UI.spacer())
+	var right := _header_side(BoxContainer.ALIGNMENT_END)
 	settings_button = UI.icon_button("settings", "Settings")
 	settings_button.pressed.connect(show_settings)
-	row.add_child(settings_button)
+	right.add_child(settings_button)
+	row.add_child(right)
 	return row
+
+
+## One side of the header. Both sides expand equally around the score.
+func _header_side(alignment: BoxContainer.AlignmentMode) -> HBoxContainer:
+	var side := HBoxContainer.new()
+	side.alignment = alignment
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side.add_theme_constant_override("separation", 8)
+	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return side
 
 
 func _build_tower_area() -> Control:
