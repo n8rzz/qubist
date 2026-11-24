@@ -92,7 +92,7 @@ var axis_buttons: Array[Button] = []
 ## Turn left, turn right.
 var rotate_buttons: Array[Button] = []
 var swiper_bar: PanelContainer
-var gear_button: Button
+var settings_button: Button
 ## Axis labels on the tower, indexed by ViewMath mode.
 var axis_labels: Array[Label] = []
 var overlay: Control
@@ -684,9 +684,9 @@ func _build_header() -> Control:
 	row.add_child(scores)
 
 	row.add_child(UI.spacer())
-	gear_button = UI.icon_button("gear", "Settings")
-	gear_button.pressed.connect(show_settings)
-	row.add_child(gear_button)
+	settings_button = UI.icon_button("settings", "Settings")
+	settings_button.pressed.connect(show_settings)
+	row.add_child(settings_button)
 	return row
 
 

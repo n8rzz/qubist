@@ -1,6 +1,6 @@
 extends Button
 ## A button that draws a line icon instead of text, so the UI needs no icon
-## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "pause", "settings", "gear", "stats",
+## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "pause", "settings", "stats",
 ## "back", "close", "rotate_left" or "rotate_right".
 
 var kind := "pause"
@@ -28,12 +28,6 @@ func _draw() -> void:
 			draw_line(c + Vector2(-8, 4), c + Vector2(8, 4), icon_color, 2.0)
 			draw_circle(c + Vector2(3, -4), 3.0, icon_color)
 			draw_circle(c + Vector2(-3, 4), 3.0, icon_color)
-		"gear":
-			draw_arc(c, 3.2, 0.0, TAU, 24, icon_color, 2.0, true)
-			draw_arc(c, 6.6, 0.0, TAU, 32, icon_color, 2.0, true)
-			for i in range(8):
-				var dir := Vector2.from_angle(i * TAU / 8.0)
-				draw_line(c + dir * 7.8, c + dir * 10.0, icon_color, 2.0, true)
 		"stats":
 			for bar in [Vector2(-7, 10), Vector2(0, 16), Vector2(7, 7)]:
 				draw_line(c + Vector2(bar.x, 8), c + Vector2(bar.x, 8 - bar.y), icon_color, 2.0, true)

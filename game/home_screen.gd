@@ -62,7 +62,7 @@ func _init() -> void:
 	stats_button.pressed.connect(func(): stats_pressed.emit())
 	bar.add_child(stats_button)
 	bar.add_child(UI.spacer())
-	settings_button = UI.icon_button("gear", "Settings")
+	settings_button = UI.icon_button("settings", "Settings")
 	settings_button.pressed.connect(func(): settings_pressed.emit())
 	bar.add_child(settings_button)
 	column.add_child(bar)
