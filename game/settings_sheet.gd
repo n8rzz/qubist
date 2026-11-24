@@ -2,7 +2,7 @@ extends Control
 ## Settings bottom sheet (#20), opened from the header settings button and from Home.
 ##
 ## Sound and feel: Music, Sound effects and Haptics switches. Game: Stats
-## (#32), Replay tutorial (#29) and Home
+## (#32), Replay tutorial (#29), the Tips switch (#164) and Home
 ## (#72, only when opened from a game). Display: the Grid ticks switch (#56),
 ## which the design doesn't show yet. Pause stays a separate menu (#42).
 
@@ -38,6 +38,7 @@ var haptics_button: Button
 var grid_ticks_button: Button
 var stats_button: Button
 var tutorial_button: Button
+var tips_button: Button
 var home_button: Button
 
 ## Settings key -> its switch row.
@@ -100,6 +101,8 @@ func _init() -> void:
 	stats_button.pressed.connect(func(): stats_pressed.emit())
 	tutorial_button = _link_row(game, "Replay tutorial", "replay")
 	tutorial_button.pressed.connect(func(): tutorial_pressed.emit())
+	tips_button = _switch_row(game, "tips", "Tips", "tip")
+	tips_button.tooltip_text = "Show tips the first time you use each control"
 	home_button = _link_row(game, "Home", "home")
 	home_button.tooltip_text = "Back to the home screen; your game is saved"
 	home_button.pressed.connect(func(): home_pressed.emit())
@@ -358,6 +361,11 @@ class Icon:
 			"home":
 				line.call([Vector2(4, 11), Vector2(12, 4), Vector2(20, 11)])
 				line.call([Vector2(6, 9.5), Vector2(6, 20), Vector2(18, 20), Vector2(18, 9.5)])
+			"tip":
+				arc.call(Vector2(12, 10), 6.0, PI * 0.75, PI * 2.25)
+				line.call([Vector2(7.8, 14.2), Vector2(9.5, 16), Vector2(9.5, 17.5),
+					Vector2(14.5, 17.5), Vector2(14.5, 16), Vector2(16.2, 14.2)])
+				line.call([Vector2(10, 20.5), Vector2(14, 20.5)])
 			"grid":
 				line.call([Vector2(4, 4), Vector2(4, 20), Vector2(20, 20)])
 				for t in [8.0, 12.0, 16.0]:

@@ -13,6 +13,7 @@ func test_defaults() -> void:
 	check_eq(settings.sound_effects, true, "sound effects")
 	check_eq(settings.haptics, true, "haptics")
 	check_eq(settings.grid_ticks, false, "grid ticks")
+	check_eq(settings.tips, true, "tips")
 
 
 func test_round_trips_through_the_save_file() -> void:
@@ -21,6 +22,7 @@ func test_round_trips_through_the_save_file() -> void:
 	settings.sound_effects = false
 	settings.haptics = false
 	settings.grid_ticks = true
+	settings.tips = false
 	check(SaveFile.write(TEST_PATH, settings.to_dict()), "settings were written")
 	var loaded := Settings.new()
 	loaded.from_dict(SaveFile.read(TEST_PATH))
@@ -28,6 +30,7 @@ func test_round_trips_through_the_save_file() -> void:
 	check_eq(loaded.sound_effects, false, "sound effects")
 	check_eq(loaded.haptics, false, "haptics")
 	check_eq(loaded.grid_ticks, true, "grid ticks")
+	check_eq(loaded.tips, false, "tips")
 	SaveFile.remove(TEST_PATH)
 
 
@@ -47,3 +50,10 @@ func test_older_save_keeps_its_grid_ticks() -> void:
 	settings.from_dict({"version": 1, "grid_ticks": true})
 	check_eq(settings.grid_ticks, true, "grid ticks")
 	check_eq(settings.sound_effects, true, "sound effects")
+
+
+## A save from before #164 has no tips value; tips start on.
+func test_older_save_shows_tips() -> void:
+	var settings := Settings.new()
+	settings.from_dict({"version": 1, "music": false})
+	check_eq(settings.tips, true, "tips")
