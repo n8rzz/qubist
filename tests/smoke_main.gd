@@ -387,6 +387,7 @@ func _check_stats() -> void:
 	_check_grid_ticks()
 	_check_sound_switches()
 	_check_volume_sliders()
+	_check_now_playing()
 	main.settings_sheet.close_sheet()
 	if main.menu_open():
 		failures.append("closing Settings left a menu open")
@@ -548,6 +549,32 @@ func _check_sound_switches() -> void:
 	if not main.audio.sound_effects or not main.audio.is_music_playing():
 		failures.append("turning sound back on left it off")
 	SaveFile.remove(saves.settings_path)
+
+
+## Settings › Sound and feel: the track playing shows under the music
+## slider, the skip button starts a new one, and it stops while Music is
+## off (#166).
+func _check_now_playing() -> void:
+	var sheet = main.settings_sheet
+	if sheet.track_title_label.text == "" or sheet.track_title_label.text != main.audio.track_title():
+		failures.append("Settings does not show the track playing")
+	var started := [0]
+	var count := func(_t, _a): started[0] += 1
+	main.audio.track_changed.connect(count)
+	sheet.next_track_button.pressed.emit()
+	main.audio.track_changed.disconnect(count)
+	if started[0] != 1:
+		failures.append("the skip button did not start the next track")
+	if sheet.track_title_label.text != main.audio.track_title():
+		failures.append("Settings did not show the skipped-to track")
+	var was_on: bool = sheet.music_button.button_pressed
+	sheet.music_button.button_pressed = false
+	if not sheet.next_track_button.disabled:
+		failures.append("the skip button works while Music is off")
+	main.audio.next_track()
+	if main.audio.is_music_playing():
+		failures.append("a new track played while Music is off")
+	sheet.music_button.button_pressed = was_on
 
 
 ## Settings › Sound and feel: each volume slider starts full, sets its own

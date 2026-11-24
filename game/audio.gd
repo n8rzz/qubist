@@ -5,7 +5,8 @@ extends Node
 ## The clacks take turns so repeated landings don't sound identical, the two
 ## takes of the stone tumble crumble alternate (#170), and the chime climbs a
 ## major arpeggio as more lines clear at once. The music plays TRACKS in a
-## random order, never the same one twice in a row (#196). `sound_effects` and
+## random order, never the same one twice in a row (#196); Settings shows the
+## one playing and can skip to the next (#166). `sound_effects` and
 ## `music` follow the Settings switches,
 ## and `sound_effects_volume` and `music_volume` follow its sliders (#165).
 ## Credits and licenses are in assets/audio/CREDITS.md.
@@ -28,6 +29,13 @@ const CHIME: AudioStream = preload("res://assets/audio/759839__noisyredfox__sing
 const TRACKS: Array[AudioStream] = [
 	preload("res://assets/audio/velariomusic-tech-ambient-612419.mp3"),
 ]
+## Each track's title and artist, in TRACKS order, for Settings (#166).
+const TRACK_INFO: Array[Dictionary] = [
+	{"title": "Tech Ambient", "artist": "VelarioMusic"},
+]
+
+## A new track started: `title` and `artist` are from TRACK_INFO.
+signal track_changed(title: String, artist: String)
 
 ## Semitones above the chime's own pitch for 1, 2, 3… lines cleared at once
 ## (a major arpeggio). Bigger combos stay on the top note.
@@ -93,7 +101,6 @@ func _init() -> void:
 
 func _ready() -> void:
 	next_track()
-	_music.stream_paused = not music
 
 
 ## A random index into `count` tracks other than `last` (any if `last` is -1).
@@ -108,10 +115,24 @@ static func pick_track(count: int, last: int, roll: RandomNumberGenerator) -> in
 
 
 ## Starts a randomly picked track, other than the one that just played.
+## Also Settings' skip button (#166). With the Music switch off the new track
+## waits, paused, at its start.
 func next_track() -> void:
 	_track = pick_track(TRACKS.size(), _track, rng)
 	_music.stream = TRACKS[_track]
 	play.call(_music)
+	_music.stream_paused = not music
+	track_changed.emit(track_title(), track_artist())
+
+
+## The title of the track playing now, or "" before the first.
+func track_title() -> String:
+	return TRACK_INFO[_track].title if _track >= 0 else ""
+
+
+## The artist of the track playing now, or "" before the first.
+func track_artist() -> String:
+	return TRACK_INFO[_track].artist if _track >= 0 else ""
 
 
 ## The track playing now.
