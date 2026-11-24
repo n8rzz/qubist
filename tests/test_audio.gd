@@ -63,3 +63,30 @@ func test_sound_effects_switch_silences_effects() -> void:
 	audio.land()
 	check_eq(pair[1].size(), 1, "plays again once back on")
 	audio.free()
+
+
+## The volume sliders (#165) lower every effect together, and the music on
+## its own, from their levels; full volume leaves the levels as they are.
+func test_volumes_scale_their_own_players() -> void:
+	var audio := Audio.new()
+	check_eq(audio.clack_player.volume_db, Audio.CLACK_DB, "full volume keeps the level")
+	audio.sound_effects_volume = 0.5
+	var offset := Audio.volume_offset_db(0.5)
+	check(offset < 0.0, "half volume is quieter")
+	check(is_equal_approx(audio.clack_player.volume_db, Audio.CLACK_DB + offset), "clack")
+	check(is_equal_approx(audio.crumble_player.volume_db, Audio.CRUMBLE_DB + offset), "crumble")
+	check(is_equal_approx(audio.chime_player.volume_db, Audio.CHIME_DB + offset), "chime")
+	check_eq(audio.music_db(), Audio.MUSIC_DB, "music untouched by the effects volume")
+	audio.music_volume = 0.0
+	check_eq(audio.music_db(), Audio.MUSIC_DB - 80.0, "silent at zero")
+	check(is_equal_approx(audio.clack_player.volume_db, Audio.CLACK_DB + offset), "effects untouched by the music volume")
+	audio.sound_effects_volume = 2.0
+	check_eq(audio.sound_effects_volume, 1.0, "clamped to full")
+	check_eq(audio.chime_player.volume_db, Audio.CHIME_DB, "back to the level")
+	audio.free()
+
+
+func test_volume_offset_rises_with_the_slider() -> void:
+	check_eq(Audio.volume_offset_db(1.0), 0.0, "full")
+	check_eq(Audio.volume_offset_db(0.0), -80.0, "silent")
+	check(Audio.volume_offset_db(0.25) < Audio.volume_offset_db(0.75), "louder further along")

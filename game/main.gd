@@ -131,6 +131,8 @@ func _ready() -> void:
 	haptics.enabled = settings.haptics
 	audio.sound_effects = settings.sound_effects
 	audio.music = settings.music
+	audio.sound_effects_volume = settings.sound_effects_volume
+	audio.music_volume = settings.music_volume
 	add_child(audio)
 	drag.target_changed.connect(_refresh_blocks)
 	drag.dropped.connect(_place)
@@ -559,6 +561,14 @@ func set_setting(key: String, on: bool) -> void:
 	SaveFile.write(settings_path, settings.to_dict())
 
 
+## Changes the music or sound effects volume (#165), applies it and saves the
+## settings. `key` is "music_volume" or "sound_effects_volume"; `value` is 0–1.
+func set_volume(key: String, value: float) -> void:
+	settings.set(key, clampf(value, 0.0, 1.0))
+	audio.set(key, settings.get(key))
+	SaveFile.write(settings_path, settings.to_dict())
+
+
 func show_stats() -> void:
 	_stats_from_settings = true
 	settings_sheet.visible = false
@@ -637,6 +647,7 @@ func _build_ui() -> void:
 	settings_sheet.stats_pressed.connect(show_stats)
 	settings_sheet.home_pressed.connect(show_home)
 	settings_sheet.setting_toggled.connect(set_setting)
+	settings_sheet.volume_changed.connect(set_volume)
 	settings_sheet.tutorial_pressed.connect(_on_replay_tutorial)
 	settings_sheet.show_settings(settings)
 	add_child(settings_sheet)

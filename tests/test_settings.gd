@@ -52,6 +52,28 @@ func test_older_save_keeps_its_grid_ticks() -> void:
 	check_eq(settings.sound_effects, true, "sound effects")
 
 
+## Music and sound effects volumes (#165): full by default, saved, and a bad
+## or out-of-range value falls back or is clamped.
+func test_volumes() -> void:
+	var settings := Settings.new()
+	check_eq(settings.music_volume, 1.0, "music volume starts full")
+	check_eq(settings.sound_effects_volume, 1.0, "sound effects volume starts full")
+	settings.music_volume = 0.25
+	settings.sound_effects_volume = 0.6
+	check(SaveFile.write(TEST_PATH, settings.to_dict()), "settings were written")
+	var loaded := Settings.new()
+	loaded.from_dict(SaveFile.read(TEST_PATH))
+	check_eq(loaded.music_volume, 0.25, "music volume")
+	check_eq(loaded.sound_effects_volume, 0.6, "sound effects volume")
+	SaveFile.remove(TEST_PATH)
+	loaded.from_dict({"music_volume": "loud", "sound_effects_volume": 3})
+	check_eq(loaded.music_volume, 1.0, "not a number")
+	check_eq(loaded.sound_effects_volume, 1.0, "above 1 is clamped")
+	loaded.from_dict({"music_volume": -0.5, "sound_effects_volume": 0})
+	check_eq(loaded.music_volume, 0.0, "below 0 is clamped")
+	check_eq(loaded.sound_effects_volume, 0.0, "a whole number")
+
+
 ## A save from before #164 has no tips value; tips start on.
 func test_older_save_shows_tips() -> void:
 	var settings := Settings.new()

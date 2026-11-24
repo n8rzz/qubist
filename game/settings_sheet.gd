@@ -1,7 +1,8 @@
 extends Control
 ## Settings bottom sheet (#20), opened from the header settings button and from Home.
 ##
-## Sound and feel: Music, Sound effects and Haptics switches. Game: Stats
+## Sound and feel: Music, Sound effects and Haptics switches, with a volume
+## slider under Music and Sound effects (#165). Game: Stats
 ## (#32), Replay tutorial (#29), the Tips switch (#164) and Home
 ## (#72, only when opened from a game). Display: the Grid ticks switch (#56),
 ## which the design doesn't show yet. Pause stays a separate menu (#42).
@@ -14,6 +15,9 @@ signal tutorial_pressed
 signal home_pressed
 ## A switch was flipped by the player. `key` is a Settings field name.
 signal setting_toggled(key: String, on: bool)
+## A volume slider was moved by the player. `key` is a Settings field name;
+## `value` is 0–1.
+signal volume_changed(key: String, value: float)
 signal closed
 
 ## Colours from the Qubist Settings design.
@@ -31,11 +35,14 @@ const SHEET_RADIUS := 30
 const ROW_HEIGHT := 56
 const ROW_GAP := 14
 const TILE_SIDE := 36
+const SLIDER_HEIGHT := 36
 
 var music_button: Button
 var sound_effects_button: Button
 var haptics_button: Button
 var grid_ticks_button: Button
+var music_volume_slider: HSlider
+var sound_effects_volume_slider: HSlider
 var stats_button: Button
 var tutorial_button: Button
 var tips_button: Button
@@ -43,6 +50,8 @@ var home_button: Button
 
 ## Settings key -> its switch row.
 var _switches := {}
+## Settings key -> its volume slider.
+var _sliders := {}
 ## Each card's rows, so dividers can follow which rows are visible.
 var _cards: Array[VBoxContainer] = []
 
@@ -93,7 +102,10 @@ func _init() -> void:
 
 	var sound := _card(column, "SOUND AND FEEL")
 	music_button = _switch_row(sound, "music", "Music", "music")
+	music_volume_slider = _volume_row(sound, "music_volume", music_button, "Music volume")
 	sound_effects_button = _switch_row(sound, "sound_effects", "Sound effects", "sound")
+	sound_effects_volume_slider = _volume_row(sound, "sound_effects_volume",
+		sound_effects_button, "Sound effects volume")
 	haptics_button = _switch_row(sound, "haptics", "Haptics", "haptics")
 
 	var game := _card(column, "GAME")
@@ -114,10 +126,13 @@ func _init() -> void:
 	_update_dividers()
 
 
-## Shows every switch as `settings` has it, without emitting setting_toggled.
+## Shows every switch and slider as `settings` has it, without emitting
+## setting_toggled or volume_changed.
 func show_settings(settings) -> void:
 	for key in _switches:
 		set_switch(key, settings.get(key))
+	for key in _sliders:
+		set_volume(key, settings.get(key))
 
 
 ## Shows one switch as `on`, without emitting setting_toggled.
@@ -125,6 +140,12 @@ func set_switch(key: String, on: bool) -> void:
 	var row: Button = _switches[key]
 	row.set_pressed_no_signal(on)
 	row.queue_redraw()
+	_sync_sliders()
+
+
+## Shows one volume slider at `value` (0–1), without emitting volume_changed.
+func set_volume(key: String, value: float) -> void:
+	(_sliders[key] as HSlider).set_value_no_signal(value)
 
 
 ## `in_game`: opened from the game screen, so the Home row shows.
@@ -204,6 +225,73 @@ func _switch_row(rows: VBoxContainer, key: String, text: String, icon: String) -
 	return row
 
 
+## A volume slider under `switch_row`, indented to line up with its name.
+## It dims and stops responding while its switch is off.
+func _volume_row(rows: VBoxContainer, key: String, switch_row: Button, label: String) -> HSlider:
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", TILE_SIDE + ROW_GAP)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	rows.add_child(margin)
+
+	var slider := HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 1.0
+	slider.step = 0.05
+	slider.value = 1.0
+	slider.custom_minimum_size.y = SLIDER_HEIGHT
+	slider.focus_mode = Control.FOCUS_NONE
+	slider.tooltip_text = label
+	slider.set_meta("switch_row", switch_row)
+	_style_slider(slider)
+	slider.value_changed.connect(func(value): volume_changed.emit(key, value))
+	margin.add_child(slider)
+	_sliders[key] = slider
+	switch_row.toggled.connect(func(_on): _sync_sliders())
+	_sync_sliders()
+	return slider
+
+
+## Each slider is usable only while its switch is on.
+func _sync_sliders() -> void:
+	for key in _sliders:
+		var slider: HSlider = _sliders[key]
+		var on: bool = (slider.get_meta("switch_row") as Button).button_pressed
+		slider.editable = on
+		slider.modulate.a = 1.0 if on else 0.4
+
+
+## A thin rounded track, filled in the switch colour up to a white knob.
+static func _style_slider(slider: HSlider) -> void:
+	var track := UI.box(SWITCH_OFF, Color(0, 0, 0, 0), 3, 0)
+	track.content_margin_top = 3
+	track.content_margin_bottom = 3
+	var filled := UI.box(Switch.ON, Color(0, 0, 0, 0), 3, 0)
+	filled.content_margin_top = 3
+	filled.content_margin_bottom = 3
+	slider.add_theme_stylebox_override("slider", track)
+	slider.add_theme_stylebox_override("grabber_area", filled)
+	slider.add_theme_stylebox_override("grabber_area_highlight", filled)
+	var knob := _knob_texture()
+	for icon in ["grabber", "grabber_highlight", "grabber_disabled"]:
+		slider.add_theme_icon_override(icon, knob)
+
+
+## A 24-point white knob with a soft grey rim, like the switch's.
+static func _knob_texture() -> Texture2D:
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.78, 0.86, 0.96, 1.0])
+	gradient.colors = PackedColorArray([Color.WHITE, Color.WHITE,
+		Color(0.79, 0.84, 0.86), Color(0.79, 0.84, 0.86, 0.5), Color(1, 1, 1, 0)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = 24
+	texture.height = 24
+	return texture
+
+
 ## The parts every row shares: a tinted icon tile and the name. The trailing
 ## chevron or switch goes at the end of the returned button's first child.
 func _row(rows: VBoxContainer, text: String, icon: String) -> Button:
@@ -248,6 +336,7 @@ func _divider() -> Control:
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", TILE_SIDE + ROW_GAP)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.set_meta("divider", true)
 	var line := ColorRect.new()
 	line.color = DIVIDER
 	line.custom_minimum_size.y = 1
@@ -256,12 +345,15 @@ func _divider() -> Control:
 	return margin
 
 
-## A divider shows only between two visible rows.
+## A divider shows only between two visible rows. Volume sliders sit with
+## the row above them and take no part.
 func _update_dividers() -> void:
 	for rows in _cards:
 		var seen_row := false
 		var pending_divider: Control = null
 		for child in rows.get_children():
+			if not (child is Button or child.has_meta("divider")):
+				continue
 			if child is Button:
 				if pending_divider != null:
 					pending_divider.visible = seen_row and child.visible
