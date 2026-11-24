@@ -38,6 +38,11 @@ func _init(screen) -> void:
 	host = screen
 
 
+## The player's game, set aside while the tutorial runs. Null otherwise.
+func saved_game():
+	return _saved_game
+
+
 func is_active() -> bool:
 	return step >= 0
 
