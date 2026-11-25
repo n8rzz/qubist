@@ -251,11 +251,12 @@ func draw_tree() -> void:
 			continue
 		for puff in SkyView.TREE_PUFFS:
 			draw_circle(at.call(Vector2(puff[0], puff[1])), puff[2], Color(canopy[puff[3]], a), true, -1.0, true)
-		if layer[0] == "spring":
+		var features := SkyView.features(layer[0], layer[1])
+		if features.has("blossom"):
 			for i in 10:
 				var dot := Vector2(-18 + 36 * DrawUtil.rand(i, 7), 60 - 32 * DrawUtil.rand(i, 8))
 				draw_circle(at.call(dot), 1.6, Color(1, 1, 1, a), true, -1.0, true)
-		elif layer[0] == "fall":
+		if features.has("fallen_leaves"):
 			for i in 5:
 				var leaf := base + Vector2(-22 + 44 * DrawUtil.rand(i, 9), -2 + 6 * DrawUtil.rand(i, 10))
 				draw_colored_polygon(DrawUtil.ellipse(leaf, Vector2(2.4, 1.4), 12), Color(canopy[SkyView.TREE_FALLEN_LEAF], a))

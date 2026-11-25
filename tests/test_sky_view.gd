@@ -206,13 +206,36 @@ func test_recolor_skips_untagged_controls() -> void:
 	_reset()
 
 
-func test_particles_by_view() -> void:
-	check_eq(SkyWeather.kinds_for("spring", "night"), ["petal"] as Array[String], "spring")
-	check_eq(SkyWeather.kinds_for("fall", "day"), ["leaf"] as Array[String], "fall")
-	check_eq(SkyWeather.kinds_for("winter", "sunset"), ["snow"] as Array[String], "winter")
-	check_eq(SkyWeather.kinds_for("summer", "night"), ["firefly"] as Array[String], "summer night")
-	check_eq(SkyWeather.kinds_for("summer", "sunset"), ["seed"] as Array[String], "summer sunset")
-	check_eq(SkyWeather.kinds_for("summer", "day"), ["butterfly"] as Array[String], "summer day")
+func test_every_view_lists_its_features() -> void:
+	var known := ["sun", "stars", "aurora", "moon", "birds", "geese", "mist", "blossom", "fallen_leaves",
+		"firefly", "butterfly"] + SkyWeather.FALLING.keys()
+	var particles := ["firefly", "butterfly"] + SkyWeather.FALLING.keys()
+	check_eq(SkyView.FEATURES.size(), 16, "16 views")
+	for season in ["spring", "summer", "fall", "winter"]:
+		for time in ["sunrise", "day", "sunset", "night"]:
+			var view := "%s %s" % [season, time]
+			var features := SkyView.features(season, time)
+			check(not features.is_empty(), "%s listed" % view)
+			for feature in features:
+				check(known.has(feature), "%s: %s is drawn somewhere" % [view, feature])
+			check_eq(features.has("sun"), time != "night", "%s sun" % view)
+			check_eq(features.has("stars") and features.has("moon"), time == "night", "%s stars and moon" % view)
+			check_eq(features.filter(func(f): return particles.has(f)).size(), 1, "%s one kind of particle" % view)
+
+
+func test_features_by_view() -> void:
+	check(SkyView.features("winter", "night").has("aurora"), "aurora on winter nights")
+	check(not SkyView.features("winter", "day").has("aurora"), "no aurora by day")
+	check(not SkyView.features("summer", "night").has("aurora"), "no aurora in summer")
+	check(SkyView.features("spring", "sunrise").has("mist"), "spring sunrise mist")
+	check(SkyView.features("fall", "day").has("geese"), "geese in fall")
+	check(not SkyView.features("fall", "night").has("geese"), "no geese at night")
+	check(SkyView.features("summer", "night").has("firefly"), "summer night fireflies")
+	check(SkyView.features("summer", "sunset").has("seed"), "summer sunset seeds")
+	check(SkyView.features("summer", "day").has("butterfly"), "summer day butterflies")
+	check(SkyView.features("spring", "night").has("blossom"), "spring blossom")
+	check(SkyView.features("fall", "sunset").has("fallen_leaves"), "fall leaves under the tree")
+	check(SkyView.features("autumn", "noon").is_empty(), "unknown view shows nothing")
 
 
 func test_falling_particles_fall_and_loop() -> void:

@@ -72,13 +72,11 @@ const MOON_CRATER := Color("#DDD8BF")
 const STAR_COUNT := 46
 ## Stars sit above this line, in points.
 const STAR_BAND := 470.0
-## Birds by season and time; geese fly in a V.
-const BIRD_VIEWS := ["spring sunrise", "spring day", "summer day", "summer sunset", "fall day", "fall sunrise"]
+## Bird flocks (SkyView.FEATURES says which views have them); geese fly in a V.
 const BIRDS := [Vector2(0, 0), Vector2(22, 12), Vector2(8, 26)]
 const GEESE := [Vector2(0, 0), Vector2(16, 8), Vector2(-14, 10), Vector2(30, 16), Vector2(-28, 20)]
 const BIRD_TOP := 230.0
 const BIRD_CROSSING_SECONDS := 20.0
-const MIST_VIEWS := ["spring sunrise", "fall sunrise"]
 ## Mist banks as [left, top, width, opacity].
 const MIST := [[40.0, 420.0, 300.0, 0.55], [70.0, 470.0, 360.0, 0.45], [100.0, 520.0, 280.0, 0.5]]
 
@@ -141,13 +139,16 @@ func _draw() -> void:
 	var seconds := SkyView.seconds()
 	var layers := SkyView.layers()
 	for layer in layers:
-		if layer[1] == "night":
-			_draw_stars(k, seconds, layer[2])
-			if layer[0] == "winter":
-				_draw_aurora(k, seconds, layer[2])
-			_draw_moon(k, seconds, layer[2])
-		else:
-			_draw_sun(layer[1], k, seconds, layer[2])
+		for feature in SkyView.features(layer[0], layer[1]):
+			match feature:
+				"sun":
+					_draw_sun(layer[1], k, seconds, layer[2])
+				"stars":
+					_draw_stars(k, seconds, layer[2])
+				"aurora":
+					_draw_aurora(k, seconds, layer[2])
+				"moon":
+					_draw_moon(k, seconds, layer[2])
 
 	var tint := SkyView.cloud_color()
 	var strength := SkyView.cloud_opacity()
@@ -166,11 +167,12 @@ func _draw() -> void:
 		_draw_santa(w, seconds)
 
 	for layer in layers:
-		var view: String = "%s %s" % [layer[0], layer[1]]
-		if BIRD_VIEWS.has(view):
-			_draw_birds(layer[0] == "fall", layer[1] == "day", k, seconds, layer[2])
-		if MIST_VIEWS.has(view):
-			_draw_mist(k, seconds, layer[2])
+		for feature in SkyView.features(layer[0], layer[1]):
+			match feature:
+				"birds", "geese":
+					_draw_birds(feature == "geese", layer[1] == "day", k, seconds, layer[2])
+				"mist":
+					_draw_mist(k, seconds, layer[2])
 
 
 ## How far cloud `index` has moved from where CLOUDS puts it, `seconds` in,
