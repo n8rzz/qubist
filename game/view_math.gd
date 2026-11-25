@@ -233,10 +233,12 @@ static func piece_edges(cells: Array) -> Dictionary:
 
 ## Grid ticks (#56): short marks on the tower's border, one per cell along
 ## the top rim and the base's lip and one per layer on each corner post.
-## Every MAJOR_TICK_EVERY-th mark is a longer major tick.
+## Every MAJOR_TICK_EVERY-th mark is a longer major tick. Kept short, and one
+## mark per post rather than one into each wall, so they don't crowd the
+## playfield (#256).
 const MAJOR_TICK_EVERY := 3
-const TICK_LENGTH := 0.24
-const MAJOR_TICK_LENGTH := 0.5
+const TICK_LENGTH := 0.12
+const MAJOR_TICK_LENGTH := 0.22
 ## Floor ticks lie on the base's lip, which is half a cube wide.
 const FLOOR_TICK_MAX := 0.42
 ## Floor ticks sit just above the base, like the floor grid.
@@ -252,10 +254,9 @@ static func border_ticks(grid_size: Vector3i) -> Dictionary:
 	var hz := grid_size.y * 0.5
 	var top := float(grid_size.z)
 
-	# Corner posts: at every layer, a mark into each of the two walls.
+	# Corner posts: at every layer, a mark into the wall along x.
 	for corner in [Vector2(-hx, -hz), Vector2(hx, -hz), Vector2(hx, hz), Vector2(-hx, hz)]:
 		var into_x := -signf(corner.x)
-		var into_z := -signf(corner.y)
 		for h in range(1, grid_size.z):
 			var is_major := h % MAJOR_TICK_EVERY == 0
 			var out: Array[Vector3] = major if is_major else minor
@@ -263,8 +264,6 @@ static func border_ticks(grid_size: Vector3i) -> Dictionary:
 			var at := Vector3(corner.x, h, corner.y)
 			out.append(at)
 			out.append(at + Vector3(into_x * length, 0, 0))
-			out.append(at)
-			out.append(at + Vector3(0, 0, into_z * length))
 
 	# Top rim and base lip: a mark at every cell boundary along each edge.
 	# The rim's hang down the wall; the lip's point out across the base.

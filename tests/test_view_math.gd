@@ -265,11 +265,12 @@ func test_diagonal_cubes_keep_both_outlines() -> void:
 
 func test_border_ticks_count_cells_and_layers() -> void:
 	var ticks := ViewMath.border_ticks(SIZE)
-	# Posts: 4 corners x 11 layers x 2 walls. Rim and lip: 4 edges x 5 marks each.
-	var segments := (4 * 11 * 2) + (4 * 5) * 2
+	# Posts: 4 corners x 11 layers, one mark each (#256). Rim and lip: 4 edges
+	# x 5 marks each.
+	var segments := (4 * 11) + (4 * 5) * 2
 	check_eq((ticks.minor.size() + ticks.major.size()) / 2, segments)
 	# Majors at layers 3, 6, 9 on the posts and the midline of every edge.
-	check_eq(ticks.major.size() / 2, 4 * 3 * 2 + 4 * 2)
+	check_eq(ticks.major.size() / 2, 4 * 3 + 4 * 2)
 
 
 func test_border_ticks_stay_on_the_tower() -> void:
