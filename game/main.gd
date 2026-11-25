@@ -253,8 +253,8 @@ func _process(delta: float) -> void:
 
 
 ## Follows the clock when Settings says the sky follows the day, but never
-## while a piece is being dragged (#168). Applies the current sky's light and
-## snow to the game. The score's colours follow the sky through SkyView.ink()
+## while a piece is being dragged (#168). Applies the current sky's light,
+## snow and night (#253) to the game. The score's colours follow the sky through SkyView.ink()
 ## and muted() (#204).
 func update_sky(delta: float) -> void:
 	SkyView.follow_clock(delta, drag.is_dragging())
@@ -262,6 +262,9 @@ func update_sky(delta: float) -> void:
 	var snow := SkyView.snow_amount()
 	if not is_equal_approx(tower.snow_amount(), snow):
 		tower.set_snow(snow)
+	var night := SkyView.night_amount()
+	if not is_equal_approx(tower.night_amount(), night):
+		tower.set_night(night)
 
 
 ## Keeps the axis labels beside the base as the view zooms, resizes or turns.

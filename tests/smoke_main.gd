@@ -17,6 +17,7 @@ const Tutorial := preload("res://core/tutorial.gd")
 const Analytics := preload("res://core/analytics.gd")
 const HintToast := preload("res://game/hint_toast.gd")
 const SettingsSheet := preload("res://game/settings_sheet.gd")
+const SkyView := preload("res://game/sky_view.gd")
 
 var main
 var frame := 0
@@ -48,6 +49,7 @@ func _process(_delta: float) -> bool:
 	frame += 1
 	if frame == 5:
 		_check_layout()
+		_check_night_lines()
 		_open_short_sheet()
 	elif frame == 7:
 		_check_home()
@@ -592,6 +594,23 @@ func _check_grid_ticks() -> void:
 	if main.tower.grid_ticks_visible():
 		failures.append("turning off Grid ticks did not hide them")
 	SaveFile.remove(saves.settings_path)
+
+
+## The tower's bounding box is grey by day and ice blue at night, so it
+## still shows on the dark sky (#253).
+func _check_night_lines() -> void:
+	var tower = main.tower
+	var was: Array = [SkyView.season, SkyView.time_of_day]
+	SkyView.show("fall", "night", true)
+	main.update_sky(0.0)
+	if not tower.guide_color().is_equal_approx(tower.GUIDE_NIGHT_COLOR):
+		failures.append("bounding box at night is %s, expected %s" % [tower.guide_color(), tower.GUIDE_NIGHT_COLOR])
+	SkyView.show("fall", "day", true)
+	main.update_sky(0.0)
+	if not tower.guide_color().is_equal_approx(tower.GUIDE_COLOR):
+		failures.append("bounding box by day is %s, expected %s" % [tower.guide_color(), tower.GUIDE_COLOR])
+	SkyView.show(was[0], was[1], true)
+	main.update_sky(0.0)
 
 
 ## Settings › Sound and feel: each switch starts on, saves when flipped and

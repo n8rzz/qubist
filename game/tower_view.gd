@@ -37,12 +37,17 @@ const GHOST_COLOR := Color(64 / 255.0, 201 / 255.0, 135 / 255.0, 0.35)
 const GHOST_LINE_COLOR := Color("#2FAE72")
 const GHOST_INNER_LINE_ALPHA := 0.55
 const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
+## At night the grey lines are lost on the dark sky (#253), so the bounding
+## box and the grid ticks fade to ice blue (SkyView.NIGHT_ACCENT_INK).
+const GUIDE_NIGHT_COLOR := Color("#8CCBE6", 0.65)
 ## Floor grid lines, white on the green floor as on Home.
 const FLOOR_LINE_COLOR := Color(1, 1, 1, 0.55)
 ## Grid ticks on the tower's border (#56), off unless the player turns them on.
 ## Major ticks are darker as well as longer.
 const TICK_COLOR := Color(0.4, 0.4, 0.4, 0.7)
 const MAJOR_TICK_COLOR := Color(0.25, 0.25, 0.25, 0.9)
+const TICK_NIGHT_COLOR := Color("#8CCBE6", 0.6)
+const MAJOR_TICK_NIGHT_COLOR := Color("#8CCBE6", 0.95)
 ## The sun keeps this angle to the view as the tower turns, so the lit sides
 ## and the shadows look the same from every corner.
 const SUN_PITCH_DEG := -55.0
@@ -183,6 +188,11 @@ var _ticks := MeshInstance3D.new()
 var _sun := DirectionalLight3D.new()
 ## Snow on the cubes' tops (#168), as set_snow() last set it.
 var _snow := 0.0
+## How far it's night (#253), as set_night() last set it.
+var _night := 0.0
+## The bounding box's and the ticks' line materials, each with its day and
+## night colours: [material, day, night].
+var _night_lines: Array = []
 
 
 func setup(size: Vector3i) -> void:
@@ -271,6 +281,23 @@ func set_snow(amount: float) -> void:
 
 func snow_amount() -> float:
 	return _snow
+
+
+## Fades the bounding box and grid ticks from their day grey to ice blue
+## (#253), 0 by day to 1 at night.
+func set_night(amount: float) -> void:
+	_night = amount
+	for entry in _night_lines:
+		(entry[0] as StandardMaterial3D).albedo_color = (entry[1] as Color).lerp(entry[2], amount)
+
+
+func night_amount() -> float:
+	return _night
+
+
+## The bounding box's colour as set_night() last set it.
+func guide_color() -> Color:
+	return GUIDE_COLOR.lerp(GUIDE_NIGHT_COLOR, _night)
 
 
 func grid_ticks_visible() -> bool:
@@ -982,6 +1009,13 @@ func _early_lines_material(color: Color) -> StandardMaterial3D:
 	return m
 
 
+## An early lines material that set_night() fades from `day` to `night`.
+func _night_lines_material(day: Color, night: Color) -> StandardMaterial3D:
+	var m := _early_lines_material(day.lerp(night, _night))
+	_night_lines.append([m, day, night])
+	return m
+
+
 func _material(color: Color, transparent := false, unshaded := false) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = color
@@ -1028,7 +1062,7 @@ func _add_guides() -> void:
 		mesh.surface_add_vertex(Vector3(-hx, floor_y, -hz + i))
 		mesh.surface_add_vertex(Vector3(hx, floor_y, -hz + i))
 	mesh.surface_end()
-	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _early_lines_material(GUIDE_COLOR))
+	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _night_lines_material(GUIDE_COLOR, GUIDE_NIGHT_COLOR))
 	var corners := [Vector2(-hx, -hz), Vector2(hx, -hz), Vector2(hx, hz), Vector2(-hx, hz)]
 	for i in range(4):
 		var a: Vector2 = corners[i]
@@ -1051,11 +1085,12 @@ func _add_guides() -> void:
 func _add_ticks() -> void:
 	var ticks := ViewMath.border_ticks(grid_size)
 	var mesh := ImmediateMesh.new()
-	for group in [[ticks.minor, TICK_COLOR], [ticks.major, MAJOR_TICK_COLOR]]:
+	for group in [[ticks.minor, TICK_COLOR, TICK_NIGHT_COLOR],
+			[ticks.major, MAJOR_TICK_COLOR, MAJOR_TICK_NIGHT_COLOR]]:
 		var points: Array = group[0]
 		if points.is_empty():
 			continue
-		mesh.surface_begin(Mesh.PRIMITIVE_LINES, _early_lines_material(group[1]))
+		mesh.surface_begin(Mesh.PRIMITIVE_LINES, _night_lines_material(group[1], group[2]))
 		for p in points:
 			mesh.surface_add_vertex(p)
 		mesh.surface_end()
