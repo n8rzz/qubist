@@ -266,7 +266,7 @@ func test_new_boxes_take_night_colours() -> void:
 	slot.add_theme_stylebox_override("panel", UI.card(UI.TRAY_CARD, 20))
 	SkyView.paint_night(slot)
 	check((slot.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.is_equal_approx(SkyView.NIGHT_TRAY_CARD), "filled slot")
-	slot.add_theme_stylebox_override("panel", UI.box(Color(1, 1, 1, 0.25), Color(1, 1, 1, 0.7), 20, 2))
+	slot.add_theme_stylebox_override("panel", UI.box(Color(1, 1, 1, 0.25), 20, Vector2.ZERO, Color(1, 1, 1, 0.7), 2))
 	SkyView.paint_night(slot)
 	var empty := slot.get_theme_stylebox("panel") as StyleBoxFlat
 	check(empty.bg_color.is_equal_approx(Color(1, 1, 1, 0.08)), "empty slot fill")

@@ -13,6 +13,11 @@ const INTER: FontFile = preload("res://assets/fonts/Inter-Variable.ttf")
 static var _fonts := {}
 
 const WHITE := Color.WHITE
+## Fully transparent, for a box with no fill or border.
+const CLEAR := Color(0, 0, 0, 0)
+## The dim navy laid over the screen behind sheets, cards and the tutorial.
+## Each place sets its own alpha: Color(UI.DIM_INK, 0.45).
+const DIM_INK := Color(16 / 255.0, 32 / 255.0, 44 / 255.0)
 
 ## Text and accent colours for everything drawn over the sky.
 const SKY_INK := Color("#22313F")
@@ -29,6 +34,8 @@ const CARD_PRESSED := Color("#E6EEF2")
 ## The pale track behind the swiper's axis toggle, and the slider's rail.
 const SEGMENT_TRACK := Color("#EAF1F5")
 const SLIDER_RAIL := Color("#D5E2EA")
+## A switch's track while off, and the Settings sheet's drag handle.
+const SWITCH_OFF := Color("#C9D5DC")
 ## Tray cards are slightly see-through so the sky tints them.
 const TRAY_CARD := Color(1, 1, 1, 0.86)
 
@@ -62,7 +69,8 @@ static func _font(base: FontFile, weight: int, spacing: int) -> FontVariation:
 	return _fonts[key]
 
 
-static func box(bg: Color, border: Color, radius: int, width: int = 2, padding := Vector2.ZERO) -> StyleBoxFlat:
+## A rounded `bg` box. It has no border unless `width` and `border` are given.
+static func box(bg: Color, radius: int, padding := Vector2.ZERO, border := CLEAR, width: int = 0) -> StyleBoxFlat:
 	var b := StyleBoxFlat.new()
 	b.bg_color = bg
 	b.border_color = border
@@ -90,7 +98,7 @@ static func label(text: String, font_size: int, color: Color,
 ## A borderless card: `color` with rounded corners and a soft ledge `drop`
 ## points deep below it.
 static func card(color: Color, radius: int, padding := Vector2.ZERO, drop: int = 3) -> StyleBoxFlat:
-	var b := box(color, Color(0, 0, 0, 0), radius, 0, padding)
+	var b := box(color, radius, padding)
 	b.shadow_color = CARD_SHADOW
 	b.shadow_size = 1
 	b.shadow_offset = Vector2(0, drop)
@@ -138,7 +146,7 @@ static func text_button(text: String, font_size: int, primary := false) -> Butto
 ## The teal primary face with its dark ledge `drop` points deep, shared by
 ## primary buttons and the swiper's chosen axis.
 static func accent_key(radius: int, face: Color = SKY_ACCENT, drop: int = 4) -> StyleBoxFlat:
-	var style := box(face, Color(0, 0, 0, 0), radius, 0)
+	var style := box(face, radius)
 	style.shadow_color = ACCENT_LEDGE
 	style.shadow_size = 1
 	style.shadow_offset = Vector2(0, drop)
@@ -147,7 +155,7 @@ static func accent_key(radius: int, face: Color = SKY_ACCENT, drop: int = 4) -> 
 
 ## Slider track: a rounded bar 10 px thick.
 static func slider_track(color: Color) -> StyleBoxFlat:
-	var b := box(color, Color(0, 0, 0, 0), 5, 0)
+	var b := box(color, 5)
 	b.content_margin_top = 5
 	b.content_margin_bottom = 5
 	return b

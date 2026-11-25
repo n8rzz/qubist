@@ -36,14 +36,11 @@ signal closed
 
 ## Colours from the Qubist Settings design.
 const SHEET_BG := Color("#F3F8FA")
-const HANDLE := Color("#C9D5DC")
 const TILE := Color("#EEF5F8")
 const DIVIDER := Color("#E6EEF2")
 const CHEVRON := Color("#8AA0B0")
 const ROW_PRESSED := Color("#F4F8FA")
-const SWITCH_OFF := Color("#C9D5DC")
-const DIM := Color(16 / 255.0, 32 / 255.0, 44 / 255.0, 0.45)
-const CLOSE_SHADOW := Color(36 / 255.0, 72 / 255.0, 96 / 255.0, 0.16)
+const DIM := Color(UI.DIM_INK, 0.45)
 
 const SHEET_RADIUS := 30
 const ROW_HEIGHT := 56
@@ -51,7 +48,6 @@ const ROW_GAP := 14
 const TILE_SIDE := 36
 const SLIDER_HEIGHT := 36
 ## The segmented pickers, as on the game's swiper axis buttons.
-const SEGMENT_TRACK := Color("#EAF1F5")
 const SEGMENT_ON := Color("#22313F")
 const SEGMENT_HEIGHT := 36
 ## How far a finger moves up or down before a press on the cards becomes a
@@ -120,7 +116,7 @@ func _init() -> void:
 	_sheet = sheet
 	sheet.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	sheet.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var style := UI.box(SHEET_BG, Color(0, 0, 0, 0), SHEET_RADIUS, 0, Vector2(UI.SIDE_MARGIN, 0))
+	var style := UI.box(SHEET_BG, SHEET_RADIUS, Vector2(UI.SIDE_MARGIN, 0))
 	style.corner_radius_bottom_left = 0
 	style.corner_radius_bottom_right = 0
 	style.content_margin_top = 10
@@ -139,7 +135,7 @@ func _init() -> void:
 	handle.custom_minimum_size = Vector2(40, 5)
 	handle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	handle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	handle.add_theme_stylebox_override("panel", UI.box(HANDLE, Color(0, 0, 0, 0), 3, 0))
+	handle.add_theme_stylebox_override("panel", UI.box(UI.SWITCH_OFF, 3))
 	column.add_child(handle)
 
 	var header := HBoxContainer.new()
@@ -332,8 +328,8 @@ func _close_button() -> IconButton:
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for state in ["normal", "hover", "pressed"]:
 		var face := UI.WHITE if state != "pressed" else Color("#E6EEF2")
-		var box := UI.box(face, Color(0, 0, 0, 0), 22, 0)
-		box.shadow_color = CLOSE_SHADOW
+		var box := UI.box(face, 22)
+		box.shadow_color = UI.CARD_SHADOW
 		box.shadow_size = 1
 		box.shadow_offset = Vector2(0, 3 if state != "pressed" else 1)
 		b.add_theme_stylebox_override(state, box)
@@ -353,7 +349,7 @@ func _card(column: VBoxContainer, caption: String) -> VBoxContainer:
 	group.add_child(title_margin)
 
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", UI.box(UI.WHITE, Color(0, 0, 0, 0), 20, 0, Vector2(16, 4)))
+	card.add_theme_stylebox_override("panel", UI.box(UI.WHITE, 20, Vector2(16, 4)))
 	var rows := VBoxContainer.new()
 	rows.add_theme_constant_override("separation", 0)
 	card.add_child(rows)
@@ -440,8 +436,8 @@ func _now_playing_row(rows: VBoxContainer) -> void:
 	next_track_button.custom_minimum_size = Vector2(44, 44)
 	next_track_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for state in ["normal", "hover", "disabled"]:
-		next_track_button.add_theme_stylebox_override(state, UI.box(TILE, Color(0, 0, 0, 0), 22, 0))
-	next_track_button.add_theme_stylebox_override("pressed", UI.box(DIVIDER, Color(0, 0, 0, 0), 22, 0))
+		next_track_button.add_theme_stylebox_override(state, UI.box(TILE, 22))
+	next_track_button.add_theme_stylebox_override("pressed", UI.box(DIVIDER, 22))
 	next_track_button.pressed.connect(func(): next_track_pressed.emit())
 	line.add_child(next_track_button)
 	_now_playing = margin
@@ -482,7 +478,7 @@ func _picker(column: VBoxContainer, key: String, caption: String, values: Array[
 	title.add_theme_font_override("font", UI.body_font(600))
 	column.add_child(title)
 	var track := PanelContainer.new()
-	var track_style := UI.box(SEGMENT_TRACK, Color(0, 0, 0, 0), SEGMENT_HEIGHT / 2 + 2, 0)
+	var track_style := UI.box(UI.SEGMENT_TRACK, SEGMENT_HEIGHT / 2 + 2)
 	track_style.set_content_margin_all(2)
 	track.add_theme_stylebox_override("panel", track_style)
 	column.add_child(track)
@@ -502,7 +498,7 @@ func _picker(column: VBoxContainer, key: String, caption: String, values: Array[
 		b.add_theme_font_size_override("font_size", 14)
 		b.add_theme_font_override("font", UI.body_font(600))
 		var off := StyleBoxEmpty.new()
-		var on := UI.box(SEGMENT_ON, Color(0, 0, 0, 0), SEGMENT_HEIGHT / 2, 0)
+		var on := UI.box(SEGMENT_ON, SEGMENT_HEIGHT / 2)
 		for state in ["normal", "hover", "disabled", "focus"]:
 			b.add_theme_stylebox_override(state, off)
 		for state in ["pressed", "hover_pressed"]:
@@ -536,10 +532,10 @@ func _sync_sky_choices() -> void:
 
 ## A thin rounded track, filled in the switch colour up to a white knob.
 static func _style_slider(slider: HSlider) -> void:
-	var track := UI.box(SWITCH_OFF, Color(0, 0, 0, 0), 3, 0)
+	var track := UI.box(UI.SWITCH_OFF, 3)
 	track.content_margin_top = 3
 	track.content_margin_bottom = 3
-	var filled := UI.box(Switch.ON, Color(0, 0, 0, 0), 3, 0)
+	var filled := UI.box(Switch.ON, 3)
 	filled.content_margin_top = 3
 	filled.content_margin_bottom = 3
 	slider.add_theme_stylebox_override("slider", track)
@@ -577,7 +573,7 @@ func _row(rows: VBoxContainer, text: String, icon: String) -> Button:
 	b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	b.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
 	b.add_theme_stylebox_override("hover_pressed", StyleBoxEmpty.new())
-	var pressed := UI.box(ROW_PRESSED, Color(0, 0, 0, 0), 12, 0)
+	var pressed := UI.box(ROW_PRESSED, 12)
 	pressed.expand_margin_left = 8
 	pressed.expand_margin_right = 8
 	b.add_theme_stylebox_override("pressed", pressed)
@@ -593,7 +589,7 @@ func _row(rows: VBoxContainer, text: String, icon: String) -> Button:
 	tile.custom_minimum_size = Vector2(TILE_SIDE, TILE_SIDE)
 	tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tile.add_theme_stylebox_override("panel", UI.box(TILE, Color(0, 0, 0, 0), 10, 0))
+	tile.add_theme_stylebox_override("panel", UI.box(TILE, 10))
 	tile.add_child(Icon.new(icon, UI.SKY_ACCENT))
 	line.add_child(tile)
 
@@ -644,7 +640,6 @@ class Switch:
 	extends Control
 
 	const ON := Color("#1F5E7A")
-	const OFF := Color("#C9D5DC")
 
 	var row: Button
 
@@ -659,7 +654,7 @@ class Switch:
 	func _draw() -> void:
 		var on := row.button_pressed
 		var track := StyleBoxFlat.new()
-		track.bg_color = ON if on else OFF
+		track.bg_color = ON if on else UI.SWITCH_OFF
 		track.set_corner_radius_all(16)
 		track.anti_aliasing = true
 		draw_style_box(track, Rect2(Vector2.ZERO, size))

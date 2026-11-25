@@ -18,8 +18,8 @@ const SUBTLE := Color("#3D5568")
 const TILE := Color("#EEF5F8")
 const BUTTON := Color("#1F5E7A")
 const BUTTON_EDGE := Color("#123D50")
-const DIM_TOP := Color(16 / 255.0, 32 / 255.0, 44 / 255.0, 0.25)
-const DIM_BOTTOM := Color(16 / 255.0, 32 / 255.0, 44 / 255.0, 0.6)
+const DIM_TOP := Color(UI.DIM_INK, 0.25)
+const DIM_BOTTOM := Color(UI.DIM_INK, 0.6)
 
 const CARD_SIDE_GAP := 12
 const CARD_BOTTOM_GAP := 24
@@ -65,7 +65,7 @@ func _init() -> void:
 	card.offset_left = CARD_SIDE_GAP
 	card.offset_right = -CARD_SIDE_GAP
 	card.offset_bottom = -CARD_BOTTOM_GAP
-	var style := UI.box(UI.WHITE, Color(0, 0, 0, 0), CARD_RADIUS, 0, Vector2(22, 22))
+	var style := UI.box(UI.WHITE, CARD_RADIUS, Vector2(22, 22))
 	style.content_margin_top = 26
 	style.shadow_color = Color(0, 0, 0, 0.25)
 	style.shadow_size = 22
@@ -158,7 +158,7 @@ func finish_animation() -> void:
 func _tile(row: HBoxContainer, caption_text: String) -> Label:
 	var tile := PanelContainer.new()
 	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tile.add_theme_stylebox_override("panel", UI.box(TILE, Color(0, 0, 0, 0), 16, 0, Vector2(6, 12)))
+	tile.add_theme_stylebox_override("panel", UI.box(TILE, 16, Vector2(6, 12)))
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 2)
 	var value := UI.label("0", 24, INK, HORIZONTAL_ALIGNMENT_CENTER)
@@ -200,17 +200,16 @@ func _home_button() -> Button:
 	b.add_theme_font_size_override("font_size", 16)
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
 		b.add_theme_color_override(state, BUTTON)
-	var clear := Color(0, 0, 0, 0)
-	b.add_theme_stylebox_override("normal", UI.box(clear, clear, 20, 0))
-	b.add_theme_stylebox_override("hover", UI.box(TILE, clear, 20, 0))
-	b.add_theme_stylebox_override("pressed", UI.box(TILE.darkened(0.04), clear, 20, 0))
+	b.add_theme_stylebox_override("normal", UI.box(UI.CLEAR, 20))
+	b.add_theme_stylebox_override("hover", UI.box(TILE, 20))
+	b.add_theme_stylebox_override("pressed", UI.box(TILE.darkened(0.04), 20))
 	return b
 
 
 ## The button's face with a solid `edge` px lip under it. `sink` pushes the
 ## face down by that much, for the pressed look.
 static func _button_box(face: Color, edge: int, sink: int = 0) -> StyleBoxFlat:
-	var b := UI.box(face, BUTTON_EDGE, 20, 0)
+	var b := UI.box(face, 20, Vector2.ZERO, BUTTON_EDGE, 0)
 	b.border_width_bottom = edge
 	b.expand_margin_bottom = edge
 	b.expand_margin_top = -sink
