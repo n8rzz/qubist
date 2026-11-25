@@ -13,7 +13,7 @@ extends Control
 ## Positions are in the design's 390 × 844 frame, stretched to the control.
 
 const SkyView := preload("res://game/sky_view.gd")
-const SkyBackdrop := preload("res://game/sky_backdrop.gd")
+const DrawUtil := preload("res://game/draw_util.gd")
 
 ## Particles fall through this share of the height, and fade out over the
 ## last FADE_SHARE of it.
@@ -51,39 +51,20 @@ func _process(_delta: float) -> void:
 		queue_redraw()
 
 
-## The kinds of particles a season and time of day show.
-static func kinds_for(season: String, time: String) -> Array[String]:
-	var kinds: Array[String] = []
-	match season:
-		"spring":
-			kinds.append("petal")
-		"fall":
-			kinds.append("leaf")
-		"winter":
-			kinds.append("snow")
-		"summer":
-			if time == "night":
-				kinds.append("firefly")
-			elif time == "sunset":
-				kinds.append("seed")
-			else:
-				kinds.append("butterfly")
-	return kinds
-
-
 func _draw() -> void:
 	var k := Vector2(size.x / 390.0, size.y / 844.0)
 	var seconds := SkyView.seconds()
 	for layer in SkyView.layers():
 		var night: bool = layer[1] == "night"
-		for kind in kinds_for(layer[0], layer[1]):
-			match kind:
+		for feature in SkyView.features(layer[0], layer[1]):
+			match feature:
 				"firefly":
 					_draw_fireflies(k, seconds, layer[2])
 				"butterfly":
 					_draw_butterflies(k, seconds, layer[2])
 				_:
-					_draw_falling(kind, night, k, seconds, layer[2])
+					if FALLING.has(feature):
+						_draw_falling(feature, night, k, seconds, layer[2])
 
 
 ## Where falling particle `i` of `kind` is, as [position in the design
@@ -91,11 +72,11 @@ func _draw() -> void:
 static func falling_at(kind: String, i: int, seconds: float) -> Array:
 	var spec: Array = FALLING[kind]
 	var salt := 17 * (FALLING.keys().find(kind) + 1)
-	var duration := lerpf(spec[4].x, spec[4].y, SkyBackdrop.rand(i + salt, 1))
-	var p := fposmod(seconds / duration + SkyBackdrop.rand(i + salt, 2), 1.0)
-	var drift := lerpf(spec[2].x, spec[2].y, SkyBackdrop.rand(i + salt, 3))
-	var turn := deg_to_rad(lerpf(spec[3].x, spec[3].y, SkyBackdrop.rand(i + salt, 4)))
-	var x := 380.0 * SkyBackdrop.rand(i + salt, 5) + drift * p
+	var duration := lerpf(spec[4].x, spec[4].y, DrawUtil.rand(i + salt, 1))
+	var p := fposmod(seconds / duration + DrawUtil.rand(i + salt, 2), 1.0)
+	var drift := lerpf(spec[2].x, spec[2].y, DrawUtil.rand(i + salt, 3))
+	var turn := deg_to_rad(lerpf(spec[3].x, spec[3].y, DrawUtil.rand(i + salt, 4)))
+	var x := 380.0 * DrawUtil.rand(i + salt, 5) + drift * p
 	return [Vector2(x, -40.0 + 680.0 * p), turn * p, p]
 
 
@@ -109,7 +90,7 @@ func _draw_falling(kind: String, night: bool, k: Vector2, seconds: float, alpha:
 		if pos.y > bottom:
 			continue
 		var fade := clampf((bottom - pos.y) / (size.y * FADE_SHARE), 0.0, 1.0) * alpha
-		var pick := SkyBackdrop.rand(i + salt, 6)
+		var pick := DrawUtil.rand(i + salt, 6)
 		match kind:
 			"petal":
 				var color: Color = PETALS[int(pick * PETALS.size())]
@@ -142,11 +123,11 @@ func _blob(center: Vector2, radii: Vector2, turn: float, color: Color, point: fl
 
 func _draw_fireflies(k: Vector2, seconds: float, alpha: float) -> void:
 	for i in 14:
-		var period := 3.0 + 3.0 * SkyBackdrop.rand(i + 300, 1)
-		var p := fposmod(seconds / period + SkyBackdrop.rand(i + 300, 2), 1.0)
+		var period := 3.0 + 3.0 * DrawUtil.rand(i + 300, 1)
+		var p := fposmod(seconds / period + DrawUtil.rand(i + 300, 2), 1.0)
 		# Out and back along a short diagonal, blinking twice on the way.
 		var reach := 1.0 - absf(1.0 - 2.0 * p)
-		var home := Vector2(30.0 + 330.0 * SkyBackdrop.rand(i + 300, 3), 250.0 + 310.0 * SkyBackdrop.rand(i + 300, 4))
+		var home := Vector2(30.0 + 330.0 * DrawUtil.rand(i + 300, 3), 250.0 + 310.0 * DrawUtil.rand(i + 300, 4))
 		var at := home + Vector2(14, -12) * reach
 		var blink := 0.575 - 0.425 * cos(TAU * p * 2.0)
 		var pos := Vector2(at.x * k.x, at.y * k.y)
@@ -166,5 +147,5 @@ func _draw_butterflies(k: Vector2, seconds: float, alpha: float) -> void:
 		var wing := 0.6 + 0.4 * cos(TAU * seconds / 0.35)
 		var color := Color(spec[1], alpha)
 		for side in [-1.0, 1.0]:
-			draw_colored_polygon(SkyBackdrop.ellipse(pos + Vector2(4.5 * side * wing, -1), Vector2(4.5 * wing, 5), 16), color)
+			draw_colored_polygon(DrawUtil.ellipse(pos + Vector2(4.5 * side * wing, -1), Vector2(4.5 * wing, 5), 16), color)
 		draw_rect(Rect2(pos - Vector2(0.8, 5), Vector2(1.6, 10)), Color(BUTTERFLY_BODY, alpha))

@@ -10,7 +10,7 @@ extends SceneTree
 
 const MOVES := 30
 const SaveFile := preload("res://core/save_file.gd")
-const SmokeSaves := preload("res://tests/smoke_saves.gd")
+const SmokeSaves := preload("res://tests/support/smoke_saves.gd")
 const UI := preload("res://game/ui_style.gd")
 const ScoreFeedback := preload("res://game/score_feedback.gd")
 const Tutorial := preload("res://core/tutorial.gd")

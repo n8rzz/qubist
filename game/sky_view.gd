@@ -4,9 +4,9 @@ extends RefCounted
 ## the game, Stats and the loading view always agree and a change crossfades
 ## on all of them at once.
 ##
-## main.gd picks the view (from the clock, or the player's choice in
-## Settings) and calls show(); the backdrop, the particles and the island
-## read it every frame. Colours follow the "Seasons and time of day" design
+## The loading view and main.gd call start() with the player's settings;
+## main.gd then calls follow_clock() each frame and follow() when Settings
+## change. The backdrop, the particles and the island read it every frame. Colours follow the "Seasons and time of day" design
 ## in Notion.
 
 const SkyClock := preload("res://core/sky_clock.gd")
@@ -14,6 +14,9 @@ const UI := preload("res://game/ui_style.gd")
 
 ## How long a change of season or time of day takes to fade in.
 const CROSSFADE_SECONDS := 3.0
+## How often, in seconds, a sky that follows the day checks the clock for a
+## new season or time of day (#168).
+const CLOCK_CHECK_SECONDS := 30.0
 
 ## Sky gradients, top to bottom, as [stop, colour] pairs.
 const GRADIENTS := {
@@ -71,6 +74,21 @@ const TREES := {
 	"fall": [Color("#6E4E3A"), [Color("#E0782E"), Color("#F0A33C"), Color("#C8502A")]],
 	"winter": [Color("#6E5A4C"), []],
 }
+## The tree's shape (#207), shared by Home's 2D tree (island_art.gd, which
+## flips y) and the game's 3D one (floating_island.gd). In points from the
+## foot of the trunk, x to the right and y up.
+const TREE_TRUNK_HEIGHT := 34.0
+## Canopy puffs as [x, y, radius, index into the season's canopy colours].
+const TREE_PUFFS := [[-9, 38, 13.0, 0], [9, 40, 12.0, 2], [0, 50, 13.0, 1], [0, 38, 10.0, 1]]
+## Winter's bare branches as [from, to], and the snow on them as
+## [x, y, radius].
+const TREE_BRANCHES := [
+	[Vector2(0, 24), Vector2(-12, 38)], [Vector2(0, 30), Vector2(10, 42)],
+	[Vector2(-6, 32), Vector2(-14, 41)], [Vector2(5, 36), Vector2(12, 44)],
+]
+const TREE_SNOW_LUMPS := [[-12, 38, 4.0], [10, 42, 4.5], [-8, 42, 3.0], [7, 44, 3.0], [0, 36, 3.5]]
+## Fall's leaves on the ground are this canopy colour (the deepest red).
+const TREE_FALLEN_LEAF := 2
 ## Snow on the cubes' tops in winter.
 const SNOW_TOP := Color("#F3F7FB")
 const SNOW_TOP_INSET := Color.WHITE
@@ -148,6 +166,31 @@ const NIGHT_BOXES := [
 ]
 const NIGHT_FILL_PROPS := ["bg_color", "border_color", "shadow_color"]
 
+## What each of the 16 views shows besides its colours (#209), in the order
+## they're drawn. Every renderer checks this table:
+## - the backdrop: "sun" or "stars", "aurora", "moon"; "birds" or "geese";
+##   "mist"
+## - the weather: "petal", "leaf", "snow", "seed", "firefly", "butterfly"
+## - the tree: "blossom" (white dots), "fallen_leaves" (leaves at its foot)
+const FEATURES := {
+	"spring sunrise": ["sun", "birds", "mist", "petal", "blossom"],
+	"spring day": ["sun", "birds", "petal", "blossom"],
+	"spring sunset": ["sun", "petal", "blossom"],
+	"spring night": ["stars", "moon", "petal", "blossom"],
+	"summer sunrise": ["sun", "butterfly"],
+	"summer day": ["sun", "birds", "butterfly"],
+	"summer sunset": ["sun", "birds", "seed"],
+	"summer night": ["stars", "moon", "firefly"],
+	"fall sunrise": ["sun", "geese", "mist", "leaf", "fallen_leaves"],
+	"fall day": ["sun", "geese", "leaf", "fallen_leaves"],
+	"fall sunset": ["sun", "leaf", "fallen_leaves"],
+	"fall night": ["stars", "moon", "leaf", "fallen_leaves"],
+	"winter sunrise": ["sun", "snow"],
+	"winter day": ["sun", "snow"],
+	"winter sunset": ["sun", "snow"],
+	"winter night": ["stars", "aurora", "moon", "snow"],
+}
+
 static var season := "spring"
 static var time_of_day := "day"
 ## The view fading out, during a crossfade.
@@ -161,9 +204,36 @@ static var still := false
 ## Christmas (#198): Santa's sleigh flies across the sky. Set from the date,
 ## or from the player's Christmas switch while the sky doesn't follow the day.
 static var christmas := false
+## The settings start() was given, which follow_clock() reads.
+static var _settings = null
+## Seconds until follow_clock() next checks the clock.
+static var _clock_check_in := CLOCK_CHECK_SECONDS
 ## night_amount() when recolor_sky() last ran, so it only recolours on a
 ## change.
 static var _sky_night := -1.0
+
+
+## Starts the sky for a screen (#205): Reduce Motion from the device, and the
+## view `settings` asks for, shown at once. follow_clock() then keeps it in
+## step with the clock.
+static func start(settings) -> void:
+	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
+	still = DisplayServer.accessibility_should_reduce_animation() == 1
+	_settings = settings
+	_clock_check_in = CLOCK_CHECK_SECONDS
+	follow(settings, true)
+
+
+## Call every frame: every CLOCK_CHECK_SECONDS, if the settings start() was
+## given follow the day, shows the clock's view. While `hold` (a piece being
+## dragged, say) the check waits, and runs as soon as `hold` clears.
+static func follow_clock(delta: float, hold := false) -> void:
+	_clock_check_in -= delta
+	if _clock_check_in > 0.0 or hold or _settings == null:
+		return
+	_clock_check_in = CLOCK_CHECK_SECONDS
+	if _settings.sky_follows_day:
+		follow(_settings)
 
 
 ## Shows this season and time of day, fading from the current one unless
@@ -230,6 +300,13 @@ static func layers() -> Array:
 	if b >= 1.0:
 		return [[season, time_of_day, 1.0]]
 	return [[_from_season, _from_time, 1.0 - b], [season, time_of_day, b]]
+
+
+## What the view for `for_season` and `for_time` shows, from FEATURES.
+static func features(for_season: String, for_time: String) -> Array[String]:
+	var out: Array[String] = []
+	out.assign(FEATURES.get("%s %s" % [for_season, for_time], []))
+	return out
 
 
 ## Seconds on the animation clock: stopped under Reduce Motion.

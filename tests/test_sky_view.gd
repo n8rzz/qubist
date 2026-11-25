@@ -67,6 +67,47 @@ func test_follows_settings() -> void:
 	_reset()
 
 
+func test_start_shows_the_settings_at_once() -> void:
+	SkyView.show("spring", "day")
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "fall"
+	settings.sky_time = "sunset"
+	SkyView.start(settings)
+	check_eq([SkyView.season, SkyView.time_of_day], ["fall", "sunset"], "shows the pick")
+	check(not SkyView.is_fading(), "no crossfade")
+	_reset()
+
+
+func test_follow_clock_checks_every_interval() -> void:
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "summer"
+	settings.sky_time = "day"
+	SkyView.start(settings)
+	# The clock picks a view only while the sky follows the day.
+	settings.sky_follows_day = true
+	var clock := SkyClock.now()
+	SkyView.follow_clock(SkyView.CLOCK_CHECK_SECONDS - 1.0)
+	check_eq([SkyView.season, SkyView.time_of_day], ["summer", "day"], "not yet")
+	SkyView.follow_clock(2.0, true)
+	check_eq([SkyView.season, SkyView.time_of_day], ["summer", "day"], "held")
+	SkyView.follow_clock(0.0)
+	check_eq([SkyView.season, SkyView.time_of_day], [clock[0], clock[1]], "checks once the hold clears")
+	_reset()
+
+
+func test_follow_clock_leaves_a_manual_pick() -> void:
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "winter"
+	settings.sky_time = "night"
+	SkyView.start(settings)
+	SkyView.follow_clock(SkyView.CLOCK_CHECK_SECONDS * 2.0)
+	check_eq([SkyView.season, SkyView.time_of_day], ["winter", "night"], "stays on the pick")
+	_reset()
+
+
 func test_gradients_match_the_design_at_their_stops() -> void:
 	for time in SkyView.GRADIENTS:
 		for stop in SkyView.GRADIENTS[time]:
@@ -91,6 +132,18 @@ func test_night_light_keeps_the_tower_readable() -> void:
 	check(night.get_luminance() >= 0.75, "night light isn't too dark (#214)")
 	check(night.b > night.r, "night light stays cool")
 	_reset()
+
+
+func test_tree_shapes_fit_every_season() -> void:
+	for key in SkyView.TREES:
+		var canopy: Array = SkyView.TREES[key][1]
+		if canopy.is_empty():
+			continue
+		for puff in SkyView.TREE_PUFFS:
+			check(puff[3] < canopy.size(), "%s has a colour for every puff" % key)
+	check(SkyView.TREES["fall"][1][SkyView.TREE_FALLEN_LEAF] == Color("#C8502A"), "fallen leaves stay deep red")
+	for branch in SkyView.TREE_BRANCHES:
+		check(branch[1].y > branch[0].y, "branches point up (y is up)")
 
 
 func test_cube_tops_turn_snowy_in_winter() -> void:
@@ -230,13 +283,36 @@ func test_night_cards_follow_the_fade() -> void:
 	_reset()
 
 
-func test_particles_by_view() -> void:
-	check_eq(SkyWeather.kinds_for("spring", "night"), ["petal"] as Array[String], "spring")
-	check_eq(SkyWeather.kinds_for("fall", "day"), ["leaf"] as Array[String], "fall")
-	check_eq(SkyWeather.kinds_for("winter", "sunset"), ["snow"] as Array[String], "winter")
-	check_eq(SkyWeather.kinds_for("summer", "night"), ["firefly"] as Array[String], "summer night")
-	check_eq(SkyWeather.kinds_for("summer", "sunset"), ["seed"] as Array[String], "summer sunset")
-	check_eq(SkyWeather.kinds_for("summer", "day"), ["butterfly"] as Array[String], "summer day")
+func test_every_view_lists_its_features() -> void:
+	var known := ["sun", "stars", "aurora", "moon", "birds", "geese", "mist", "blossom", "fallen_leaves",
+		"firefly", "butterfly"] + SkyWeather.FALLING.keys()
+	var particles := ["firefly", "butterfly"] + SkyWeather.FALLING.keys()
+	check_eq(SkyView.FEATURES.size(), 16, "16 views")
+	for season in ["spring", "summer", "fall", "winter"]:
+		for time in ["sunrise", "day", "sunset", "night"]:
+			var view := "%s %s" % [season, time]
+			var features := SkyView.features(season, time)
+			check(not features.is_empty(), "%s listed" % view)
+			for feature in features:
+				check(known.has(feature), "%s: %s is drawn somewhere" % [view, feature])
+			check_eq(features.has("sun"), time != "night", "%s sun" % view)
+			check_eq(features.has("stars") and features.has("moon"), time == "night", "%s stars and moon" % view)
+			check_eq(features.filter(func(f): return particles.has(f)).size(), 1, "%s one kind of particle" % view)
+
+
+func test_features_by_view() -> void:
+	check(SkyView.features("winter", "night").has("aurora"), "aurora on winter nights")
+	check(not SkyView.features("winter", "day").has("aurora"), "no aurora by day")
+	check(not SkyView.features("summer", "night").has("aurora"), "no aurora in summer")
+	check(SkyView.features("spring", "sunrise").has("mist"), "spring sunrise mist")
+	check(SkyView.features("fall", "day").has("geese"), "geese in fall")
+	check(not SkyView.features("fall", "night").has("geese"), "no geese at night")
+	check(SkyView.features("summer", "night").has("firefly"), "summer night fireflies")
+	check(SkyView.features("summer", "sunset").has("seed"), "summer sunset seeds")
+	check(SkyView.features("summer", "day").has("butterfly"), "summer day butterflies")
+	check(SkyView.features("spring", "night").has("blossom"), "spring blossom")
+	check(SkyView.features("fall", "sunset").has("fallen_leaves"), "fall leaves under the tree")
+	check(SkyView.features("autumn", "noon").is_empty(), "unknown view shows nothing")
 
 
 func test_falling_particles_fall_and_loop() -> void:

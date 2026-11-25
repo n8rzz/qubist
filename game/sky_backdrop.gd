@@ -27,6 +27,7 @@ extends Control
 ## width, y is in points from the top.
 
 const SkyView := preload("res://game/sky_view.gd")
+const DrawUtil := preload("res://game/draw_util.gd")
 
 ## Clouds as [opacity, [center, radii]...], laid out on a 390-point-wide
 ## band that starts CLOUD_TOP points down. x stretches with the width.
@@ -72,13 +73,11 @@ const MOON_CRATER := Color("#DDD8BF")
 const STAR_COUNT := 46
 ## Stars sit above this line, in points.
 const STAR_BAND := 470.0
-## Birds by season and time; geese fly in a V.
-const BIRD_VIEWS := ["spring sunrise", "spring day", "summer day", "summer sunset", "fall day", "fall sunrise"]
+## Bird flocks (SkyView.FEATURES says which views have them); geese fly in a V.
 const BIRDS := [Vector2(0, 0), Vector2(22, 12), Vector2(8, 26)]
 const GEESE := [Vector2(0, 0), Vector2(16, 8), Vector2(-14, 10), Vector2(30, 16), Vector2(-28, 20)]
 const BIRD_TOP := 230.0
 const BIRD_CROSSING_SECONDS := 20.0
-const MIST_VIEWS := ["spring sunrise", "fall sunrise"]
 ## Mist banks as [left, top, width, opacity].
 const MIST := [[40.0, 420.0, 300.0, 0.55], [70.0, 470.0, 360.0, 0.45], [100.0, 520.0, 280.0, 0.5]]
 
@@ -141,13 +140,16 @@ func _draw() -> void:
 	var seconds := SkyView.seconds()
 	var layers := SkyView.layers()
 	for layer in layers:
-		if layer[1] == "night":
-			_draw_stars(k, seconds, layer[2])
-			if layer[0] == "winter":
-				_draw_aurora(k, seconds, layer[2])
-			_draw_moon(k, seconds, layer[2])
-		else:
-			_draw_sun(layer[1], k, seconds, layer[2])
+		for feature in SkyView.features(layer[0], layer[1]):
+			match feature:
+				"sun":
+					_draw_sun(layer[1], k, seconds, layer[2])
+				"stars":
+					_draw_stars(k, seconds, layer[2])
+				"aurora":
+					_draw_aurora(k, seconds, layer[2])
+				"moon":
+					_draw_moon(k, seconds, layer[2])
 
 	var tint := SkyView.cloud_color()
 	var strength := SkyView.cloud_opacity()
@@ -160,17 +162,18 @@ func _draw() -> void:
 		for i in range(1, cloud.size()):
 			var center: Vector2 = cloud[i][0]
 			var radii: Vector2 = cloud[i][1]
-			draw_colored_polygon(ellipse(Vector2(center.x * k, CLOUD_TOP + center.y) + shift, radii), color)
+			draw_colored_polygon(DrawUtil.ellipse(Vector2(center.x * k, CLOUD_TOP + center.y) + shift, radii), color)
 
 	if SkyView.christmas:
 		_draw_santa(w, seconds)
 
 	for layer in layers:
-		var view: String = "%s %s" % [layer[0], layer[1]]
-		if BIRD_VIEWS.has(view):
-			_draw_birds(layer[0] == "fall", layer[1] == "day", k, seconds, layer[2])
-		if MIST_VIEWS.has(view):
-			_draw_mist(k, seconds, layer[2])
+		for feature in SkyView.features(layer[0], layer[1]):
+			match feature:
+				"birds", "geese":
+					_draw_birds(feature == "geese", layer[1] == "day", k, seconds, layer[2])
+				"mist":
+					_draw_mist(k, seconds, layer[2])
 
 
 ## How far cloud `index` has moved from where CLOUDS puts it, `seconds` in,
@@ -196,18 +199,12 @@ func sky_color(y: float) -> Color:
 	return SkyView.sky_color(y / maxf(size.y, 1.0))
 
 
-## A repeatable random number in [0, 1) for item `i`, draw `k`.
-static func rand(i: int, k: int) -> float:
-	var v := sin(i * 12.9898 + k * 78.233) * 43758.5453
-	return v - floorf(v)
-
-
 func _draw_stars(k: float, seconds: float, alpha: float) -> void:
 	for i in STAR_COUNT:
-		var radius: float = [1.0, 1.0, 1.5, 2.0][int(rand(i, 3) * 4.0)]
-		var period := 2.0 + 3.0 * rand(i, 4)
-		var twinkle := 0.6 - 0.4 * cos(TAU * (seconds / period + rand(i, 5)))
-		var at := Vector2((6.0 + 378.0 * rand(i, 1)) * k, 8.0 + STAR_BAND * rand(i, 2))
+		var radius: float = [1.0, 1.0, 1.5, 2.0][int(DrawUtil.rand(i, 3) * 4.0)]
+		var period := 2.0 + 3.0 * DrawUtil.rand(i, 4)
+		var twinkle := 0.6 - 0.4 * cos(TAU * (seconds / period + DrawUtil.rand(i, 5)))
+		var at := Vector2((6.0 + 378.0 * DrawUtil.rand(i, 1)) * k, 8.0 + STAR_BAND * DrawUtil.rand(i, 2))
 		draw_circle(at, radius, Color(1, 1, 1, twinkle * alpha), true, -1.0, true)
 
 
@@ -241,7 +238,7 @@ func _draw_aurora(k: float, seconds: float, alpha: float) -> void:
 func _draw_moon(k: float, seconds: float, alpha: float) -> void:
 	var center := Vector2(MOON_CENTER.x * k, MOON_CENTER.y)
 	var pulse := 0.5 - 0.5 * cos(TAU * seconds / 6.0)
-	_glow(center, 46.0 * (1.0 + 0.08 * pulse), Color(MOON, 0.35 * (0.55 + 0.35 * pulse) / 0.55 * alpha))
+	DrawUtil.glow(self, center, 46.0 * (1.0 + 0.08 * pulse), Color(MOON, 0.35 * (0.55 + 0.35 * pulse) / 0.55 * alpha))
 	draw_circle(center, MOON_RADIUS, Color(MOON, alpha), true, -1.0, true)
 	for crater in [[Vector2(-8, -6), 4.0], [Vector2(4, 6), 5.0], [Vector2(7, -11), 2.5]]:
 		draw_circle(center + crater[0], crater[1], Color(MOON_CRATER, alpha), true, -1.0, true)
@@ -256,7 +253,7 @@ func _draw_sun(time: String, k: float, seconds: float, alpha: float) -> void:
 	var bob := SUN_BOB * cos(TAU * seconds / SUN_BOB_PERIOD)
 	var center := Vector2(sun[0].x * k, sun[0].y + bob)
 	var glow_center := Vector2(sun[0].x * k, sun[0].y)
-	_glow(glow_center, radius * 2.2 * (1.0 + 0.08 * pulse), Color(light, 0.7 * (0.55 + 0.35 * pulse) * alpha))
+	DrawUtil.glow(self, glow_center, radius * 2.2 * (1.0 + 0.08 * pulse), Color(light, 0.7 * (0.55 + 0.35 * pulse) * alpha))
 	if time == "day":
 		var turn := TAU * seconds / RAY_TURN_SECONDS
 		for i in 12:
@@ -266,14 +263,6 @@ func _draw_sun(time: String, k: float, seconds: float, alpha: float) -> void:
 			draw_circle(glow_center + dir * 52.0, 2.0, Color(deep, alpha), true, -1.0, true)
 	draw_circle(center, radius, Color(deep, alpha), true, -1.0, true)
 	draw_circle(center - Vector2(radius, radius) * 0.18, radius * 0.72, Color(light, 0.85 * alpha), true, -1.0, true)
-
-
-## A soft round glow: `color` in the middle, fading out by 70% of `radius`.
-func _glow(center: Vector2, radius: float, color: Color) -> void:
-	var rings := 10
-	for i in rings:
-		var r := radius * 0.7 * (1.0 - float(i) / rings)
-		draw_circle(center, r, Color(color, color.a / rings * 1.6), true, -1.0, true)
 
 
 func _draw_birds(geese: bool, by_day: bool, k: float, seconds: float, alpha: float) -> void:
@@ -302,7 +291,7 @@ func _draw_mist(k: float, seconds: float, alpha: float) -> void:
 		var rings := 8
 		for r in rings:
 			var f := 0.7 * (1.0 - float(r) / rings)
-			draw_colored_polygon(ellipse(center, Vector2(bank[2] * 0.5 * k, 20.0) * f),
+			draw_colored_polygon(DrawUtil.ellipse(center, Vector2(bank[2] * 0.5 * k, 20.0) * f),
 				Color(1, 1, 1, bank[3] / rings * 1.4 * alpha))
 
 
@@ -332,9 +321,9 @@ func _draw_santa(width: float, seconds: float) -> void:
 
 	for j in range(SPARKLES, 0, -1):
 		var behind: Vector2 = santa_at(seconds - j * SPARKLE_GAP_SECONDS, width)[0]
-		var twinkle := 0.6 + 0.4 * sin(TAU * (seconds * 3.0 + rand(j, 7)))
+		var twinkle := 0.6 + 0.4 * sin(TAU * (seconds * 3.0 + DrawUtil.rand(j, 7)))
 		var fade := (1.0 - float(j) / (SPARKLES + 1)) * twinkle
-		var jitter := Vector2(rand(j, 8) - 0.5, rand(j, 9) - 0.5) * 8.0
+		var jitter := Vector2(DrawUtil.rand(j, 8) - 0.5, DrawUtil.rand(j, 9) - 0.5) * 8.0
 		draw_circle(behind + Vector2(-18, 6) + jitter, 1.2 + 1.3 * fade, Color(SANTA_GOLD, 0.85 * fade), true, -1.0, true)
 
 	draw_set_transform(at[0], at[1], Vector2.ONE * SANTA_SCALE)
@@ -379,11 +368,11 @@ func _draw_reindeer(at: Vector2, phase: float, lead: bool, light: Color, night: 
 	for leg in [[Vector2(-7, 2), 1.0], [Vector2(-4, 2), -1.0], [Vector2(5, 2), -1.0], [Vector2(8, 2), 1.0]]:
 		var dir := Vector2.DOWN.rotated(swing * leg[1] + (0.6 if leg[0].x < 0 else -0.6))
 		draw_line(at + leg[0], at + leg[0] + dir * 8.0, REINDEER_DARK * light, 1.6, true)
-	draw_colored_polygon(ellipse(at, Vector2(11, 5), 20), REINDEER * light)
+	draw_colored_polygon(DrawUtil.ellipse(at, Vector2(11, 5), 20), REINDEER * light)
 	draw_circle(at + Vector2(-11, -2), 2.0, SANTA_WHITE * light, true, -1.0, true)
 	draw_line(at + Vector2(8, -2), at + Vector2(12, -8), REINDEER * light, 4.0, true)
 	var head := at + Vector2(14, -9)
-	draw_colored_polygon(ellipse(head, Vector2(4.5, 3.2), 16), REINDEER * light)
+	draw_colored_polygon(DrawUtil.ellipse(head, Vector2(4.5, 3.2), 16), REINDEER * light)
 	for side in [-1.0, 1.0]:
 		var base := head + Vector2(-1.5 + side * 1.2, -2.5)
 		var tip := base + Vector2(-2.0 + side * 2.0, -7)
@@ -393,15 +382,7 @@ func _draw_reindeer(at: Vector2, phase: float, lead: bool, light: Color, night: 
 	if lead:
 		var pulse := 0.5 + 0.5 * sin(TAU * SkyView.seconds() / 1.2)
 		var glow := lerpf(0.35, 0.8, night) * (0.7 + 0.3 * pulse)
-		_glow(nose, 14.0 + 6.0 * night, Color(RED_NOSE, glow))
+		DrawUtil.glow(self, nose, 14.0 + 6.0 * night, Color(RED_NOSE, glow))
 		draw_circle(nose, 2.0, RED_NOSE, true, -1.0, true)
 	else:
 		draw_circle(nose, 1.4, REINDEER_DARK * light, true, -1.0, true)
-
-
-static func ellipse(center: Vector2, radii: Vector2, segments := 32) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	for i in range(segments):
-		var a := i * TAU / segments
-		points.append(center + Vector2(cos(a) * radii.x, sin(a) * radii.y))
-	return points
