@@ -103,6 +103,31 @@ const TEXT_GROUP := &"sky_text"
 ## Each tagged control's [day, night] colours.
 const TEXT_META := &"sky_text_colors"
 
+## What each of the 16 views shows besides its colours (#209), in the order
+## they're drawn. Every renderer checks this table:
+## - the backdrop: "sun" or "stars", "aurora", "moon"; "birds" or "geese";
+##   "mist"
+## - the weather: "petal", "leaf", "snow", "seed", "firefly", "butterfly"
+## - the tree: "blossom" (white dots), "fallen_leaves" (leaves at its foot)
+const FEATURES := {
+	"spring sunrise": ["sun", "birds", "mist", "petal", "blossom"],
+	"spring day": ["sun", "birds", "petal", "blossom"],
+	"spring sunset": ["sun", "petal", "blossom"],
+	"spring night": ["stars", "moon", "petal", "blossom"],
+	"summer sunrise": ["sun", "butterfly"],
+	"summer day": ["sun", "birds", "butterfly"],
+	"summer sunset": ["sun", "birds", "seed"],
+	"summer night": ["stars", "moon", "firefly"],
+	"fall sunrise": ["sun", "geese", "mist", "leaf", "fallen_leaves"],
+	"fall day": ["sun", "geese", "leaf", "fallen_leaves"],
+	"fall sunset": ["sun", "leaf", "fallen_leaves"],
+	"fall night": ["stars", "moon", "leaf", "fallen_leaves"],
+	"winter sunrise": ["sun", "snow"],
+	"winter day": ["sun", "snow"],
+	"winter sunset": ["sun", "snow"],
+	"winter night": ["stars", "aurora", "moon", "snow"],
+}
+
 static var season := "spring"
 static var time_of_day := "day"
 ## The view fading out, during a crossfade.
@@ -212,6 +237,13 @@ static func layers() -> Array:
 	if b >= 1.0:
 		return [[season, time_of_day, 1.0]]
 	return [[_from_season, _from_time, 1.0 - b], [season, time_of_day, b]]
+
+
+## What the view for `for_season` and `for_time` shows, from FEATURES.
+static func features(for_season: String, for_time: String) -> Array[String]:
+	var out: Array[String] = []
+	out.assign(FEATURES.get("%s %s" % [for_season, for_time], []))
+	return out
 
 
 ## Seconds on the animation clock: stopped under Reduce Motion.

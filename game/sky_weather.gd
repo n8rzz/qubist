@@ -51,39 +51,20 @@ func _process(_delta: float) -> void:
 		queue_redraw()
 
 
-## The kinds of particles a season and time of day show.
-static func kinds_for(season: String, time: String) -> Array[String]:
-	var kinds: Array[String] = []
-	match season:
-		"spring":
-			kinds.append("petal")
-		"fall":
-			kinds.append("leaf")
-		"winter":
-			kinds.append("snow")
-		"summer":
-			if time == "night":
-				kinds.append("firefly")
-			elif time == "sunset":
-				kinds.append("seed")
-			else:
-				kinds.append("butterfly")
-	return kinds
-
-
 func _draw() -> void:
 	var k := Vector2(size.x / 390.0, size.y / 844.0)
 	var seconds := SkyView.seconds()
 	for layer in SkyView.layers():
 		var night: bool = layer[1] == "night"
-		for kind in kinds_for(layer[0], layer[1]):
-			match kind:
+		for feature in SkyView.features(layer[0], layer[1]):
+			match feature:
 				"firefly":
 					_draw_fireflies(k, seconds, layer[2])
 				"butterfly":
 					_draw_butterflies(k, seconds, layer[2])
 				_:
-					_draw_falling(kind, night, k, seconds, layer[2])
+					if FALLING.has(feature):
+						_draw_falling(feature, night, k, seconds, layer[2])
 
 
 ## Where falling particle `i` of `kind` is, as [position in the design
