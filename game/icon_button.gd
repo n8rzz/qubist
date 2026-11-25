@@ -1,17 +1,17 @@
 extends Button
 ## A button that draws a line icon instead of text, so the UI needs no icon
-## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "pause", "home", "settings",
+## assets. Shapes follow the 24-unit icons in the Qubist designs. Set `kind` to "home", "settings",
 ## "stats", "back", "close", "undo", "next", "rotate_left" or "rotate_right".
 ## A disabled button draws its icon faded.
 
-var kind := "pause"
+var kind: String
 var icon_color := Color("#22313F"):
 	set(value):
 		icon_color = value
 		queue_redraw()
 
 
-func _init(p_kind: String = "pause", label: String = "") -> void:
+func _init(p_kind: String, label: String = "") -> void:
 	kind = p_kind
 	tooltip_text = label
 	focus_mode = Control.FOCUS_NONE
@@ -23,13 +23,6 @@ func _draw() -> void:
 	if disabled:
 		ink.a *= 0.35
 	match kind:
-		"pause":
-			var bar := StyleBoxFlat.new()
-			bar.bg_color = ink
-			bar.set_corner_radius_all(2)
-			bar.anti_aliasing = true
-			draw_style_box(bar, Rect2(c + Vector2(-5.5, -7), Vector2(3.5, 14)))
-			draw_style_box(bar, Rect2(c + Vector2(2, -7), Vector2(3.5, 14)))
 		"home":
 			# A roof over an open-bottomed house, as on the Settings sheet's Home row.
 			draw_polyline(PackedVector2Array([c + Vector2(-8, -1), c + Vector2(0, -8), c + Vector2(8, -1)]),
