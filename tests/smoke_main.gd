@@ -52,6 +52,7 @@ func _process(_delta: float) -> bool:
 		_check_night_lines()
 		_open_short_sheet()
 	elif frame == 7:
+		_check_best_hidden()
 		_check_home()
 		_check_settings_swipe()
 	elif frame == 10:
@@ -438,6 +439,15 @@ func _check_crumble() -> void:
 			break
 
 
+## With no finished game, neither the header nor Home shows a best score
+## (#118).
+func _check_best_hidden() -> void:
+	if main.best_row.visible:
+		failures.append("the header shows a best score before any game has finished")
+	if main.home.best_pill.visible:
+		failures.append("Home shows a best score before any game has finished")
+
+
 ## Finished games are recorded once and saved; settings button → Settings → Stats → Back
 ## opens and closes the right screens (#32).
 func _check_stats() -> void:
@@ -456,6 +466,8 @@ func _check_stats() -> void:
 	if main.stats.games_played != before + 1:
 		failures.append("finished game counted %d times" % (main.stats.games_played - before))
 	_check_analytics()
+	if not main.best_row.visible:
+		failures.append("the header hides the best score after a finished game")
 	if main.stats.best_score < main.game.score:
 		failures.append("best score %d is below the finished score %d" % [main.stats.best_score, main.game.score])
 	if FileAccess.file_exists(saves.game_path):
@@ -495,6 +507,9 @@ func _check_stats() -> void:
 ## Settings › Home from a game returns to Home (#72).
 func _check_home_menus() -> void:
 	main.show_home()
+	var best_text := "BEST %s" % UI.format_number(main.stats.best_score)
+	if not main.home.best_pill.visible or main.home.best_label.text != best_text:
+		failures.append("Home does not show %s after a finished game" % best_text)
 	main.home.stats_button.pressed.emit()
 	if not main.stats_screen.visible:
 		failures.append("Home › Stats did not open the Stats screen")

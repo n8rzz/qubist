@@ -15,6 +15,13 @@ func test_starts_at_zero() -> void:
 	check_eq(stats.average_score(), 0)
 
 
+func test_has_best_after_a_finished_game() -> void:
+	var stats := Stats.new()
+	check(not stats.has_best(), "no finished game yet")
+	stats.record(0, 0, 0, 0)
+	check(stats.has_best(), "a finished game counts, even with no points")
+
+
 func test_record_adds_up_games() -> void:
 	var stats := Stats.new()
 	stats.record(1000, 5, 2, 3)
