@@ -134,6 +134,18 @@ func test_night_light_keeps_the_tower_readable() -> void:
 	_reset()
 
 
+func test_tree_shapes_fit_every_season() -> void:
+	for key in SkyView.TREES:
+		var canopy: Array = SkyView.TREES[key][1]
+		if canopy.is_empty():
+			continue
+		for puff in SkyView.TREE_PUFFS:
+			check(puff[3] < canopy.size(), "%s has a colour for every puff" % key)
+	check(SkyView.TREES["fall"][1][SkyView.TREE_FALLEN_LEAF] == Color("#C8502A"), "fallen leaves stay deep red")
+	for branch in SkyView.TREE_BRANCHES:
+		check(branch[1].y > branch[0].y, "branches point up (y is up)")
+
+
 func test_cube_tops_turn_snowy_in_winter() -> void:
 	var top := Color("#ECE7DD")
 	var inset := Color("#F6F2EA")

@@ -230,7 +230,8 @@ func _face(corners: Array, color: Color, inset: Color, alpha := 1.0) -> void:
 func draw_tree() -> void:
 	var base := iso(TREE_SPOT.x, TREE_SPOT.y, 0)
 	var turn := TREE_SWAY * sin(TAU * SkyView.seconds() / TREE_SWAY_SECONDS)
-	var at := func(offset: Vector2) -> Vector2: return base + offset.rotated(turn)
+	# SkyView's tree shapes have y up; the screen's y runs down.
+	var at := func(offset: Vector2) -> Vector2: return base + Vector2(offset.x, -offset.y).rotated(turn)
 	for layer in SkyView.layers():
 		var a: float = layer[2]
 		var tree: Array = SkyView.TREES[layer[0]]
@@ -238,26 +239,26 @@ func draw_tree() -> void:
 		var canopy: Array = tree[1]
 		draw_colored_polygon(SkyBackdrop.ellipse(base + Vector2(0, 2), Vector2(16, 5), ELLIPSE_SEGMENTS),
 			Color(TREE_SHADOW, TREE_SHADOW.a * a))
-		draw_colored_polygon(PackedVector2Array([at.call(Vector2.ZERO), at.call(Vector2(-3, -34)), at.call(Vector2(3, -34))]),
+		var top := SkyView.TREE_TRUNK_HEIGHT
+		draw_colored_polygon(PackedVector2Array([at.call(Vector2.ZERO), at.call(Vector2(-3, top)), at.call(Vector2(3, top))]),
 			Color(trunk, a))
 		if canopy.is_empty():
-			for branch in [[Vector2(0, -24), Vector2(-12, -38)], [Vector2(0, -30), Vector2(10, -42)],
-					[Vector2(-6, -32), Vector2(-14, -41)], [Vector2(5, -36), Vector2(12, -44)]]:
+			for branch in SkyView.TREE_BRANCHES:
 				draw_line(at.call(branch[0]), at.call(branch[1]), Color(trunk, a), 2.4, true)
-			for lump in [[-12, -38, 4.0], [10, -42, 4.5], [-8, -42, 3.0], [7, -44, 3.0], [0, -36, 3.5]]:
+			for lump in SkyView.TREE_SNOW_LUMPS:
 				draw_colored_polygon(SkyBackdrop.ellipse(at.call(Vector2(lump[0], lump[1])), Vector2(lump[2], lump[2] * 0.6), 16),
 					Color(1, 1, 1, a))
 			continue
-		for puff in [[-9, -38, 13.0, 0], [9, -40, 12.0, 2], [0, -50, 13.0, 1], [0, -38, 10.0, 1]]:
+		for puff in SkyView.TREE_PUFFS:
 			draw_circle(at.call(Vector2(puff[0], puff[1])), puff[2], Color(canopy[puff[3]], a), true, -1.0, true)
 		if layer[0] == "spring":
 			for i in 10:
-				var dot := Vector2(-18 + 36 * SkyBackdrop.rand(i, 7), -60 + 32 * SkyBackdrop.rand(i, 8))
+				var dot := Vector2(-18 + 36 * SkyBackdrop.rand(i, 7), 60 - 32 * SkyBackdrop.rand(i, 8))
 				draw_circle(at.call(dot), 1.6, Color(1, 1, 1, a), true, -1.0, true)
 		elif layer[0] == "fall":
 			for i in 5:
 				var leaf := base + Vector2(-22 + 44 * SkyBackdrop.rand(i, 9), -2 + 6 * SkyBackdrop.rand(i, 10))
-				draw_colored_polygon(SkyBackdrop.ellipse(leaf, Vector2(2.4, 1.4), 12), Color("#C8502A", a))
+				draw_colored_polygon(SkyBackdrop.ellipse(leaf, Vector2(2.4, 1.4), 12), Color(canopy[SkyView.TREE_FALLEN_LEAF], a))
 
 
 ## A filled polygon from flat [x, y, ...] coordinates, with an optional edge.

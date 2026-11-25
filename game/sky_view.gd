@@ -74,6 +74,21 @@ const TREES := {
 	"fall": [Color("#6E4E3A"), [Color("#E0782E"), Color("#F0A33C"), Color("#C8502A")]],
 	"winter": [Color("#6E5A4C"), []],
 }
+## The tree's shape (#207), shared by Home's 2D tree (island_art.gd, which
+## flips y) and the game's 3D one (floating_island.gd). In points from the
+## foot of the trunk, x to the right and y up.
+const TREE_TRUNK_HEIGHT := 34.0
+## Canopy puffs as [x, y, radius, index into the season's canopy colours].
+const TREE_PUFFS := [[-9, 38, 13.0, 0], [9, 40, 12.0, 2], [0, 50, 13.0, 1], [0, 38, 10.0, 1]]
+## Winter's bare branches as [from, to], and the snow on them as
+## [x, y, radius].
+const TREE_BRANCHES := [
+	[Vector2(0, 24), Vector2(-12, 38)], [Vector2(0, 30), Vector2(10, 42)],
+	[Vector2(-6, 32), Vector2(-14, 41)], [Vector2(5, 36), Vector2(12, 44)],
+]
+const TREE_SNOW_LUMPS := [[-12, 38, 4.0], [10, 42, 4.5], [-8, 42, 3.0], [7, 44, 3.0], [0, 36, 3.5]]
+## Fall's leaves on the ground are this canopy colour (the deepest red).
+const TREE_FALLEN_LEAF := 2
 ## Snow on the cubes' tops in winter.
 const SNOW_TOP := Color("#F3F7FB")
 const SNOW_TOP_INSET := Color.WHITE

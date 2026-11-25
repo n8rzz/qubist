@@ -279,8 +279,9 @@ func _add_props() -> void:
 	add_child(rock)
 
 
-## A tree for each season, built from Home's 2D tree: a trunk, round
-## canopy puffs (or, in winter, bare branches with snow on them).
+## A tree for each season, from the same shapes as Home's 2D tree
+## (SkyView.TREE_*): a trunk, round canopy puffs (or, in winter, bare
+## branches with snow on them).
 func _add_tree() -> void:
 	var hx := grid_size.x * 0.5
 	var hz := grid_size.y * 0.5
@@ -293,12 +294,11 @@ func _add_tree() -> void:
 		var trunk := CylinderMesh.new()
 		trunk.top_radius = 1.5 * u
 		trunk.bottom_radius = 3.5 * u
-		trunk.height = 34.0 * u
-		_tree_part(tree, trunk, Vector3(0, 17.0 * u, 0), spec[0])
+		trunk.height = SkyView.TREE_TRUNK_HEIGHT * u
+		_tree_part(tree, trunk, Vector3(0, SkyView.TREE_TRUNK_HEIGHT * 0.5 * u, 0), spec[0])
 		var canopy: Array = spec[1]
 		if canopy.is_empty():
-			for branch in [[Vector2(0, 24), Vector2(-12, 38)], [Vector2(0, 30), Vector2(10, 42)],
-					[Vector2(-6, 32), Vector2(-14, 41)], [Vector2(5, 36), Vector2(12, 44)]]:
+			for branch in SkyView.TREE_BRANCHES:
 				var from := Vector3(branch[0].x, branch[0].y, 0) * u
 				var to := Vector3(branch[1].x, branch[1].y, 0) * u
 				var stick := CylinderMesh.new()
@@ -307,13 +307,13 @@ func _add_tree() -> void:
 				stick.height = from.distance_to(to)
 				var part := _tree_part(tree, stick, (from + to) * 0.5, spec[0])
 				part.rotation.z = -Vector2(to.x - from.x, to.y - from.y).angle_to(Vector2.UP)
-			for lump in [[-12, 38, 4.0], [10, 42, 4.5], [-8, 42, 3.0], [7, 44, 3.0], [0, 36, 3.5]]:
+			for lump in SkyView.TREE_SNOW_LUMPS:
 				var ball := SphereMesh.new()
 				ball.radius = lump[2] * u
 				ball.height = lump[2] * 1.2 * u
 				_tree_part(tree, ball, Vector3(lump[0], lump[1], 0) * u, Color.WHITE)
 		else:
-			for puff in [[-9, 38, 13.0, 0], [9, 40, 12.0, 2], [0, 50, 13.0, 1], [0, 38, 10.0, 1]]:
+			for puff in SkyView.TREE_PUFFS:
 				var ball := SphereMesh.new()
 				ball.radius = puff[2] * u
 				ball.height = puff[2] * 2.0 * u
