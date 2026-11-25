@@ -590,10 +590,14 @@ func _on_replay_tutorial() -> void:
 	start_tutorial(show_home if home.visible else Callable())
 
 
+func _save_onboarding() -> void:
+	SaveFile.write(onboarding_path, onboarding.to_dict())
+
+
 ## The tutorial was finished or skipped: it won't start on its own again.
 func onboarding_done() -> void:
 	onboarding.tutorial_done = true
-	SaveFile.write(onboarding_path, onboarding.to_dict())
+	_save_onboarding()
 
 
 ## Shows one-time hint `key` (core/onboarding.gd HINTS) if the player hasn't
@@ -602,7 +606,7 @@ func onboarding_done() -> void:
 func show_hint(key: String) -> void:
 	if not settings.tips or tutorial.is_active() or menu_open() or not onboarding.see(key):
 		return
-	SaveFile.write(onboarding_path, onboarding.to_dict())
+	_save_onboarding()
 	hint_toast.show_hint(key, viewport_box.get_global_rect(), HINT_TOP)
 
 
@@ -652,7 +656,7 @@ func set_setting(key: String, on: bool) -> void:
 		settings.sky_christmas = SkyView.christmas
 		settings_sheet.set_switch("sky_christmas", SkyView.christmas)
 	_apply_setting(key)
-	SaveFile.write(settings_path, settings.to_dict())
+	_save_settings()
 
 
 ## Picks a season or time of day for the sky (#168), shows it and saves the
@@ -663,7 +667,7 @@ func set_choice(key: String, value: String) -> void:
 	settings.set(key, value)
 	settings_sheet.set_choice(key, value)
 	_apply_setting(key)
-	SaveFile.write(settings_path, settings.to_dict())
+	_save_settings()
 
 
 ## Changes the music or sound effects volume (#165), applies it and saves the
@@ -671,6 +675,10 @@ func set_choice(key: String, value: String) -> void:
 func set_volume(key: String, value: float) -> void:
 	settings.set(key, clampf(value, 0.0, 1.0))
 	_apply_setting(key)
+	_save_settings()
+
+
+func _save_settings() -> void:
 	SaveFile.write(settings_path, settings.to_dict())
 
 
