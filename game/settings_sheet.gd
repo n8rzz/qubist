@@ -32,7 +32,6 @@ signal volume_changed(key: String, value: float)
 ## A choice was picked by the player. `key` is a Settings field name;
 ## `value` is one of Settings.CHOICES[key].
 signal choice_changed(key: String, value: String)
-signal closed
 
 ## Colours from the Qubist Settings design.
 const SHEET_BG := Color("#F3F8FA")
@@ -312,7 +311,6 @@ static func _control_at(node: Node, point: Vector2) -> Control:
 
 func close_sheet() -> void:
 	visible = false
-	closed.emit()
 
 
 func _on_dim_input(event: InputEvent) -> void:
