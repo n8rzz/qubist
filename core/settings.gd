@@ -11,6 +11,9 @@ extends RefCounted
 const SkyClock := preload("res://core/sky_clock.gd")
 
 const SAVE_VERSION := 1
+## Where the game keeps the player's settings. The loading view reads it too,
+## for the sky (#205).
+const PATH := "user://settings.json"
 
 ## Every on/off setting with its default.
 const DEFAULTS := {

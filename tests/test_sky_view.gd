@@ -67,6 +67,47 @@ func test_follows_settings() -> void:
 	_reset()
 
 
+func test_start_shows_the_settings_at_once() -> void:
+	SkyView.show("spring", "day")
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "fall"
+	settings.sky_time = "sunset"
+	SkyView.start(settings)
+	check_eq([SkyView.season, SkyView.time_of_day], ["fall", "sunset"], "shows the pick")
+	check(not SkyView.is_fading(), "no crossfade")
+	_reset()
+
+
+func test_follow_clock_checks_every_interval() -> void:
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "summer"
+	settings.sky_time = "day"
+	SkyView.start(settings)
+	# The clock picks a view only while the sky follows the day.
+	settings.sky_follows_day = true
+	var clock := SkyClock.now()
+	SkyView.follow_clock(SkyView.CLOCK_CHECK_SECONDS - 1.0)
+	check_eq([SkyView.season, SkyView.time_of_day], ["summer", "day"], "not yet")
+	SkyView.follow_clock(2.0, true)
+	check_eq([SkyView.season, SkyView.time_of_day], ["summer", "day"], "held")
+	SkyView.follow_clock(0.0)
+	check_eq([SkyView.season, SkyView.time_of_day], [clock[0], clock[1]], "checks once the hold clears")
+	_reset()
+
+
+func test_follow_clock_leaves_a_manual_pick() -> void:
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "winter"
+	settings.sky_time = "night"
+	SkyView.start(settings)
+	SkyView.follow_clock(SkyView.CLOCK_CHECK_SECONDS * 2.0)
+	check_eq([SkyView.season, SkyView.time_of_day], ["winter", "night"], "stays on the pick")
+	_reset()
+
+
 func test_gradients_match_the_design_at_their_stops() -> void:
 	for time in SkyView.GRADIENTS:
 		for stop in SkyView.GRADIENTS[time]:

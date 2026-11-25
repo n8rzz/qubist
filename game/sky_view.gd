@@ -4,9 +4,9 @@ extends RefCounted
 ## the game, Stats and the loading view always agree and a change crossfades
 ## on all of them at once.
 ##
-## main.gd picks the view (from the clock, or the player's choice in
-## Settings) and calls show(); the backdrop, the particles and the island
-## read it every frame. Colours follow the "Seasons and time of day" design
+## The loading view and main.gd call start() with the player's settings;
+## main.gd then calls follow_clock() each frame and follow() when Settings
+## change. The backdrop, the particles and the island read it every frame. Colours follow the "Seasons and time of day" design
 ## in Notion.
 
 const SkyClock := preload("res://core/sky_clock.gd")
@@ -14,6 +14,9 @@ const UI := preload("res://game/ui_style.gd")
 
 ## How long a change of season or time of day takes to fade in.
 const CROSSFADE_SECONDS := 3.0
+## How often, in seconds, a sky that follows the day checks the clock for a
+## new season or time of day (#168).
+const CLOCK_CHECK_SECONDS := 30.0
 
 ## Sky gradients, top to bottom, as [stop, colour] pairs.
 const GRADIENTS := {
@@ -98,9 +101,36 @@ static var still := false
 ## Christmas (#198): Santa's sleigh flies across the sky. Set from the date,
 ## or from the player's Christmas switch while the sky doesn't follow the day.
 static var christmas := false
+## The settings start() was given, which follow_clock() reads.
+static var _settings = null
+## Seconds until follow_clock() next checks the clock.
+static var _clock_check_in := CLOCK_CHECK_SECONDS
 ## night_amount() when recolor_text() last ran, so it only recolours on a
 ## change.
 static var _text_night := -1.0
+
+
+## Starts the sky for a screen (#205): Reduce Motion from the device, and the
+## view `settings` asks for, shown at once. follow_clock() then keeps it in
+## step with the clock.
+static func start(settings) -> void:
+	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
+	still = DisplayServer.accessibility_should_reduce_animation() == 1
+	_settings = settings
+	_clock_check_in = CLOCK_CHECK_SECONDS
+	follow(settings, true)
+
+
+## Call every frame: every CLOCK_CHECK_SECONDS, if the settings start() was
+## given follow the day, shows the clock's view. While `hold` (a piece being
+## dragged, say) the check waits, and runs as soon as `hold` clears.
+static func follow_clock(delta: float, hold := false) -> void:
+	_clock_check_in -= delta
+	if _clock_check_in > 0.0 or hold or _settings == null:
+		return
+	_clock_check_in = CLOCK_CHECK_SECONDS
+	if _settings.sky_follows_day:
+		follow(_settings)
 
 
 ## Shows this season and time of day, fading from the current one unless
