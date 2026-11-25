@@ -15,6 +15,20 @@ func test_defaults() -> void:
 	check_eq(settings.grid_ticks, false, "grid ticks")
 	check_eq(settings.tips, true, "tips")
 	check_eq(settings.analytics, true, "analytics")
+	check_eq(settings.sky_follows_day, true, "sky follows the day")
+	check_eq(settings.sky_season, "spring", "sky season")
+	check_eq(settings.sky_time, "day", "sky time")
+	check_eq(settings.sky_christmas, false, "sky christmas")
+	check_eq(settings.music_volume, 1.0, "music volume")
+	check_eq(settings.sound_effects_volume, 1.0, "sound effects volume")
+
+
+## Every var starts at the default its dictionary lists (#251).
+func test_vars_start_at_the_dictionary_defaults() -> void:
+	var settings := Settings.new()
+	for defaults in [Settings.DEFAULTS, Settings.VOLUME_DEFAULTS, Settings.CHOICE_DEFAULTS]:
+		for key in defaults:
+			check_eq(settings.get(key), defaults[key], key)
 
 
 func test_round_trips_through_the_save_file() -> void:
