@@ -470,10 +470,7 @@ func play_move(placed: Array, cleared: Array, skip: Dictionary, line_count := 1)
 			last = maxf(last, start)
 		_make_debris(CHIPS_PER_CUBE + EXTRA_CHIPS_PER_LINE * extra)
 		total = last + CRACK_SECONDS + BURST_SECONDS
-	_set_move_time(0.0)
-	_move_tween = create_tween()
-	_move_tween.tween_method(_set_move_time, 0.0, total, total)
-	_move_tween.finished.connect(_end_move_animation.bind(true))
+	_move_tween = _play_timeline(_set_move_time, total, _end_move_animation)
 
 
 func is_animating() -> bool:
@@ -505,9 +502,7 @@ func _end_move_animation(notify: bool) -> void:
 	_shake = 0.0
 	for node in [_landing, _clearing, _chips, _dust]:
 		node.multimesh.instance_count = 0
-	if rig != null:
-		rig.camera.h_offset = 0.0
-		rig.camera.v_offset = 0.0
+	_reset_camera()
 	if notify:
 		move_animation_finished.emit()
 
@@ -535,7 +530,7 @@ func _set_move_time(t: float) -> void:
 		cmm.set_instance_transform(n, Transform3D(swell, ViewMath.to_world(_clearing_cells[i], grid_size)))
 		cmm.set_instance_color(n, Color(crack, crack, crack))
 	_draw_chips(t)
-	_draw_dust(t)
+	_draw_puffs(_dust.multimesh, _dust_list, _clearing_cells, _clearing_starts, t, BURST_SECONDS, 0.55)
 	_draw_shake(t)
 
 
@@ -551,25 +546,25 @@ func _make_debris(chips_per_cube: int) -> void:
 	rng.seed = hash(_clearing_cells)
 	for i in range(_clearing_cells.size()):
 		for k in range(chips_per_cube):
-			var offset := Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(-0.3, 0.3), rng.randf_range(-0.3, 0.3))
+			var offset := _rand_vec3(rng, Vector3.ONE * 0.3)
 			var out := Vector3(offset.x, 0.0, offset.z).normalized()
 			if out == Vector3.ZERO:
 				out = Vector3.RIGHT.rotated(Vector3.UP, rng.randf() * TAU)
 			var speed := rng.randf_range(1.2, 2.6) * _burst
-			var stone := rng.randf_range(0.82, 1.08)
+			var color := _stone(rng, 0.82, 1.08)
 			_chip_list.append({
 				"cube": i,
 				"offset": offset,
 				"velocity": out * speed + Vector3.UP * rng.randf_range(1.5, 3.5) * _burst,
-				"axis": Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)).normalized(),
+				"axis": _rand_axis(rng),
 				"spin": rng.randf_range(6.0, 14.0),
-				"size": Vector3(rng.randf_range(0.16, 0.32), rng.randf_range(0.12, 0.26), rng.randf_range(0.16, 0.32)),
-				"color": Color(BLOCK_COLOR.r * stone, BLOCK_COLOR.g * stone, BLOCK_COLOR.b * stone),
+				"size": _rand_size(rng, Vector3(0.16, 0.12, 0.16), Vector3(0.32, 0.26, 0.32)),
+				"color": color,
 			})
 		for k in range(DUST_PER_CUBE):
 			_dust_list.append({
 				"cube": i,
-				"offset": Vector3(rng.randf_range(-0.25, 0.25), rng.randf_range(-0.2, 0.2), rng.randf_range(-0.25, 0.25)),
+				"offset": _rand_vec3(rng, Vector3(0.25, 0.2, 0.25)),
 				"rise": rng.randf_range(0.3, 0.7),
 				"size": rng.randf_range(0.9, 1.3) * _burst,
 			})
@@ -596,36 +591,77 @@ func _draw_chips(t: float) -> void:
 		mm.set_instance_color(n, chip.color)
 
 
-func _draw_dust(t: float) -> void:
-	var live: Array = []
-	for puff in _dust_list:
-		var since: float = _burst_time(puff.cube, t)
-		if since >= 0.0:
-			live.append([puff, since])
-	# Puffs face the camera.
-	var facing := rig.camera.global_transform.basis.orthonormalized()
-	var mm := _dust.multimesh
-	mm.instance_count = live.size()
-	for n in range(live.size()):
-		var puff: Dictionary = live[n][0]
-		var since: float = live[n][1]
-		var life := since / BURST_SECONDS
-		var size: float = puff.size * (0.5 + ease(life, 0.4) * 0.9)
-		var origin: Vector3 = ViewMath.to_world(_clearing_cells[puff.cube], grid_size) + puff.offset \
-			+ Vector3.UP * puff.rise * life
-		mm.set_instance_transform(n, Transform3D(facing.scaled(Vector3.ONE * size), origin))
-		mm.set_instance_color(n, Color(DUST_COLOR, 0.55 * (1.0 - life) * minf(life * 8.0, 1.0)))
-
-
 ## Multi-line clears shake the camera from the first break, dying away.
 func _draw_shake(t: float) -> void:
 	if _shake <= 0.0 or _clearing_starts.is_empty():
 		return
 	var since: float = t - float(_clearing_starts.min()) - CRACK_SECONDS
 	var left := 1.0 - clampf(since / SHAKE_SECONDS, 0.0, 1.0) if since >= 0.0 else 0.0
-	var amount := _shake * left * left
-	rig.camera.h_offset = amount * sin(since * 71.0)
-	rig.camera.v_offset = amount * cos(since * 53.0)
+	_camera_shake(_shake * left * left, since)
+
+
+# --- Shared by the line clear and the crumble ---
+
+## Calls `setter` with the time from 0 to `total` seconds, then `on_done(true)`.
+func _play_timeline(setter: Callable, total: float, on_done: Callable) -> Tween:
+	setter.call(0.0)
+	var tween := create_tween()
+	tween.tween_method(setter, 0.0, total, total)
+	tween.finished.connect(on_done.bind(true))
+	return tween
+
+
+## A random vector within `extent` of zero on each axis.
+func _rand_vec3(rng: RandomNumberGenerator, extent: Vector3) -> Vector3:
+	return _rand_size(rng, -extent, extent)
+
+
+## A random vector between `lo` and `hi` on each axis.
+func _rand_size(rng: RandomNumberGenerator, lo: Vector3, hi: Vector3) -> Vector3:
+	return Vector3(rng.randf_range(lo.x, hi.x), rng.randf_range(lo.y, hi.y), rng.randf_range(lo.z, hi.z))
+
+
+func _rand_axis(rng: RandomNumberGenerator) -> Vector3:
+	return _rand_vec3(rng, Vector3.ONE).normalized()
+
+
+## The block colour, darkened or lightened by a random factor.
+func _stone(rng: RandomNumberGenerator, lo: float, hi: float) -> Color:
+	var stone := rng.randf_range(lo, hi)
+	return Color(BLOCK_COLOR.r * stone, BLOCK_COLOR.g * stone, BLOCK_COLOR.b * stone)
+
+
+## Dust puffs that grow, rise and fade over `life_seconds` once their cube
+## breaks. `starts` holds when each cube in `cells` starts to crack.
+func _draw_puffs(mm: MultiMesh, puffs: Array, cells: Array, starts: Array[float], t: float,
+		life_seconds: float, alpha: float) -> void:
+	var live: Array = []
+	for puff in puffs:
+		var since: float = t - starts[puff.cube] - CRACK_SECONDS
+		if since >= 0.0 and since < life_seconds:
+			live.append([puff, since])
+	# Puffs face the camera.
+	var facing := rig.camera.global_transform.basis.orthonormalized()
+	mm.instance_count = live.size()
+	for n in range(live.size()):
+		var puff: Dictionary = live[n][0]
+		var life: float = live[n][1] / life_seconds
+		var size: float = puff.size * (0.5 + ease(life, 0.4) * 0.9)
+		var origin: Vector3 = ViewMath.to_world(cells[puff.cube], grid_size) + puff.offset \
+			+ Vector3.UP * puff.rise * life
+		mm.set_instance_transform(n, Transform3D(facing.scaled(Vector3.ONE * size), origin))
+		mm.set_instance_color(n, Color(DUST_COLOR, alpha * (1.0 - life) * minf(life * 8.0, 1.0)))
+
+
+func _camera_shake(amount: float, t: float) -> void:
+	rig.camera.h_offset = amount * sin(t * 71.0)
+	rig.camera.v_offset = amount * cos(t * 53.0)
+
+
+func _reset_camera() -> void:
+	if rig != null:
+		rig.camera.h_offset = 0.0
+		rig.camera.v_offset = 0.0
 
 
 # --- Crumble (#132) ---
@@ -660,42 +696,39 @@ func play_crumble(cells: Array) -> void:
 		var center := ViewMath.to_world(_crumble_cells[i], grid_size)
 		var broken := _crumble_breaks[i] + CRACK_SECONDS
 		for k in range(RUBBLE_PER_CUBE):
-			var start := center + Vector3(rng.randf_range(-0.28, 0.28), rng.randf_range(-0.28, 0.28), rng.randf_range(-0.28, 0.28))
+			var start := center + _rand_vec3(rng, Vector3.ONE * 0.28)
 			var spot := Vector2.from_angle(rng.randf() * TAU) * radius * sqrt(rng.randf())
 			var land := Vector2(start.x, start.z).lerp(spot, RUBBLE_SCATTER)
 			if land.length() > radius:
 				land = land.normalized() * radius
-			var size := Vector3(rng.randf_range(0.26, 0.46), rng.randf_range(0.18, 0.34), rng.randf_range(0.26, 0.46))
+			var size := _rand_size(rng, Vector3(0.26, 0.18, 0.26), Vector3(0.46, 0.34, 0.46))
 			var lift := ViewMath.rubble_height(land.length(), peak, radius) * rng.randf_range(0.7, 1.0)
 			var rest := Vector3(land.x, lift + size.y * 0.5, land.y)
 			var up := rng.randf_range(0.5, 2.5)
 			var fall := ViewMath.fall_seconds(start.y - rest.y, up, RUBBLE_GRAVITY)
-			var stone := rng.randf_range(0.8, 1.06)
+			var color := _stone(rng, 0.8, 1.06)
 			_rubble_list.append({
 				"cube": i,
 				"start": start,
 				"rest": rest,
 				"up": up,
 				"fall": fall,
-				"axis": Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)).normalized(),
+				"axis": _rand_axis(rng),
 				"spin": rng.randf_range(3.0, 8.0),
 				"size": size,
-				"color": Color(BLOCK_COLOR.r * stone, BLOCK_COLOR.g * stone, BLOCK_COLOR.b * stone),
+				"color": color,
 			})
 			_crumble_total = maxf(_crumble_total, broken + fall)
 		for k in range(DUST_PER_CUBE):
 			_crumble_dust_list.append({
 				"cube": i,
-				"offset": Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(-0.2, 0.2), rng.randf_range(-0.3, 0.3)),
+				"offset": _rand_vec3(rng, Vector3(0.3, 0.2, 0.3)),
 				"rise": rng.randf_range(0.2, 0.6),
 				"size": rng.randf_range(1.0, 1.5),
 			})
 		_crumble_total = maxf(_crumble_total, broken + CRUMBLE_DUST_SECONDS)
 
-	_set_crumble_time(0.0)
-	_crumble_tween = create_tween()
-	_crumble_tween.tween_method(_set_crumble_time, 0.0, _crumble_total, _crumble_total)
-	_crumble_tween.finished.connect(_end_crumble.bind(true))
+	_crumble_tween = _play_timeline(_set_crumble_time, _crumble_total, _end_crumble)
 
 
 func is_crumbling() -> bool:
@@ -757,9 +790,7 @@ func clear_crumble() -> void:
 ## Leaves the rubble where it lies.
 func _end_crumble(notify: bool) -> void:
 	_crumble_tween = null
-	if rig != null:
-		rig.camera.h_offset = 0.0
-		rig.camera.v_offset = 0.0
+	_reset_camera()
 	if notify:
 		crumble_finished.emit()
 
@@ -767,7 +798,8 @@ func _end_crumble(notify: bool) -> void:
 func _set_crumble_time(t: float) -> void:
 	_draw_crumbling_cubes(t)
 	_draw_rubble(t)
-	_draw_crumble_dust(t)
+	_draw_puffs(_crumble_dust.multimesh, _crumble_dust_list, _crumble_cells, _crumble_breaks, t,
+		CRUMBLE_DUST_SECONDS, 0.5)
 	_draw_rumble(t)
 
 
@@ -825,25 +857,6 @@ func _draw_rubble(t: float) -> void:
 		mm.set_instance_color(n, piece.color)
 
 
-func _draw_crumble_dust(t: float) -> void:
-	var live: Array = []
-	for puff in _crumble_dust_list:
-		var since: float = t - _crumble_breaks[puff.cube] - CRACK_SECONDS
-		if since >= 0.0 and since < CRUMBLE_DUST_SECONDS:
-			live.append([puff, since])
-	var facing := rig.camera.global_transform.basis.orthonormalized()
-	var mm := _crumble_dust.multimesh
-	mm.instance_count = live.size()
-	for n in range(live.size()):
-		var puff: Dictionary = live[n][0]
-		var life: float = live[n][1] / CRUMBLE_DUST_SECONDS
-		var size: float = puff.size * (0.5 + ease(life, 0.4) * 0.9)
-		var origin: Vector3 = ViewMath.to_world(_crumble_cells[puff.cube], grid_size) + puff.offset \
-			+ Vector3.UP * puff.rise * life
-		mm.set_instance_transform(n, Transform3D(facing.scaled(Vector3.ONE * size), origin))
-		mm.set_instance_color(n, Color(DUST_COLOR, 0.5 * (1.0 - life) * minf(life * 8.0, 1.0)))
-
-
 ## The camera rumbles from the shake until the last cube breaks, then settles.
 func _draw_rumble(t: float) -> void:
 	if rig == null or _crumble_breaks.is_empty():
@@ -853,8 +866,7 @@ func _draw_rumble(t: float) -> void:
 	if t > last:
 		var left := 1.0 - clampf((t - last) / CRUMBLE_RUMBLE_FADE_SECONDS, 0.0, 1.0)
 		amount *= left * left
-	rig.camera.h_offset = amount * sin(t * 71.0)
-	rig.camera.v_offset = amount * cos(t * 53.0)
+	_camera_shake(amount, t)
 
 
 ## Screen position, in this view's viewport, of a world point.
