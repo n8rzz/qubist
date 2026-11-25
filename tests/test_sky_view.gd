@@ -92,6 +92,19 @@ func test_night_light_keeps_the_tower_readable() -> void:
 	_reset()
 
 
+func test_tree_shapes_fit_every_season() -> void:
+	for key in SkyView.TREES:
+		var canopy: Array = SkyView.TREES[key][1]
+		if canopy.is_empty():
+			continue
+		for puff in SkyView.TREE_PUFFS:
+			check(puff[3] < canopy.size(), "%s has a colour for every puff" % key)
+	check(SkyView.TREES["fall"][1][SkyView.TREE_FALLEN_LEAF] == Color("#C8502A"), "fallen leaves stay deep red")
+	for branch in SkyView.TREE_BRANCHES:
+		check(branch[0].y <= SkyView.TREE_TRUNK_HEIGHT, "branches start on the trunk")
+		check(branch[1].y > branch[0].y, "branches point up")
+
+
 func test_night_text_turns_light() -> void:
 	SkyView.show("summer", "night", true)
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at night")
