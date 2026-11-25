@@ -8,7 +8,7 @@ extends SceneTree
 ##
 ## Exits with code 0 if the hand-off went through, 1 otherwise.
 
-const SmokeSaves := preload("res://tests/smoke_saves.gd")
+const SmokeSaves := preload("res://tests/support/smoke_saves.gd")
 ## Shorter than the real minimum so the test doesn't wait 3 s, but long
 ## enough that the game is ready well before it.
 const MIN_SECONDS := 0.6
