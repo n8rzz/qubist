@@ -43,25 +43,33 @@ const VOLUME_DEFAULTS := {
 	"sound_effects_volume": 1.0,
 }
 
-var music := true
-var sound_effects := true
-var haptics := true
+var music: bool
+var sound_effects: bool
+var haptics: bool
 ## Show tick marks on the tower's border, to make distances easier to count.
-var grid_ticks := false
-var music_volume := 1.0
-var sound_effects_volume := 1.0
+var grid_ticks: bool
+var music_volume: float
+var sound_effects_volume: float
 ## Show the one-time tip popups during play (#29). Off keeps them hidden.
-var tips := true
+var tips: bool
 ## Send anonymous gameplay events and error reports (core/analytics.gd).
-var analytics := true
+var analytics: bool
 ## The sky matches the season and time of day (#168). Off shows sky_season
 ## and sky_time instead.
-var sky_follows_day := true
-var sky_season := "spring"
-var sky_time := "day"
+var sky_follows_day: bool
+var sky_season: String
+var sky_time: String
 ## Santa flies across the sky (#198) while it doesn't follow the day. While
 ## it does, the date decides.
-var sky_christmas := false
+var sky_christmas: bool
+
+
+## Each var starts at its default from DEFAULTS, VOLUME_DEFAULTS or
+## CHOICE_DEFAULTS, so every default is written once (#251).
+func _init() -> void:
+	for defaults in [DEFAULTS, VOLUME_DEFAULTS, CHOICE_DEFAULTS]:
+		for key in defaults:
+			set(key, defaults[key])
 
 
 func to_dict() -> Dictionary:
