@@ -34,6 +34,8 @@ func _initialize() -> void:
 	# headless default (wider than a phone). Layout is fluid, so the drag path
 	# is the same; check real sizes on a device.
 	saves.clear()
+	# Full motion, whatever this machine asks for.
+	UI.motion_override = 0
 	main = _make_main()
 	main.analytics.backend = Analytics.MemoryBackend.new()
 	root.add_child(main)
@@ -65,12 +67,61 @@ func _process(_delta: float) -> bool:
 	elif frame == 19:
 		_check_finished_save()
 	elif frame == 20:
+		_check_reduce_motion()
+	elif frame == 21:
 		# Free the screen and give the audio thread a moment to drop its
 		# sounds (#26) before quitting, or they show up as leaks at exit.
 		main.queue_free()
 		create_timer(0.25).timeout.connect(
 			saves.finish.bind(self, failures, "game screen smoke test"))
 	return false
+
+
+## Under Reduce Motion (#116) nothing drops, flies, shakes or slides, and the
+## score, the cleared cubes and the game-over card still show.
+func _check_reduce_motion() -> void:
+	UI.motion_override = 1
+	main.show_home()
+	if main.home.island.is_animating():
+		failures.append("Reduce Motion: Home's island still plays its loop")
+	main.home.new_game_button.pressed.emit()
+	if main.tutorial.is_active():
+		main.tutorial.skip()
+	main.new_game()
+	var tower = main.tower
+	var cleared: Array = [Vector3i(0, 0, 0), Vector3i(1, 0, 0)]
+	tower.play_move([Vector3i(0, 0, 0)], cleared, {}, 3)
+	if tower._fading.multimesh.instance_count != cleared.size():
+		failures.append("Reduce Motion: cleared cubes are not drawn fading")
+	for node in [tower._landing, tower._clearing, tower._chips, tower._dust]:
+		if node.multimesh.instance_count != 0:
+			failures.append("Reduce Motion: a clear still drops or breaks cubes")
+	tower._move_tween.custom_step(0.2)
+	if tower.rig.camera.h_offset != 0.0 or tower.rig.camera.v_offset != 0.0:
+		failures.append("Reduce Motion: a multi-line clear shook the camera")
+	tower.finish_move_animation()
+	if tower._fading.multimesh.instance_count != 0:
+		failures.append("Reduce Motion: faded cubes were left behind")
+
+	main.score_feedback.tick_to(1234)
+	if main.score_feedback.shown_score != 1234:
+		failures.append("Reduce Motion: the score still counts up")
+	main.score_feedback.snap()
+
+	while not main.game.is_over and main.autoplay_one_move():
+		if not main.game.is_over:
+			main.finish_animations()
+	tower.finish_move_animation()
+	if tower.has_crumbled():
+		failures.append("Reduce Motion: the tower still crumbles")
+	if not main.game_over_card.visible:
+		failures.append("Reduce Motion: no game-over card")
+	if main.game_over_card.slider.position.y != 0.0:
+		failures.append("Reduce Motion: the game-over card still slides")
+	main.game_over_card.finish_animation()
+	if main.game_over_card.slider.modulate.a != 1.0:
+		failures.append("Reduce Motion: the game-over card did not fade in")
+	UI.motion_override = 0
 
 
 func _check_layout() -> void:
