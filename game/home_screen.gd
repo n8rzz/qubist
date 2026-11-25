@@ -38,7 +38,6 @@ const SAMPLE_CELLS: Array[Vector3i] = [
 var stats_button: IconButton
 var settings_button: IconButton
 var best_label: Label
-var wordmark: Label
 var island: HomeTowerArt
 var new_game_button: Button
 var continue_button: Button
@@ -76,7 +75,7 @@ func _init() -> void:
 
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", 6)
-	wordmark = UI.label("Qubist", 68, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var wordmark: Label = SkyView.ink(UI.label("Qubist", 68, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
 	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	title.add_child(_best_pill())
@@ -125,20 +124,13 @@ func _init() -> void:
 	how_to_play_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	how_to_play_button.add_theme_font_size_override("font_size", 15)
 	how_to_play_button.add_theme_font_override("font", UI.body_font(600))
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		how_to_play_button.add_theme_color_override(state, UI.SKY_ACCENT)
+	SkyView.on_sky(how_to_play_button, UI.SKY_ACCENT, SkyView.NIGHT_INK)
 	how_to_play_button.pressed.connect(func(): how_to_play_pressed.emit())
 	buttons.add_child(how_to_play_button)
 	column.add_child(buttons)
 
 	# In front of the island; it never takes taps.
 	add_child(SkyWeather.new())
-
-
-func _process(_delta: float) -> void:
-	if visible:
-		SkyView.color_text(wordmark, UI.SKY_INK, SkyView.NIGHT_INK)
-		SkyView.color_text(how_to_play_button, UI.SKY_ACCENT, SkyView.NIGHT_INK)
 
 
 ## Shows Home with the best score. `resume_score` is the score of the game

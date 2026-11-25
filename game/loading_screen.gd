@@ -56,8 +56,6 @@ var progress := START_PROGRESS
 
 var art: LoadingArt
 var bar_fill: Panel
-var tip_label: Label
-var wordmark: Label
 
 var _settled_frames := 0
 var _fading := false
@@ -77,8 +75,6 @@ func _process(delta: float) -> void:
 	elapsed += delta
 	art.time = elapsed
 	art.queue_redraw()
-	SkyView.color_text(wordmark, UI.SKY_INK, SkyView.NIGHT_INK)
-	SkyView.color_text(tip_label, UI.SKY_MUTED, SkyView.NIGHT_MUTED)
 
 	var loaded := 0.0
 	if main == null:
@@ -170,13 +166,13 @@ func _build() -> void:
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", 14)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	wordmark = UI.label("Qubist", 56, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var wordmark: Label = SkyView.ink(UI.label("Qubist", 56, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
 	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	title.add_child(_build_bar())
 	column.add_child(title)
 
-	tip_label = UI.label(TIPS[randi() % TIPS.size()], 14, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	var tip_label: Label = SkyView.muted(UI.label(TIPS[randi() % TIPS.size()], 14, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)) as Label
 	tip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tip_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	tip_label.offset_left = 32
