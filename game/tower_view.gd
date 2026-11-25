@@ -43,11 +43,12 @@ const GUIDE_NIGHT_COLOR := Color("#8CCBE6", 0.65)
 ## Floor grid lines, white on the green floor as on Home.
 const FLOOR_LINE_COLOR := Color(1, 1, 1, 0.55)
 ## Grid ticks on the tower's border (#56), off unless the player turns them on.
-## Major ticks are darker as well as longer.
-const TICK_COLOR := Color(0.4, 0.4, 0.4, 0.7)
-const MAJOR_TICK_COLOR := Color(0.25, 0.25, 0.25, 0.9)
-const TICK_NIGHT_COLOR := Color("#8CCBE6", 0.6)
-const MAJOR_TICK_NIGHT_COLOR := Color("#8CCBE6", 0.95)
+## Faint, so they help count cells without pulling the eye (#256); major
+## ticks are a little stronger as well as longer.
+const TICK_COLOR := Color(0.45, 0.45, 0.45, 0.3)
+const MAJOR_TICK_COLOR := Color(0.4, 0.4, 0.4, 0.5)
+const TICK_NIGHT_COLOR := Color("#8CCBE6", 0.3)
+const MAJOR_TICK_NIGHT_COLOR := Color("#8CCBE6", 0.5)
 ## The sun keeps this angle to the view as the tower turns, so the lit sides
 ## and the shadows look the same from every corner.
 const SUN_PITCH_DEG := -55.0
