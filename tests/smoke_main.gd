@@ -490,6 +490,24 @@ func _check_crumble() -> void:
 			break
 
 
+## Dust puffs, shared by the line clear and the crumble (#234), are drawn
+## only from when their cube breaks until their life is over.
+func _check_puffs() -> void:
+	var tower = main.tower
+	var mm: MultiMesh = tower._make_multimesh(true)
+	var starts: Array[float] = [1.0, 2.0]
+	var puffs: Array = []
+	for cube in [0, 1, 1]:
+		puffs.append({"cube": cube, "offset": Vector3.ZERO, "rise": 0.5, "size": 1.0})
+	var broken: float = starts[0] + tower.CRACK_SECONDS
+	# [time, puffs drawn]; a life of 1.5 seconds overlaps the two cubes.
+	for expected in [[broken - 0.01, 0], [broken + 0.01, 1], [broken + 1.01, 3], [broken + 1.51, 2],
+			[broken + 2.51, 0]]:
+		tower._draw_puffs(mm, puffs, [Vector3i.ZERO, Vector3i.ONE], starts, expected[0], 1.5, 0.5)
+		if mm.instance_count != expected[1]:
+			failures.append("%d puffs drawn at %.2fs, expected %d" % [mm.instance_count, expected[0], expected[1]])
+
+
 ## With no finished game, neither the header nor Home shows a best score
 ## (#118).
 func _check_best_hidden() -> void:
@@ -511,6 +529,7 @@ func _check_stats() -> void:
 		failures.append("autoplay could not finish a game")
 		return
 	_check_crumble()
+	_check_puffs()
 	_check_game_over_card()
 	# A repeated game_over must not count the game a second time.
 	main.game.game_over.emit(main.game.score)
