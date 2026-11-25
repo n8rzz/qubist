@@ -5,7 +5,10 @@ extends Button
 ## A disabled button draws its icon faded.
 
 var kind := "pause"
-var icon_color := Color("#22313F")
+var icon_color := Color("#22313F"):
+	set(value):
+		icon_color = value
+		queue_redraw()
 
 
 func _init(p_kind: String = "pause", label: String = "") -> void:

@@ -36,7 +36,7 @@ func _init() -> void:
 	var header := HBoxContainer.new()
 	header.custom_minimum_size.y = 56
 	header.add_theme_constant_override("separation", 12)
-	var back := UI.icon_button("back", "Back")
+	var back := SkyView.by_night(UI.icon_button("back", "Back")) as Button
 	back.pressed.connect(func(): back_pressed.emit())
 	header.add_child(back)
 	# Text on the sky turns light at night (#168).
@@ -90,5 +90,6 @@ func _card(key: String, title: String, value_size: int) -> PanelContainer:
 	value.add_theme_font_override("font", UI.title_font(600))
 	stack.add_child(value)
 	card.add_child(stack)
+	SkyView.by_night(card)
 	values[key] = value
 	return card
