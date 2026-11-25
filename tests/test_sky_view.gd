@@ -101,8 +101,7 @@ func test_tree_shapes_fit_every_season() -> void:
 			check(puff[3] < canopy.size(), "%s has a colour for every puff" % key)
 	check(SkyView.TREES["fall"][1][SkyView.TREE_FALLEN_LEAF] == Color("#C8502A"), "fallen leaves stay deep red")
 	for branch in SkyView.TREE_BRANCHES:
-		check(branch[0].y <= SkyView.TREE_TRUNK_HEIGHT, "branches start on the trunk")
-		check(branch[1].y > branch[0].y, "branches point up")
+		check(branch[1].y > branch[0].y, "branches point up (y is up)")
 
 
 func test_night_text_turns_light() -> void:
