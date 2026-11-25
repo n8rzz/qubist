@@ -4,18 +4,23 @@ extends RefCounted
 
 const SaveFile := preload("res://core/save_file.gd")
 
+## This run's own folder. Every worktree of the project shares one user://
+## folder, so the process ID keeps two smoke runs at the same time from
+## overwriting each other's saves.
+var dir: String
 var stats_path: String
 var game_path: String
 var settings_path: String
 var onboarding_path: String
 
 
-## Save paths under user://test_saves/, named `<prefix>_stats.json` and so on.
+## Save paths under user://test_saves/<prefix>_<process id>/.
 func _init(prefix: String) -> void:
-	stats_path = "user://test_saves/%s_stats.json" % prefix
-	game_path = "user://test_saves/%s_game.json" % prefix
-	settings_path = "user://test_saves/%s_settings.json" % prefix
-	onboarding_path = "user://test_saves/%s_onboarding.json" % prefix
+	dir = "user://test_saves/%s_%d" % [prefix, OS.get_process_id()]
+	stats_path = dir.path_join("stats.json")
+	game_path = dir.path_join("game.json")
+	settings_path = dir.path_join("settings.json")
+	onboarding_path = dir.path_join("onboarding.json")
 
 
 ## Points a game screen (scenes/main.tscn) at these save files.
@@ -26,9 +31,13 @@ func use_on(screen) -> void:
 	screen.onboarding_path = onboarding_path
 
 
+## Removes this run's save files and its folder.
 func clear() -> void:
 	for path in [stats_path, game_path, settings_path, onboarding_path]:
 		SaveFile.remove(path)
+		SaveFile.remove(path + ".tmp")
+	if DirAccess.dir_exists_absolute(dir):
+		DirAccess.remove_absolute(dir)
 
 
 ## Clears the save files, prints PASS or FAIL with each failure, and quits
