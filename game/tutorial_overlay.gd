@@ -10,7 +10,7 @@ const UI := preload("res://game/ui_style.gd")
 
 signal skip_pressed
 
-const DIM := Color(16 / 255.0, 32 / 255.0, 44 / 255.0, 0.55)
+const DIM := Color(UI.DIM_INK, 0.55)
 const HIGHLIGHT := Color("#FFC94D")
 const DOT := Color(1, 1, 1, 0.5)
 const SKIP_FACE := Color(1, 1, 1, 0.18)
@@ -86,10 +86,9 @@ func _init() -> void:
 	skip_button.add_theme_font_override("font", UI.body_font(600))
 	for state in ["font_color", "font_hover_color", "font_pressed_color"]:
 		skip_button.add_theme_color_override(state, UI.WHITE)
-	var clear := Color(0, 0, 0, 0)
-	skip_button.add_theme_stylebox_override("normal", UI.box(SKIP_FACE, clear, 22, 0, Vector2(18, 0)))
-	skip_button.add_theme_stylebox_override("hover", UI.box(SKIP_PRESSED, clear, 22, 0, Vector2(18, 0)))
-	skip_button.add_theme_stylebox_override("pressed", UI.box(SKIP_PRESSED, clear, 22, 0, Vector2(18, 0)))
+	skip_button.add_theme_stylebox_override("normal", UI.box(SKIP_FACE, 22, Vector2(18, 0)))
+	skip_button.add_theme_stylebox_override("hover", UI.box(SKIP_PRESSED, 22, Vector2(18, 0)))
+	skip_button.add_theme_stylebox_override("pressed", UI.box(SKIP_PRESSED, 22, Vector2(18, 0)))
 	skip_button.pressed.connect(func(): skip_pressed.emit())
 	bar.add_child(skip_button)
 	add_child(bar)
@@ -97,7 +96,7 @@ func _init() -> void:
 	card = PanelContainer.new()
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.custom_minimum_size.x = CARD_WIDTH
-	var style := UI.box(UI.WHITE, clear, CARD_RADIUS, 0, Vector2(18, 0))
+	var style := UI.box(UI.WHITE, CARD_RADIUS, Vector2(18, 0))
 	style.content_margin_top = 18
 	style.content_margin_bottom = 16
 	style.shadow_color = Color(0, 0, 0, 0.25)
@@ -142,7 +141,7 @@ func set_progress(index: int, count: int) -> void:
 		dot.custom_minimum_size = Vector2(22 if i == index else 8, 8)
 		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		dot.add_theme_stylebox_override("panel",
-			UI.box(HIGHLIGHT if i == index else DOT, Color(0, 0, 0, 0), 4, 0))
+			UI.box(HIGHLIGHT if i == index else DOT, 4))
 		dots.add_child(dot)
 	step_label.text = "Step %d of %d" % [index + 1, count]
 
@@ -304,7 +303,7 @@ class Ring:
 		for band in [[8.0, HIGHLIGHT], [4.0, UI.WHITE]]:
 			var grow: float = band[0]
 			var style := StyleBoxFlat.new()
-			style.bg_color = Color(0, 0, 0, 0)
+			style.bg_color = UI.CLEAR
 			style.border_color = band[1]
 			style.set_border_width_all(4)
 			style.set_corner_radius_all(int(radius + grow))

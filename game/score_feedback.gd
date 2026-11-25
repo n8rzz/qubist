@@ -95,7 +95,7 @@ func show_gain(result: Dictionary) -> void:
 		return
 	var banner := UI.label(text, 24, BANNER_TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	banner.add_theme_font_override("font", UI.title_font(700))
-	var style := UI.box(BANNER_FILL, Color(0, 0, 0, 0), 16, 0, Vector2(20, 8))
+	var style := UI.box(BANNER_FILL, 16, Vector2(20, 8))
 	style.shadow_color = BANNER_LEDGE
 	style.shadow_size = 1
 	style.shadow_offset = Vector2(0, 4)

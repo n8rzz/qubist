@@ -328,7 +328,7 @@ static func seconds() -> float:
 
 
 ## Mixes `pick` (a Callable from [season, time] to a Color or a float)
-## across the crossfade, starting from `zero` (`Color(0, 0, 0, 0)` or `0.0`).
+## across the crossfade, starting from `zero` (`UI.CLEAR` or `0.0`).
 static func _mix(pick: Callable, zero: Variant) -> Variant:
 	var out: Variant = zero
 	for layer in layers():
@@ -487,12 +487,12 @@ static func recolor(controls: Array) -> void:
 
 ## The light on the island and tower.
 static func tint() -> Color:
-	return _mix(func(_s, t): return TINTS[t], Color(0, 0, 0, 0))
+	return _mix(func(_s, t): return TINTS[t], UI.CLEAR)
 
 
 ## `color` from island_art.gd as this season paints it, before the tint.
 static func island_color(color: Color) -> Color:
-	return _mix(func(s, _t): return season_color(s, color), Color(0, 0, 0, 0))
+	return _mix(func(s, _t): return season_color(s, color), UI.CLEAR)
 
 
 ## `color` as `for_season` paints it.
@@ -518,7 +518,7 @@ static func gradient_color(for_time: String, t: float) -> Color:
 
 ## The sky's colour at `t`, across the crossfade.
 static func sky_color(t: float) -> Color:
-	return _mix(func(_s, tm): return gradient_color(tm, t), Color(0, 0, 0, 0))
+	return _mix(func(_s, tm): return gradient_color(tm, t), UI.CLEAR)
 
 
 ## Every stop used by any gradient, so drawing bands between them shows each
@@ -534,7 +534,7 @@ static func gradient_stops() -> PackedFloat32Array:
 
 
 static func cloud_color() -> Color:
-	return _mix(func(_s, t): return CLOUD_COLORS[t], Color(0, 0, 0, 0))
+	return _mix(func(_s, t): return CLOUD_COLORS[t], UI.CLEAR)
 
 
 static func cloud_opacity() -> float:

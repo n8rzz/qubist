@@ -154,7 +154,7 @@ func _best_pill() -> Control:
 	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pill.add_theme_stylebox_override("panel",
-		UI.box(Color(1, 1, 1, 0.85), Color(0, 0, 0, 0), 999, 0, Vector2(14, 6)))
+		UI.box(Color(1, 1, 1, 0.85), 999, Vector2(14, 6)))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	var crown := Control.new()
@@ -194,7 +194,7 @@ func _button(height: int, radius: int, color: Color, shadow: Color, drop: int) -
 
 
 static func _card(color: Color, radius: int, shadow: Color, drop: int) -> StyleBoxFlat:
-	var b := UI.box(color, Color(0, 0, 0, 0), radius, 0)
+	var b := UI.box(color, radius)
 	b.shadow_color = shadow
 	b.shadow_size = 1
 	b.shadow_offset = Vector2(0, drop)

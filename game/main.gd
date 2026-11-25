@@ -920,7 +920,7 @@ func _build_tray() -> Control:
 static func _tray_card(filled: bool) -> StyleBoxFlat:
 	if filled:
 		return UI.card(UI.TRAY_CARD, 20)
-	return UI.box(Color(1, 1, 1, 0.25), Color(1, 1, 1, 0.7), 20, 2)
+	return UI.box(Color(1, 1, 1, 0.25), 20, Vector2.ZERO, Color(1, 1, 1, 0.7), 2)
 
 
 func _build_controls() -> Control:
@@ -946,11 +946,10 @@ func _build_controls() -> Control:
 	# teal primary key, ledge and all (#162).
 	var track := PanelContainer.new()
 	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	track.add_theme_stylebox_override("panel", UI.box(UI.SEGMENT_TRACK, Color(0, 0, 0, 0), 22, 0, Vector2(2, 2)))
+	track.add_theme_stylebox_override("panel", UI.box(UI.SEGMENT_TRACK, 22, Vector2(2, 2)))
 	var axes := HBoxContainer.new()
 	axes.add_theme_constant_override("separation", 0)
 	track.add_child(axes)
-	var clear := Color(0, 0, 0, 0)
 	var group := ButtonGroup.new()
 	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
 		var b := UI.text_button(Swiper.AXIS_NAMES[mode], 15)
@@ -958,8 +957,8 @@ func _build_controls() -> Control:
 		b.toggle_mode = true
 		b.button_group = group
 		b.custom_minimum_size = Vector2(40, 40)
-		b.add_theme_stylebox_override("normal", UI.box(clear, clear, 20, 0))
-		b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.6), clear, 20, 0))
+		b.add_theme_stylebox_override("normal", UI.box(UI.CLEAR, 20))
+		b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.6), 20))
 		b.add_theme_stylebox_override("pressed", UI.accent_key(20, UI.SKY_ACCENT, 3))
 		b.add_theme_stylebox_override("hover_pressed", UI.accent_key(20, UI.SKY_ACCENT, 3))
 		for state in ["font_color", "font_hover_color"]:
@@ -1006,7 +1005,7 @@ func _build_overlay() -> Control:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.visible = false
 	var dim := ColorRect.new()
-	dim.color = Color(16 / 255.0, 32 / 255.0, 44 / 255.0, 0.45)
+	dim.color = Color(UI.DIM_INK, 0.45)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(dim)
 	var center := CenterContainer.new()

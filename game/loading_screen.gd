@@ -186,10 +186,10 @@ func _build_bar() -> Control:
 	track.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	track.clip_contents = true
 	track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	track.add_theme_stylebox_override("panel", UI.box(BAR_TRACK, Color(0, 0, 0, 0), 4, 0))
+	track.add_theme_stylebox_override("panel", UI.box(BAR_TRACK, 4))
 	bar_fill = Panel.new()
 	bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar_fill.size = Vector2(BAR_SIZE.x * progress, BAR_SIZE.y)
-	bar_fill.add_theme_stylebox_override("panel", UI.box(UI.SKY_ACCENT, Color(0, 0, 0, 0), 4, 0))
+	bar_fill.add_theme_stylebox_override("panel", UI.box(UI.SKY_ACCENT, 4))
 	track.add_child(bar_fill)
 	return track
