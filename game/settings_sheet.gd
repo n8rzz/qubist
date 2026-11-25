@@ -474,36 +474,16 @@ func _picker(column: VBoxContainer, key: String, caption: String, values: Array[
 	var title := UI.label(caption, 13, UI.SKY_MUTED)
 	title.add_theme_font_override("font", UI.body_font(600))
 	column.add_child(title)
-	var track := PanelContainer.new()
-	var track_style := UI.box(UI.SEGMENT_TRACK, SEGMENT_HEIGHT / 2 + 2)
-	track_style.set_content_margin_all(2)
-	track.add_theme_stylebox_override("panel", track_style)
-	column.add_child(track)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 0)
-	track.add_child(row)
+	column.add_child(UI.segment_track(row, SEGMENT_HEIGHT / 2 + 2))
 	var group := ButtonGroup.new()
 	var buttons := {}
 	for value in values:
-		var b := Button.new()
-		b.text = value.capitalize()
-		b.toggle_mode = true
+		var b := UI.segment_button(value.capitalize(), 14,
+				UI.box(SEGMENT_ON, SEGMENT_HEIGHT / 2), UI.WHITE, UI.SKY_INK)
 		b.button_group = group
-		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size.y = SEGMENT_HEIGHT
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 14)
-		b.add_theme_font_override("font", UI.body_font(600))
-		var off := StyleBoxEmpty.new()
-		var on := UI.box(SEGMENT_ON, SEGMENT_HEIGHT / 2)
-		for state in ["normal", "hover", "disabled", "focus"]:
-			b.add_theme_stylebox_override(state, off)
-		for state in ["pressed", "hover_pressed"]:
-			b.add_theme_stylebox_override(state, on)
-		for state in ["font_color", "font_hover_color", "font_focus_color"]:
-			b.add_theme_color_override(state, UI.SKY_INK)
-		for state in ["font_pressed_color", "font_hover_pressed_color"]:
-			b.add_theme_color_override(state, UI.WHITE)
 		b.toggled.connect(func(pressed):
 			if pressed:
 				choice_changed.emit(key, value))

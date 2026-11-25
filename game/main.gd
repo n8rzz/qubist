@@ -951,27 +951,17 @@ func _build_controls() -> Control:
 
 	# The axis toggle: a pale pill track with the chosen axis drawn as the
 	# teal primary key, ledge and all (#162).
-	var track := PanelContainer.new()
-	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	track.add_theme_stylebox_override("panel", UI.box(UI.SEGMENT_TRACK, 22, Vector2(2, 2)))
 	var axes := HBoxContainer.new()
-	axes.add_theme_constant_override("separation", 0)
-	track.add_child(axes)
+	var track := UI.segment_track(axes, 22)
+	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var group := ButtonGroup.new()
 	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
-		var b := UI.text_button(Swiper.AXIS_NAMES[mode], 15)
+		var b := UI.segment_button(Swiper.AXIS_NAMES[mode], 15,
+				UI.accent_key(20, UI.SKY_ACCENT, 3), UI.WHITE, UI.SKY_MUTED)
 		b.add_theme_font_override("font", UI.title_font(600))
-		b.toggle_mode = true
 		b.button_group = group
 		b.custom_minimum_size = Vector2(40, 40)
-		b.add_theme_stylebox_override("normal", UI.box(UI.CLEAR, 20))
 		b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.6), 20))
-		b.add_theme_stylebox_override("pressed", UI.accent_key(20, UI.SKY_ACCENT, 3))
-		b.add_theme_stylebox_override("hover_pressed", UI.accent_key(20, UI.SKY_ACCENT, 3))
-		for state in ["font_color", "font_hover_color"]:
-			b.add_theme_color_override(state, UI.SKY_MUTED)
-		b.add_theme_color_override("font_pressed_color", UI.WHITE)
-		b.add_theme_color_override("font_hover_pressed_color", UI.WHITE)
 		b.pressed.connect(_set_slice_mode.bind(mode))
 		b.pressed.connect(_on_swiper_used)
 		axes.add_child(b)

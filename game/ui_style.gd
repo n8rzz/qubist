@@ -31,7 +31,7 @@ const CARD_SHADOW := Color(36 / 255.0, 72 / 255.0, 96 / 255.0, 0.16)
 ## White cards and buttons while hovered and pressed.
 const CARD_HOVER := Color("#F4F8FA")
 const CARD_PRESSED := Color("#E6EEF2")
-## The pale track behind the swiper's axis toggle, and the slider's rail.
+## The pale track behind segmented toggles, and the slider's rail.
 const SEGMENT_TRACK := Color("#EAF1F5")
 const SLIDER_RAIL := Color("#D5E2EA")
 ## A switch's track while off, and the Settings sheet's drag handle.
@@ -165,6 +165,34 @@ static func accent_key(radius: int, face: Color = SKY_ACCENT, drop: int = 4) -> 
 	style.shadow_size = 1
 	style.shadow_offset = Vector2(0, drop)
 	return style
+
+
+## One choice of a segmented toggle: `on_style` and `on_color` text while
+## picked, no fill and `off_color` text otherwise. The caller gives the
+## buttons of a toggle one ButtonGroup.
+static func segment_button(text: String, font_size: int, on_style: StyleBox,
+		on_color: Color, off_color: Color) -> Button:
+	var b := text_button(text, font_size)
+	b.toggle_mode = true
+	var off := box(CLEAR, 0)
+	for state in ["normal", "hover", "disabled"]:
+		b.add_theme_stylebox_override(state, off)
+	for state in ["pressed", "hover_pressed"]:
+		b.add_theme_stylebox_override(state, on_style)
+	for state in ["font_color", "font_hover_color"]:
+		b.add_theme_color_override(state, off_color)
+	for state in ["font_pressed_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(state, on_color)
+	return b
+
+
+## The pale pill around a segmented toggle's `row` of segment_button()s.
+static func segment_track(row: HBoxContainer, radius: int) -> PanelContainer:
+	row.add_theme_constant_override("separation", 0)
+	var track := PanelContainer.new()
+	track.add_theme_stylebox_override("panel", box(SEGMENT_TRACK, radius, Vector2(2, 2)))
+	track.add_child(row)
+	return track
 
 
 ## Slider track: a rounded bar 10 px thick.
