@@ -434,6 +434,7 @@ func _refresh() -> void:
 		tray_previews[i].set_piece(piece, step)
 		tray_slots[i].add_theme_stylebox_override("panel",
 			_tray_card(piece != null))
+		SkyView.paint_night(tray_slots[i])
 
 	swiper.fit(step)
 	slice_slider.max_value = swiper.layer_count(step) - 1
@@ -774,14 +775,14 @@ func _build_header() -> Control:
 	# Home and Undo sit opposite Settings. Both sides get the same width,
 	# so the score stays centered (#163).
 	var left := _header_side(BoxContainer.ALIGNMENT_BEGIN)
-	home_button = UI.icon_button("home", "Home")
+	home_button = SkyView.by_night(UI.icon_button("home", "Home")) as Button
 	home_button.pressed.connect(show_home)
 	left.add_child(home_button)
-	undo_button = UI.icon_button("undo", "Undo")
+	undo_button = SkyView.by_night(UI.icon_button("undo", "Undo")) as Button
 	undo_button.pressed.connect(undo)
 	left.add_child(undo_button)
 	if SHOW_PAUSE_BUTTON:
-		var pause := UI.icon_button("pause", "Pause")
+		var pause := SkyView.by_night(UI.icon_button("pause", "Pause")) as Button
 		pause.pressed.connect(_show_pause)
 		left.add_child(pause)
 	row.add_child(left)
@@ -807,7 +808,7 @@ func _build_header() -> Control:
 	row.add_child(scores)
 
 	var right := _header_side(BoxContainer.ALIGNMENT_END)
-	settings_button = UI.icon_button("settings", "Settings")
+	settings_button = SkyView.by_night(UI.icon_button("settings", "Settings")) as Button
 	settings_button.pressed.connect(show_settings)
 	right.add_child(settings_button)
 	row.add_child(right)
@@ -859,6 +860,7 @@ func _build_tower_area() -> Control:
 	slice_chip.add_theme_stylebox_override("normal", UI.card(UI.WHITE, 16, Vector2(12, 6)))
 	slice_chip.position = Vector2(12, 12)
 	slice_chip.visible = false
+	SkyView.by_night(slice_chip)
 	area.add_child(slice_chip)
 
 	show_all_button = UI.text_button("Show all", 13)
@@ -870,6 +872,7 @@ func _build_tower_area() -> Control:
 	show_all_button.offset_bottom = 52
 	show_all_button.pressed.connect(func(): _set_slice_depth(0))
 	show_all_button.visible = false
+	SkyView.by_night(show_all_button)
 	area.add_child(show_all_button)
 
 	# Rotate buttons sit in the bottom corners beside the base, so the swiper
@@ -884,6 +887,7 @@ func _build_tower_area() -> Control:
 		b.offset_top = -64
 		b.offset_bottom = -8
 		b.pressed.connect(_turn.bind(dir))
+		SkyView.by_night(b)
 		area.add_child(b)
 		rotate_buttons.append(b)
 	return area
@@ -903,6 +907,7 @@ func _build_tray() -> Control:
 		preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		slot.add_child(preview)
+		SkyView.by_night(slot)
 		tray.add_child(slot)
 		tray_slots.append(slot)
 		tray_previews.append(preview)
@@ -910,7 +915,8 @@ func _build_tray() -> Control:
 
 
 ## A tray slot's card: white and raised when it holds a piece, a faint
-## outline once the piece is placed.
+## outline once the piece is placed. SkyView.paint_night() gives it its
+## night colours.
 static func _tray_card(filled: bool) -> StyleBoxFlat:
 	if filled:
 		return UI.card(UI.TRAY_CARD, 20)
@@ -988,6 +994,8 @@ func _build_controls() -> Control:
 	slice_slider.drag_started.connect(swiper.begin_sweep)
 	slice_slider.drag_ended.connect(func(_changed: bool): swiper.end_sweep())
 	inner.add_child(slice_slider)
+	# Navy at night, with the track, axis keys and slider inside it (#219).
+	SkyView.by_night(swiper_bar)
 	row.add_child(swiper_bar)
 
 	return row

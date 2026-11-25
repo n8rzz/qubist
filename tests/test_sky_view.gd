@@ -206,6 +206,83 @@ func test_recolor_skips_untagged_controls() -> void:
 	_reset()
 
 
+## #219: a white icon button on the sky turns midnight navy at night, with
+## a white icon, and back again by day.
+func test_sky_buttons_turn_midnight_at_night() -> void:
+	SkyView.show("summer", "night", true)
+	var b := SkyView.by_night(UI.icon_button("home", "Home")) as Button
+	check(b.is_in_group(SkyView.NIGHT_GROUP), "tagged")
+	var normal := b.get_theme_stylebox("normal") as StyleBoxFlat
+	check(normal.bg_color.is_equal_approx(SkyView.NIGHT_CARD), "navy at once")
+	check(normal.shadow_color.is_equal_approx(SkyView.NIGHT_LEDGE), "dark ledge")
+	check((b.get_theme_stylebox("pressed") as StyleBoxFlat).bg_color.is_equal_approx(SkyView.NIGHT_CARD_PRESSED), "pressed")
+	check(b.icon_color.is_equal_approx(SkyView.NIGHT_INK), "white icon")
+	SkyView.show("summer", "day", true)
+	SkyView.recolor([b])
+	check(normal.bg_color.is_equal_approx(UI.WHITE), "white by day")
+	check(normal.shadow_color.is_equal_approx(UI.CARD_SHADOW), "day ledge")
+	check(b.icon_color.is_equal_approx(UI.SKY_INK), "ink icon by day")
+	b.free()
+	_reset()
+
+
+## Text inside a tagged card turns light, but white text on the teal key
+## stays white and colours not in the swap lists stay as they are.
+func test_night_swaps_only_listed_colours() -> void:
+	SkyView.show("winter", "night", true)
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UI.card(UI.WHITE, 20))
+	var caption := UI.label("Best", 13, UI.SKY_MUTED)
+	card.add_child(caption)
+	var key := UI.text_button("X", 15)
+	key.add_theme_stylebox_override("pressed", UI.accent_key(20))
+	key.add_theme_color_override("font_pressed_color", UI.WHITE)
+	key.add_theme_color_override("font_hover_color", Color.GREEN)
+	card.add_child(key)
+	SkyView.by_night(card)
+	check(caption.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "caption lightens")
+	check(key.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "key text lightens")
+	check(key.get_theme_color("font_pressed_color").is_equal_approx(UI.WHITE), "white on teal stays white")
+	check(key.get_theme_color("font_hover_color").is_equal_approx(Color.GREEN), "unlisted colour left alone")
+	var pressed := key.get_theme_stylebox("pressed") as StyleBoxFlat
+	check(pressed.bg_color.is_equal_approx(SkyView.NIGHT_ACCENT), "brighter teal")
+	check(pressed.shadow_color.is_equal_approx(SkyView.NIGHT_ACCENT_LEDGE), "teal ledge")
+	card.free()
+	_reset()
+
+
+## A box swapped in after tagging (a tray slot refilling) takes its night
+## colours at the next paint_night().
+func test_new_boxes_take_night_colours() -> void:
+	SkyView.show("summer", "night", true)
+	var slot := SkyView.by_night(PanelContainer.new())
+	slot.add_theme_stylebox_override("panel", UI.card(UI.TRAY_CARD, 20))
+	SkyView.paint_night(slot)
+	check((slot.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.is_equal_approx(SkyView.NIGHT_TRAY_CARD), "filled slot")
+	slot.add_theme_stylebox_override("panel", UI.box(Color(1, 1, 1, 0.25), Color(1, 1, 1, 0.7), 20, 2))
+	SkyView.paint_night(slot)
+	var empty := slot.get_theme_stylebox("panel") as StyleBoxFlat
+	check(empty.bg_color.is_equal_approx(Color(1, 1, 1, 0.08)), "empty slot fill")
+	check(empty.border_color.is_equal_approx(Color(1, 1, 1, 0.3)), "empty slot outline")
+	slot.free()
+	_reset()
+
+
+## Halfway through a fade to night, a card is halfway to navy.
+func test_night_cards_follow_the_fade() -> void:
+	SkyView.show("summer", "day", true)
+	var b := SkyView.by_night(UI.icon_button("home", "Home"))
+	SkyView.show("summer", "night")
+	SkyView._changed_msec = Time.get_ticks_msec() - int(SkyView.CROSSFADE_SECONDS * 500.0)
+	var night := SkyView.night_amount()
+	check(night > 0.0 and night < 1.0, "mid-fade")
+	SkyView.recolor([b])
+	var expected := UI.WHITE.lerp(SkyView.NIGHT_CARD, night)
+	check((b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color.is_equal_approx(expected), "part way to navy")
+	b.free()
+	_reset()
+
+
 func test_every_view_lists_its_features() -> void:
 	var known := ["sun", "stars", "aurora", "moon", "birds", "geese", "mist", "blossom", "fallen_leaves",
 		"firefly", "butterfly"] + SkyWeather.FALLING.keys()

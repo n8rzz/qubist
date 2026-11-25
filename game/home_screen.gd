@@ -64,11 +64,11 @@ func _init() -> void:
 
 	var bar := HBoxContainer.new()
 	bar.custom_minimum_size.y = 44
-	stats_button = UI.icon_button("stats", "Stats")
+	stats_button = SkyView.by_night(UI.icon_button("stats", "Stats")) as IconButton
 	stats_button.pressed.connect(func(): stats_pressed.emit())
 	bar.add_child(stats_button)
 	bar.add_child(UI.spacer())
-	settings_button = UI.icon_button("settings", "Settings")
+	settings_button = SkyView.by_night(UI.icon_button("settings", "Settings")) as IconButton
 	settings_button.pressed.connect(func(): settings_pressed.emit())
 	bar.add_child(settings_button)
 	column.add_child(bar)
@@ -114,6 +114,7 @@ func _init() -> void:
 	parts.add_child(continue_score)
 	continue_button.add_child(parts)
 	continue_button.pressed.connect(func(): continue_pressed.emit())
+	SkyView.by_night(continue_button)
 	buttons.add_child(continue_button)
 
 	how_to_play_button = Button.new()
@@ -165,6 +166,7 @@ func _best_pill() -> Control:
 	best_label.add_theme_font_override("font", UI.body_font(700, 1))
 	row.add_child(best_label)
 	pill.add_child(row)
+	SkyView.by_night(pill)
 	return pill
 
 
