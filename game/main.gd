@@ -240,8 +240,11 @@ func _use_game(next: Game) -> void:
 func _process(delta: float) -> void:
 	_update_axis_labels(delta)
 	tutorial.update()
-	# Undo depends on drags, menus and animations, so it is checked each frame.
-	undo_button.disabled = not can_undo()
+	# Undo depends on drags, menus and animations, so it is checked each frame
+	# and written only when it changes.
+	var undo_off := not can_undo()
+	if undo_button.disabled != undo_off:
+		undo_button.disabled = undo_off
 	update_sky(delta)
 	if swiper.update_sweep(delta, tower.rig.is_turning()):
 		tower.set_sweep_alpha(swiper.sweep_alpha())
@@ -361,7 +364,8 @@ func _place(index: int, origin: Vector3i) -> void:
 			cubes_break.connect(haptics.clear.bind(lines))
 			cubes_break.connect(audio.clear.bind(lines))
 		# Sliced-away cubes stay faded instead of animating.
-		tower.play_move(result.placed, result.cleared, _faded_cells(), result.lines.size())
+		tower.play_move(result.placed, result.cleared, _faded_cells(game.grid.filled_cells()),
+			result.lines.size())
 		score_feedback.show_gain(result)
 		if tutorial.is_active():
 			tutorial.placed()
@@ -448,17 +452,16 @@ func _refresh() -> void:
 
 func _refresh_blocks() -> void:
 	var filled: Array = game.grid.filled_cells()
-	var faded := _faded_cells()
+	var faded := _faded_cells(filled)
 	var step := tower.rig.view_step()
 	var shade := swiper.shade(filled, faded, step)
 	tower.update_blocks(filled, faded, shade.behind)
 	tower.set_sweep(swiper.plane(step), swiper.toward_viewer(step), shade.cap)
 
 
-## Cells to draw see-through: those the swiper has cut away, plus, while
-## dragging, those that would hide the ghost.
-func _faded_cells() -> Dictionary:
-	var filled: Array = game.grid.filled_cells()
+## Which of `filled` to draw see-through: those the swiper has cut away,
+## plus, while dragging, those that would hide the ghost.
+func _faded_cells(filled: Array) -> Dictionary:
 	var faded := swiper.faded_cells(filled, tower.rig.view_step())
 	drag.fade_occluders(faded, filled)
 	return faded
