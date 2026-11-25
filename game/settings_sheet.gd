@@ -8,8 +8,7 @@ extends Control
 ## (#183), and the Sky follows my day switch (#168), with Season and Time of
 ## day pickers and a Christmas switch (#198) under it while it's off. Game:
 ## Stats (#32), Replay tutorial (#29), the Tips switch (#164), the Share usage
-## data switch (#31) and Home (#72, only when opened from a game). Pause stays
-## a separate menu (#42).
+## data switch (#31) and Home (#72, only when opened from a game).
 ##
 ## The cards scroll under the header when they don't fit below the status
 ## bar (UI.SAFE_TOP). A vertical swipe anywhere on them scrolls (#213), even

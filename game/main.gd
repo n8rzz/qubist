@@ -37,8 +37,6 @@ const GAP := 8
 const HEADER_HEIGHT := 56
 const TRAY_HEIGHT := 140
 const CONTROLS_HEIGHT := 72
-## Pause is hidden for MVP (#42); re-enable for the post-MVP timed mode.
-const SHOW_PAUSE_BUTTON := false
 
 ## Axis labels around the tower's base (#53): small and quiet, so they don't
 ## compete with the blocks. They fade out while the tower turns.
@@ -112,8 +110,6 @@ var home_button: Button
 var undo_button: Button
 ## Axis labels on the tower, indexed by ViewMath mode.
 var axis_labels: Array[Label] = []
-var overlay: Control
-var overlay_panel: VBoxContainer
 var game_over_card: GameOverCard
 var settings_sheet: SettingsSheet
 var stats_screen: StatsScreen
@@ -237,7 +233,6 @@ func _use_game(next: Game) -> void:
 	if not game.game_over.is_connected(_on_game_over):
 		game.game_over.connect(_on_game_over)
 		game.tray_refilled.connect(_on_tray_refilled)
-	_hide_overlay()
 	game_over_card.close()
 	score_feedback.snap()
 
@@ -346,7 +341,7 @@ func _touch_spread() -> float:
 func start_drag(index: int, finger: Vector2) -> void:
 	# No new move until the last one has finished animating, so the grid and
 	# the view stay in step.
-	if game.is_over or overlay.visible or game_over_card.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
+	if game.is_over or game_over_card.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
 		return
 	drag.start(index, finger)
 
@@ -381,7 +376,7 @@ func _place(index: int, origin: Vector3i) -> void:
 func can_undo() -> bool:
 	return game != null and game.can_undo() and not tutorial.is_active() \
 		and not drag.is_dragging() and not tower.is_animating() \
-		and not overlay.visible and not game_over_card.visible and not menu_open()
+		and not game_over_card.visible and not menu_open()
 
 
 ## Takes back the last move (#184): the piece goes back to its slot and the
@@ -544,7 +539,6 @@ func can_continue() -> bool:
 func show_home() -> void:
 	drag.clear()
 	save_game()
-	_hide_overlay()
 	game_over_card.close()
 	settings_sheet.visible = false
 	stats_screen.visible = false
@@ -703,10 +697,6 @@ func _on_tray_refilled(_tray: Array) -> void:
 		tween.tween_property(preview, "modulate:a", 1.0, TRAY_FADE_SECONDS)
 
 
-func _show_pause() -> void:
-	_show_overlay("Paused", "", "Resume", _hide_overlay, "New game", new_game)
-
-
 # --- Building the UI ---
 
 func _build_ui() -> void:
@@ -741,8 +731,6 @@ func _build_ui() -> void:
 	drag_preview.visible = false
 	add_child(drag_preview)
 
-	overlay = _build_overlay()
-	add_child(overlay)
 	game_over_card = GameOverCard.new()
 	game_over_card.play_again_pressed.connect(new_game)
 	game_over_card.home_pressed.connect(show_home)
@@ -796,10 +784,6 @@ func _build_header() -> Control:
 	undo_button = SkyView.by_night(UI.icon_button("undo", "Undo")) as Button
 	undo_button.pressed.connect(undo)
 	left.add_child(undo_button)
-	if SHOW_PAUSE_BUTTON:
-		var pause := SkyView.by_night(UI.icon_button("pause", "Pause")) as Button
-		pause.pressed.connect(_show_pause)
-		left.add_child(pause)
 	row.add_child(left)
 
 	var scores := VBoxContainer.new()
@@ -1013,57 +997,6 @@ func _build_controls() -> Control:
 	row.add_child(swiper_bar)
 
 	return row
-
-
-func _build_overlay() -> Control:
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.visible = false
-	var dim := ColorRect.new()
-	dim.color = Color(UI.DIM_INK, 0.45)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(center)
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size.x = 310
-	panel.add_theme_stylebox_override("panel", UI.card(UI.WHITE, 24, Vector2(24, 24)))
-	center.add_child(panel)
-	overlay_panel = VBoxContainer.new()
-	overlay_panel.add_theme_constant_override("separation", 14)
-	panel.add_child(overlay_panel)
-	return root
-
-
-func _show_overlay(title: String, body: String, primary: String, on_primary: Callable,
-		secondary: String = "", on_secondary: Callable = Callable(), score: String = "") -> void:
-	for child in overlay_panel.get_children():
-		child.queue_free()
-	var heading := UI.label(title, 22, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
-	heading.add_theme_font_override("font", UI.title_font(600))
-	overlay_panel.add_child(heading)
-	if score != "":
-		var big := UI.label(score, 48, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
-		big.add_theme_font_override("font", UI.title_font(600))
-		overlay_panel.add_child(big)
-	if body != "":
-		overlay_panel.add_child(UI.label(body, 16, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER))
-	var first := UI.text_button(primary, 16, true)
-	first.custom_minimum_size.y = 52
-	first.pressed.connect(on_primary)
-	overlay_panel.add_child(first)
-	if secondary != "":
-		var second := UI.text_button(secondary, 14)
-		second.custom_minimum_size.y = 44
-		second.pressed.connect(on_secondary)
-		overlay_panel.add_child(second)
-	overlay.visible = true
-
-
-func _hide_overlay() -> void:
-	if overlay != null:
-		overlay.visible = false
 
 
 # --- Test hooks ---

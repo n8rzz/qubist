@@ -450,8 +450,6 @@ func _check_game_over_card() -> void:
 		failures.append("game-over card shows %s, expected %s" % [shown, expected])
 	if card.score_saved_row.visible:
 		failures.append("game-over card claims a Game Center save with Game Center off")
-	if main.overlay.visible:
-		failures.append("game over also opened the old overlay")
 	main.start_drag(0, Vector2.ZERO)
 	if main.drag.is_dragging():
 		failures.append("a piece could be dragged under the game-over card")
