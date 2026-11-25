@@ -12,9 +12,6 @@ const CARD_RADIUS := 22
 
 ## Value labels by stat name, filled in by open().
 var values := {}
-## Text on the sky, light at night (#168).
-var heading: Label
-var footer: Label
 
 
 func _init() -> void:
@@ -42,7 +39,8 @@ func _init() -> void:
 	var back := UI.icon_button("back", "Back")
 	back.pressed.connect(func(): back_pressed.emit())
 	header.add_child(back)
-	heading = UI.label("Stats", 30, UI.SKY_INK)
+	# Text on the sky turns light at night (#168).
+	var heading: Label = SkyView.ink(UI.label("Stats", 30, UI.SKY_INK)) as Label
 	heading.add_theme_font_override("font", UI.title_font(600))
 	header.add_child(heading)
 	column.add_child(header)
@@ -65,14 +63,7 @@ func _init() -> void:
 		grid.add_child(card)
 	column.add_child(grid)
 
-	footer = UI.label("Stats are kept on this device.", 13, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-	column.add_child(footer)
-
-
-func _process(_delta: float) -> void:
-	if visible:
-		SkyView.color_text(heading, UI.SKY_INK, SkyView.NIGHT_INK)
-		SkyView.color_text(footer, UI.SKY_MUTED, SkyView.NIGHT_MUTED)
+	column.add_child(SkyView.muted(UI.label("Stats are kept on this device.", 13, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)))
 
 
 ## Shows the screen with `stats` (a core/stats.gd instance).

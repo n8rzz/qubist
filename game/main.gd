@@ -253,16 +253,15 @@ func _process(delta: float) -> void:
 
 
 ## Follows the clock when Settings says the sky follows the day, but never
-## while a piece is being dragged (#168). Applies the current sky's light,
-## snow and text colours to the game.
+## while a piece is being dragged (#168). Applies the current sky's light and
+## snow to the game. The score's colours follow the sky through SkyView.ink()
+## and muted() (#204).
 func update_sky(delta: float) -> void:
 	SkyView.follow_clock(delta, drag.is_dragging())
 	viewport_box.modulate = SkyView.tint()
 	var snow := SkyView.snow_amount()
 	if not is_equal_approx(tower.snow_amount(), snow):
 		tower.set_snow(snow)
-	score_label.add_theme_color_override("font_color", SkyView.text_color(UI.SKY_INK, SkyView.NIGHT_INK))
-	best_label.add_theme_color_override("font_color", SkyView.text_color(UI.SKY_MUTED, SkyView.NIGHT_MUTED))
 
 
 ## Keeps the axis labels beside the base as the view zooms, resizes or turns.
@@ -790,9 +789,9 @@ func _build_header() -> Control:
 	var scores := VBoxContainer.new()
 	scores.alignment = BoxContainer.ALIGNMENT_CENTER
 	scores.add_theme_constant_override("separation", 2)
-	score_label = UI.label("0", 36, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)
+	score_label = SkyView.ink(UI.label("0", 36, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
 	score_label.add_theme_font_override("font", UI.title_font(600))
-	best_label = UI.label("BEST 0", 11, UI.SKY_MUTED)
+	best_label = SkyView.muted(UI.label("BEST 0", 11, UI.SKY_MUTED)) as Label
 	best_label.add_theme_font_override("font", UI.body_font(700, 1))
 	var best_row := HBoxContainer.new()
 	best_row.alignment = BoxContainer.ALIGNMENT_CENTER

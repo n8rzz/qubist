@@ -202,9 +202,8 @@ func _draw_cube(c: Vector3i, alpha := 1.0) -> void:
 	var x := c.x
 	var y := c.y
 	var h := c.z
-	var snow := SkyView.snow_amount()
 	_face([iso(x, y, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y + 1, h + 1), iso(x, y + 1, h + 1)],
-		CUBE_TOP.lerp(SkyView.SNOW_TOP, snow), CUBE_TOP_INSET.lerp(SkyView.SNOW_TOP_INSET, snow), alpha)
+		SkyView.snowy_top(CUBE_TOP), SkyView.snowy_top_inset(CUBE_TOP_INSET), alpha)
 	_face([iso(x, y + 1, h + 1), iso(x + 1, y + 1, h + 1), iso(x + 1, y + 1, h), iso(x, y + 1, h)],
 		CUBE_LEFT, CUBE_LEFT_INSET, alpha)
 	_face([iso(x + 1, y + 1, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y, h), iso(x + 1, y + 1, h)],
