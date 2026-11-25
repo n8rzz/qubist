@@ -293,13 +293,26 @@ static func is_fading() -> bool:
 	return blend() < 1.0
 
 
-## The views to draw, as [season, time, weight] with weights adding to 1:
-## the outgoing one first, while a crossfade runs.
-static func layers() -> Array:
+## One view to draw: a season and time of day, and how much of it shows.
+class Layer:
+	var season: String
+	var time: String
+	## How opaque this view is, 0 to 1; the layers' weights add to 1.
+	var weight: float
+
+	func _init(for_season: String, for_time: String, for_weight: float) -> void:
+		season = for_season
+		time = for_time
+		weight = for_weight
+
+
+## The views to draw, with weights adding to 1: the outgoing one first, while
+## a crossfade runs.
+static func layers() -> Array[Layer]:
 	var b := blend()
 	if b >= 1.0:
-		return [[season, time_of_day, 1.0]]
-	return [[_from_season, _from_time, 1.0 - b], [season, time_of_day, b]]
+		return [Layer.new(season, time_of_day, 1.0)]
+	return [Layer.new(_from_season, _from_time, 1.0 - b), Layer.new(season, time_of_day, b)]
 
 
 ## What the view for `for_season` and `for_time` shows, from FEATURES.
@@ -319,7 +332,7 @@ static func seconds() -> float:
 static func _mix(pick: Callable) -> Color:
 	var out := Color(0, 0, 0, 0)
 	for layer in layers():
-		out += pick.call(layer[0], layer[1]) * layer[2]
+		out += pick.call(layer.season, layer.time) * layer.weight
 	return out
 
 
@@ -328,7 +341,7 @@ static func _mix(pick: Callable) -> Color:
 static func _mixf(pick: Callable) -> float:
 	var out := 0.0
 	for layer in layers():
-		out += pick.call(layer[0], layer[1]) * layer[2]
+		out += pick.call(layer.season, layer.time) * layer.weight
 	return out
 
 

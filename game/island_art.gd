@@ -233,8 +233,8 @@ func draw_tree() -> void:
 	# SkyView's tree shapes have y up; the screen's y runs down.
 	var at := func(offset: Vector2) -> Vector2: return base + Vector2(offset.x, -offset.y).rotated(turn)
 	for layer in SkyView.layers():
-		var a: float = layer[2]
-		var tree: Array = SkyView.TREES[layer[0]]
+		var a: float = layer.weight
+		var tree: Array = SkyView.TREES[layer.season]
 		var trunk: Color = tree[0]
 		var canopy: Array = tree[1]
 		draw_colored_polygon(DrawUtil.ellipse(base + Vector2(0, 2), Vector2(16, 5), ELLIPSE_SEGMENTS),
@@ -251,7 +251,7 @@ func draw_tree() -> void:
 			continue
 		for puff in SkyView.TREE_PUFFS:
 			draw_circle(at.call(Vector2(puff[0], puff[1])), puff[2], Color(canopy[puff[3]], a), true, -1.0, true)
-		var features := SkyView.features(layer[0], layer[1])
+		var features := SkyView.features(layer.season, layer.time)
 		if features.has("blossom"):
 			for i in 10:
 				var dot := Vector2(-18 + 36 * DrawUtil.rand(i, 7), 60 - 32 * DrawUtil.rand(i, 8))

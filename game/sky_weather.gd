@@ -55,16 +55,16 @@ func _draw() -> void:
 	var k := Vector2(size.x / 390.0, size.y / 844.0)
 	var seconds := SkyView.seconds()
 	for layer in SkyView.layers():
-		var night: bool = layer[1] == "night"
-		for feature in SkyView.features(layer[0], layer[1]):
+		var night: bool = layer.time == "night"
+		for feature in SkyView.features(layer.season, layer.time):
 			match feature:
 				"firefly":
-					_draw_fireflies(k, seconds, layer[2])
+					_draw_fireflies(k, seconds, layer.weight)
 				"butterfly":
-					_draw_butterflies(k, seconds, layer[2])
+					_draw_butterflies(k, seconds, layer.weight)
 				_:
 					if FALLING.has(feature):
-						_draw_falling(feature, night, k, seconds, layer[2])
+						_draw_falling(feature, night, k, seconds, layer.weight)
 
 
 ## Where falling particle `i` of `kind` is, as [position in the design

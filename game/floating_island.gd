@@ -102,7 +102,7 @@ func paint() -> void:
 	_bush_material.albedo_color = SkyView.island_color(IslandArt.BUSH)
 	var weights := {}
 	for layer in SkyView.layers():
-		weights[layer[0]] = weights.get(layer[0], 0.0) + layer[2]
+		weights[layer.season] = weights.get(layer.season, 0.0) + layer.weight
 	for key in _trees:
 		var tree: Node3D = _trees[key]
 		tree.visible = weights.get(key, 0.0) > 0.0

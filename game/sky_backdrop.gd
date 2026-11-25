@@ -140,16 +140,16 @@ func _draw() -> void:
 	var seconds := SkyView.seconds()
 	var layers := SkyView.layers()
 	for layer in layers:
-		for feature in SkyView.features(layer[0], layer[1]):
+		for feature in SkyView.features(layer.season, layer.time):
 			match feature:
 				"sun":
-					_draw_sun(layer[1], k, seconds, layer[2])
+					_draw_sun(layer.time, k, seconds, layer.weight)
 				"stars":
-					_draw_stars(k, seconds, layer[2])
+					_draw_stars(k, seconds, layer.weight)
 				"aurora":
-					_draw_aurora(k, seconds, layer[2])
+					_draw_aurora(k, seconds, layer.weight)
 				"moon":
-					_draw_moon(k, seconds, layer[2])
+					_draw_moon(k, seconds, layer.weight)
 
 	var tint := SkyView.cloud_color()
 	var strength := SkyView.cloud_opacity()
@@ -168,12 +168,12 @@ func _draw() -> void:
 		_draw_santa(w, seconds)
 
 	for layer in layers:
-		for feature in SkyView.features(layer[0], layer[1]):
+		for feature in SkyView.features(layer.season, layer.time):
 			match feature:
 				"birds", "geese":
-					_draw_birds(feature == "geese", layer[1] == "day", k, seconds, layer[2])
+					_draw_birds(feature == "geese", layer.time == "day", k, seconds, layer.weight)
 				"mist":
-					_draw_mist(k, seconds, layer[2])
+					_draw_mist(k, seconds, layer.weight)
 
 
 ## How far cloud `index` has moved from where CLOUDS puts it, `seconds` in,
