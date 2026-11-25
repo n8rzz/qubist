@@ -434,9 +434,8 @@ static func _faces(at: Vector3, k: float) -> Array:
 func _draw_block(at: Vector3, k: float, alpha: float, crack: float, cracks: Array) -> void:
 	var faces := _faces(at, k)
 	var d := crack * DARKEN
-	var snow := SkyView.snow_amount()
-	var snow_top := CUBE_TOP.lerp(SkyView.SNOW_TOP, snow)
-	var snow_inset := CUBE_TOP_INSET.lerp(SkyView.SNOW_TOP_INSET, snow)
+	var snow_top := SkyView.snowy_top(CUBE_TOP)
+	var snow_inset := SkyView.snowy_top_inset(CUBE_TOP_INSET)
 	_face(faces[0], snow_top.lerp(CRACK_COLOR, d), snow_inset.lerp(CRACK_COLOR, d), alpha)
 	_face(faces[1], CUBE_LEFT.lerp(CRACK_COLOR, d), CUBE_LEFT_INSET.lerp(CRACK_COLOR, d), alpha)
 	_face(faces[2], CUBE_RIGHT.lerp(CRACK_COLOR, d), CUBE_RIGHT_INSET.lerp(CRACK_COLOR, d), alpha)

@@ -19,6 +19,9 @@ extends Control
 ## fly across now and then, in front of the clouds, leaving a trail of
 ## sparkles. The lead reindeer's nose glows, brighter at night.
 ##
+## Each frame it also brings the sky's text into step with the time of day:
+## labels and buttons tagged with SkyView.ink(), muted() or on_sky() (#204).
+##
 ## Positions are in the design's 390-point-wide frame: x stretches with the
 ## width, y is in points from the top.
 
@@ -112,6 +115,7 @@ func _init() -> void:
 
 
 func _process(_delta: float) -> void:
+	SkyView.recolor_text(get_tree())
 	if is_visible_in_tree():
 		queue_redraw()
 

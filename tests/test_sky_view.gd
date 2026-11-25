@@ -6,6 +6,7 @@ const SkyClock := preload("res://core/sky_clock.gd")
 const SkyWeather := preload("res://game/sky_weather.gd")
 const Settings := preload("res://core/settings.gd")
 const IslandArt := preload("res://game/island_art.gd")
+const UI := preload("res://game/ui_style.gd")
 
 
 func _reset() -> void:
@@ -66,6 +67,47 @@ func test_follows_settings() -> void:
 	_reset()
 
 
+func test_start_shows_the_settings_at_once() -> void:
+	SkyView.show("spring", "day")
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "fall"
+	settings.sky_time = "sunset"
+	SkyView.start(settings)
+	check_eq([SkyView.season, SkyView.time_of_day], ["fall", "sunset"], "shows the pick")
+	check(not SkyView.is_fading(), "no crossfade")
+	_reset()
+
+
+func test_follow_clock_checks_every_interval() -> void:
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "summer"
+	settings.sky_time = "day"
+	SkyView.start(settings)
+	# The clock picks a view only while the sky follows the day.
+	settings.sky_follows_day = true
+	var clock := SkyClock.now()
+	SkyView.follow_clock(SkyView.CLOCK_CHECK_SECONDS - 1.0)
+	check_eq([SkyView.season, SkyView.time_of_day], ["summer", "day"], "not yet")
+	SkyView.follow_clock(2.0, true)
+	check_eq([SkyView.season, SkyView.time_of_day], ["summer", "day"], "held")
+	SkyView.follow_clock(0.0)
+	check_eq([SkyView.season, SkyView.time_of_day], [clock[0], clock[1]], "checks once the hold clears")
+	_reset()
+
+
+func test_follow_clock_leaves_a_manual_pick() -> void:
+	var settings := Settings.new()
+	settings.sky_follows_day = false
+	settings.sky_season = "winter"
+	settings.sky_time = "night"
+	SkyView.start(settings)
+	SkyView.follow_clock(SkyView.CLOCK_CHECK_SECONDS * 2.0)
+	check_eq([SkyView.season, SkyView.time_of_day], ["winter", "night"], "stays on the pick")
+	_reset()
+
+
 func test_gradients_match_the_design_at_their_stops() -> void:
 	for time in SkyView.GRADIENTS:
 		for stop in SkyView.GRADIENTS[time]:
@@ -104,11 +146,63 @@ func test_tree_shapes_fit_every_season() -> void:
 		check(branch[1].y > branch[0].y, "branches point up (y is up)")
 
 
+func test_cube_tops_turn_snowy_in_winter() -> void:
+	var top := Color("#ECE7DD")
+	var inset := Color("#F6F2EA")
+	SkyView.show("winter", "day", true)
+	check(SkyView.snowy_top(top).is_equal_approx(SkyView.SNOW_TOP), "snow on top in winter")
+	check(SkyView.snowy_top_inset(inset).is_equal_approx(SkyView.SNOW_TOP_INSET), "snow on the inset in winter")
+	SkyView.show("summer", "day", true)
+	check(SkyView.snowy_top(top).is_equal_approx(top), "bare top in summer")
+	check(SkyView.snowy_top_inset(inset).is_equal_approx(inset), "bare inset in summer")
+	_reset()
+
+
 func test_night_text_turns_light() -> void:
 	SkyView.show("summer", "night", true)
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at night")
 	SkyView.show("summer", "day", true)
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.BLACK), "dark by day")
+	_reset()
+
+
+func test_sky_text_is_tagged_and_coloured_now() -> void:
+	SkyView.show("summer", "night", true)
+	var label := Label.new()
+	check(SkyView.ink(label) == label, "returns the control")
+	check(label.is_in_group(SkyView.TEXT_GROUP), "tagged")
+	check(label.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "coloured for night at once")
+	label.free()
+	_reset()
+
+
+func test_sky_text_follows_the_time_of_day() -> void:
+	_reset()
+	var ink := SkyView.ink(Label.new())
+	var muted := SkyView.muted(Label.new())
+	var button := SkyView.on_sky(Button.new(), Color.RED, Color.BLUE)
+	SkyView.show("winter", "night", true)
+	SkyView.recolor([ink, muted, button])
+	check(ink.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "ink at night")
+	check(muted.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "muted at night")
+	check(button.get_theme_color("font_pressed_color").is_equal_approx(Color.BLUE), "button states at night")
+	SkyView.show("winter", "day", true)
+	SkyView.recolor([ink, muted, button])
+	check(ink.get_theme_color("font_color").is_equal_approx(UI.SKY_INK), "ink by day")
+	check(muted.get_theme_color("font_color").is_equal_approx(UI.SKY_MUTED), "muted by day")
+	check(button.get_theme_color("font_color").is_equal_approx(Color.RED), "button by day")
+	for control in [ink, muted, button]:
+		control.free()
+	_reset()
+
+
+func test_recolor_skips_untagged_controls() -> void:
+	SkyView.show("summer", "night", true)
+	var label := Label.new()
+	label.add_theme_color_override("font_color", Color.GREEN)
+	SkyView.recolor([label])
+	check(label.get_theme_color("font_color").is_equal_approx(Color.GREEN), "left alone")
+	label.free()
 	_reset()
 
 
