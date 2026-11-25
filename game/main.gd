@@ -143,14 +143,12 @@ func _ready() -> void:
 	stats.from_dict(SaveFile.read(stats_path))
 	settings.from_dict(SaveFile.read(settings_path))
 	onboarding.from_dict(SaveFile.read(onboarding_path))
-	haptics.enabled = settings.haptics
-	audio.sound_effects = settings.sound_effects
-	audio.music = settings.music
-	audio.sound_effects_volume = settings.sound_effects_volume
-	audio.music_volume = settings.music_volume
-	add_child(audio)
-	analytics.enabled = settings.analytics
 	SkyView.start(settings)
+	# Before add_child(audio) and the ErrorReporter, so neither starts on a
+	# default the player has turned off.
+	for key in settings.to_dict():
+		_apply_setting(key)
+	add_child(audio)
 	if analytics.backend == null and OS.is_debug_build():
 		analytics.backend = Analytics.LogBackend.new()
 	add_child(ErrorReporter.new(analytics))
@@ -618,34 +616,41 @@ func show_settings() -> void:
 	settings_sheet.open(not home.visible)
 
 
+## Hands setting `key` to whatever it drives: every key at startup, and one
+## again each time the player changes it. A new setting is applied here only.
+## At startup the screen isn't built yet, so the builders apply what they own.
+func _apply_setting(key: String) -> void:
+	var value = settings.get(key)
+	match key:
+		"music", "sound_effects", "music_volume", "sound_effects_volume":
+			audio.set(key, value)
+		"haptics":
+			haptics.enabled = value
+		"analytics":
+			analytics.enabled = value
+		"grid_ticks":
+			if tower != null:
+				tower.set_grid_ticks(value)
+		"tips":
+			if not value and hint_toast != null:
+				hint_toast.dismiss()
+		"sky_follows_day", "sky_season", "sky_time", "sky_christmas":
+			SkyView.follow(settings)
+
+
 ## Changes one on/off setting (#20), applies it and saves the settings.
 ## `key` is a Settings field name.
 func set_setting(key: String, on: bool) -> void:
 	settings.set(key, on)
 	settings_sheet.set_switch(key, on)
-	if key == "grid_ticks":
-		tower.set_grid_ticks(on)
-	elif key == "haptics":
-		haptics.enabled = on
-	elif key == "sound_effects":
-		audio.sound_effects = on
-	elif key == "music":
-		audio.music = on
-	elif key == "tips" and not on:
-		hint_toast.dismiss()
-	elif key == "analytics":
-		analytics.enabled = on
-	elif key == "sky_follows_day":
-		if not on:
-			# Start the pickers on what's showing, so nothing jumps.
-			for choice in [["sky_season", SkyView.season], ["sky_time", SkyView.time_of_day]]:
-				settings.set(choice[0], choice[1])
-				settings_sheet.set_choice(choice[0], choice[1])
-			settings.sky_christmas = SkyView.christmas
-			settings_sheet.set_switch("sky_christmas", SkyView.christmas)
-		SkyView.follow(settings)
-	elif key == "sky_christmas":
-		SkyView.follow(settings)
+	if key == "sky_follows_day" and not on:
+		# Start the pickers on what's showing, so nothing jumps.
+		for choice in [["sky_season", SkyView.season], ["sky_time", SkyView.time_of_day]]:
+			settings.set(choice[0], choice[1])
+			settings_sheet.set_choice(choice[0], choice[1])
+		settings.sky_christmas = SkyView.christmas
+		settings_sheet.set_switch("sky_christmas", SkyView.christmas)
+	_apply_setting(key)
 	SaveFile.write(settings_path, settings.to_dict())
 
 
@@ -656,7 +661,7 @@ func set_choice(key: String, value: String) -> void:
 		return
 	settings.set(key, value)
 	settings_sheet.set_choice(key, value)
-	SkyView.follow(settings)
+	_apply_setting(key)
 	SaveFile.write(settings_path, settings.to_dict())
 
 
@@ -664,7 +669,7 @@ func set_choice(key: String, value: String) -> void:
 ## settings. `key` is "music_volume" or "sound_effects_volume"; `value` is 0–1.
 func set_volume(key: String, value: float) -> void:
 	settings.set(key, clampf(value, 0.0, 1.0))
-	audio.set(key, settings.get(key))
+	_apply_setting(key)
 	SaveFile.write(settings_path, settings.to_dict())
 
 
@@ -848,7 +853,7 @@ func _build_tower_area() -> Control:
 	tower = TowerView.new()
 	sub.add_child(tower)
 	tower.setup(config.grid_size)
-	tower.set_grid_ticks(settings.grid_ticks)
+	_apply_setting("grid_ticks")
 	tower.rig.view_changed.connect(func(_step): _refresh())
 	tower.move_animation_finished.connect(_on_move_animation_finished)
 	tower.crumble_finished.connect(_on_crumble_finished)
