@@ -146,6 +146,13 @@ func test_tree_shapes_fit_every_season() -> void:
 		check(branch[1].y > branch[0].y, "branches point up (y is up)")
 
 
+func test_falling_petals_and_leaves_match_the_tree() -> void:
+	check(SkyWeather.PETALS == SkyView.TREES["spring"][1], "petals are the spring canopy (#210)")
+	var fall: Array = SkyView.TREES["fall"][1]
+	check(SkyWeather.LEAVES.slice(0, fall.size()) == fall, "leaves start with the fall canopy")
+	check(SkyWeather.LEAVES.has(Color("#D9A441")), "leaves keep their extra gold")
+
+
 func test_cube_tops_turn_snowy_in_winter() -> void:
 	var top := Color("#ECE7DD")
 	var inset := Color("#F6F2EA")

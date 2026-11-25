@@ -22,8 +22,10 @@ const FADE_SHARE := 0.12
 ## Opacity of petals and leaves at night.
 const NIGHT_DIM := 0.55
 
-const PETALS := [Color("#F7B6CB"), Color("#FBD3E0"), Color("#F49AB8")]
-const LEAVES := [Color("#E0782E"), Color("#F0A33C"), Color("#C8502A"), Color("#D9A441")]
+## Falling petals and leaves are the spring and fall canopy colours (#210),
+## so the tree and what drops from it can't drift apart. Leaves add a gold.
+const PETALS: Array = SkyView.TREES["spring"][1]
+const LEAVES: Array = SkyView.TREES["fall"][1] + [Color("#D9A441")]
 const FIREFLY := Color("#FFF3A0")
 const FIREFLY_GLOW := Color(1.0, 236 / 255.0, 120 / 255.0, 0.7)
 const SEED := Color(1.0, 250 / 255.0, 235 / 255.0, 0.9)
