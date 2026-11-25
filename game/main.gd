@@ -486,7 +486,8 @@ func finish_animations() -> void:
 
 
 ## Once the last move has played out, the tower crumbles (#132), then the
-## game-over card comes up.
+## game-over card comes up. Under Reduce Motion the tower stays standing and
+## the card comes up straight away.
 func _on_game_over(_final_score: int) -> void:
 	if _placing or tower.is_animating():
 		_pending_game_over = true
@@ -494,7 +495,10 @@ func _on_game_over(_final_score: int) -> void:
 	_record_finished_game()
 	if not tower.has_crumbled():
 		Input.vibrate_handheld(CRUMBLE_VIBRATE_MS)
-		tower.play_crumble(game.grid.filled_cells())
+		if UI.reduce_motion():
+			_open_game_over_card()
+		else:
+			tower.play_crumble(game.grid.filled_cells())
 	elif not tower.is_crumbling():
 		_open_game_over_card()
 

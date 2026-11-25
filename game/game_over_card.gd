@@ -2,6 +2,7 @@ extends Control
 ## Game-over card (#19): the tower dims and a card slides up from the bottom
 ## with the final score, the best score and this game's lines, best combo and
 ## longest streak, over a Play again button and a quieter Home button (#163).
+## Under Reduce Motion the card fades in where it rests.
 ##
 ## The "Score saved to Game Center" line stays
 ## hidden until the leaderboard (#30) reports a submit with
@@ -113,7 +114,7 @@ func _init() -> void:
 	column.add_child(score_saved_row)
 
 
-## Fills the card from the finished `game` and slides it up.
+## Fills the card from the finished `game` and brings it in.
 func open(game, best_score: int) -> void:
 	score_label.text = UI.format_number(game.score)
 	best_label.text = "Best %s" % UI.format_number(best_score)
@@ -126,17 +127,24 @@ func open(game, best_score: int) -> void:
 	if _tween != null:
 		_tween.kill()
 	dim.modulate.a = 0.0
-	slider.position.y = size.y
 	_tween = create_tween().set_parallel()
 	_tween.tween_property(dim, "modulate:a", 1.0, DIM_SECONDS)
-	_tween.tween_property(slider, "position:y", 0.0, SLIDE_SECONDS) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	if UI.reduce_motion():
+		slider.position.y = 0.0
+		slider.modulate.a = 0.0
+		_tween.tween_property(slider, "modulate:a", 1.0, DIM_SECONDS)
+	else:
+		slider.position.y = size.y
+		slider.modulate.a = 1.0
+		_tween.tween_property(slider, "position:y", 0.0, SLIDE_SECONDS) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func close() -> void:
 	if _tween != null:
 		_tween.kill()
 	slider.position.y = 0.0
+	slider.modulate.a = 1.0
 	dim.modulate.a = 1.0
 	visible = false
 
@@ -148,7 +156,7 @@ func show_score_saved(saved := true) -> void:
 	score_saved_row.visible = saved
 
 
-## Skips the slide-in. Used by tests.
+## Skips the way in. Used by tests.
 func finish_animation() -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.custom_step(SLIDE_SECONDS)

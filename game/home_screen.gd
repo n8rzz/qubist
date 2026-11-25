@@ -84,8 +84,6 @@ func _init() -> void:
 	island = HomeTowerArt.new()
 	island.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	island.cells = SAMPLE_CELLS
-	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
-	island.still = DisplayServer.accessibility_should_reduce_animation() == 1
 	column.add_child(island)
 
 	var buttons := VBoxContainer.new()
@@ -142,6 +140,7 @@ func open(best: int, resume_score: int = -1, cells: Array = []) -> void:
 	best_label.text = "BEST %s" % UI.format_number(best)
 	continue_button.visible = resume_score >= 0
 	continue_score.text = "· %s" % UI.format_number(maxi(resume_score, 0))
+	island.still = UI.reduce_motion()
 	if cells.is_empty():
 		island.play(SAMPLE_CELLS)
 	else:
