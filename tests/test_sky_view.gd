@@ -32,9 +32,9 @@ func test_a_change_crossfades() -> void:
 	check(SkyView.is_fading(), "fading")
 	var layers := SkyView.layers()
 	check_eq(layers.size(), 2, "two layers while fading")
-	check_eq([layers[0][0], layers[0][1]], ["spring", "day"], "outgoing view first")
-	check_eq([layers[1][0], layers[1][1]], ["fall", "sunset"], "incoming view second")
-	check(is_equal_approx(layers[0][2] + layers[1][2], 1.0), "weights add to 1")
+	check_eq([layers[0].season, layers[0].time], ["spring", "day"], "outgoing view first")
+	check_eq([layers[1].season, layers[1].time], ["fall", "sunset"], "incoming view second")
+	check(is_equal_approx(layers[0].weight + layers[1].weight, 1.0), "weights add to 1")
 	_reset()
 
 
