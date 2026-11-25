@@ -102,6 +102,10 @@ const NIGHT_MUTED := Color("#C9D8E6")
 const TEXT_GROUP := &"sky_text"
 ## Each tagged control's [day, night] colours.
 const TEXT_META := &"sky_text_colors"
+## How far sky text takes its night colours at each time of day. Sunset's
+## sky is dark enough at the top that dark ink is hard to read (#254), so
+## it takes them too.
+const LIGHT_TEXT := {"sunrise": 0.0, "day": 0.0, "sunset": 1.0, "night": 1.0}
 
 ## Cards and buttons on the sky turn midnight navy at night (#219). Each
 ## day colour they use is swapped for its night colour below: fills are a
@@ -208,9 +212,10 @@ static var christmas := false
 static var _settings = null
 ## Seconds until follow_clock() next checks the clock.
 static var _clock_check_in := CLOCK_CHECK_SECONDS
-## night_amount() when recolor_sky() last ran, so it only recolours on a
-## change.
+## night_amount() and light_text_amount() when recolor_sky() last ran, so
+## it only recolours on a change.
 static var _sky_night := -1.0
+static var _sky_light_text := -1.0
 
 
 ## Starts the sky for a screen (#205): Reduce Motion from the device, and the
@@ -341,6 +346,12 @@ static func night_amount() -> float:
 	return _mix(func(_s, t): return 1.0 if t == "night" else 0.0, 0.0)
 
 
+## 1 when sky text takes its night colours (sunset and night), 0 when it
+## keeps its day colours, in between while fading.
+static func light_text_amount() -> float:
+	return _mix(func(_s, t): return LIGHT_TEXT[t], 0.0)
+
+
 ## 1 in winter (snow on the cubes), 0 otherwise.
 static func snow_amount() -> float:
 	return _mix(func(s, _t): return 1.0 if s == "winter" else 0.0, 0.0)
@@ -356,13 +367,14 @@ static func snowy_top_inset(color: Color) -> Color:
 	return color.lerp(SNOW_TOP_INSET, snow_amount())
 
 
-## Colour for text on the sky: `day` by day, `night` at night.
+## Colour for text on the sky: `day` by day and at sunrise, `night` at
+## sunset and night.
 static func text_color(day: Color, night: Color) -> Color:
-	return day.lerp(night, night_amount())
+	return day.lerp(night, light_text_amount())
 
 
 ## Colours a label (or a flat button's text) that sits on the sky: `day`
-## by day, `night` at night.
+## by day and at sunrise, `night` at sunset and night.
 static func color_text(control: Control, day: Color, night: Color) -> void:
 	var color := text_color(day, night)
 	if control is Button:
@@ -372,18 +384,21 @@ static func color_text(control: Control, day: Color, night: Color) -> void:
 		control.add_theme_color_override("font_color", color)
 
 
-## Tags `control` as sky text in SKY_INK by day and NIGHT_INK at night.
+## Tags `control` as sky text in SKY_INK by day and NIGHT_INK at sunset
+## and night.
 ## Returns it, so it can wrap UI.label().
 static func ink(control: Control) -> Control:
 	return on_sky(control, UI.SKY_INK, NIGHT_INK)
 
 
-## Tags `control` as sky text in SKY_MUTED by day and NIGHT_MUTED at night.
+## Tags `control` as sky text in SKY_MUTED by day and NIGHT_MUTED at
+## sunset and night.
 static func muted(control: Control) -> Control:
 	return on_sky(control, UI.SKY_MUTED, NIGHT_MUTED)
 
 
-## Tags `control` as sky text in `day` by day and `night` at night, and
+## Tags `control` as sky text in `day` by day and `night` at sunset and
+## night, and
 ## colours it now and whenever it enters the tree. The sky backdrop keeps it
 ## in step from then on.
 static func on_sky(control: Control, day: Color, night: Color) -> Control:
@@ -460,17 +475,19 @@ static func _apply_night(target: Object, night: float) -> void:
 		target.set(prop, (swaps[prop][0] as Color).lerp(swaps[prop][1], night))
 
 
-## Recolours every tagged control in `tree` (sky text, and cards and
-## buttons), when the night amount has changed since last time. Every sky
-## backdrop calls this each frame; only the first call after a change does
-## any work.
+## Recolours every tagged control in `tree`: sky text when the light text
+## amount has changed since last time, and cards and buttons when the
+## night amount has. Every sky backdrop calls this each frame; only the
+## first call after a change does any work.
 static func recolor_sky(tree: SceneTree) -> void:
+	var light_text := light_text_amount()
+	if light_text != _sky_light_text:
+		_sky_light_text = light_text
+		recolor(tree.get_nodes_in_group(TEXT_GROUP))
 	var night := night_amount()
-	if night == _sky_night:
-		return
-	_sky_night = night
-	recolor(tree.get_nodes_in_group(TEXT_GROUP))
-	recolor(tree.get_nodes_in_group(NIGHT_GROUP))
+	if night != _sky_night:
+		_sky_night = night
+		recolor(tree.get_nodes_in_group(NIGHT_GROUP))
 
 
 ## Colours each tagged control in `controls` for the sky as it is now.

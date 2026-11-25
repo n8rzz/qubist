@@ -173,6 +173,36 @@ func test_night_text_turns_light() -> void:
 	_reset()
 
 
+## #254: dark ink is hard to read on sunset's purple sky, so sky text takes
+## its night colours at sunset too. Sunrise's sky is light and keeps them.
+func test_sunset_text_turns_light() -> void:
+	SkyView.show("fall", "sunset", true)
+	check_eq(SkyView.light_text_amount(), 1.0, "light text at sunset")
+	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at sunset")
+	SkyView.show("fall", "sunrise", true)
+	check_eq(SkyView.light_text_amount(), 0.0, "dark text at sunrise")
+	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.BLACK), "dark at sunrise")
+	_reset()
+
+
+## At sunset the score's ink turns white but the white buttons beside it
+## stay white: only sky text changes, not cards.
+func test_sunset_lightens_text_but_not_cards() -> void:
+	_reset()
+	var ink := SkyView.ink(Label.new())
+	var muted := SkyView.muted(Label.new())
+	var b := SkyView.by_night(UI.icon_button("home", "Home")) as Button
+	SkyView.show("summer", "sunset", true)
+	SkyView.recolor([ink, muted, b])
+	check(ink.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "ink at sunset")
+	check(muted.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "muted at sunset")
+	check((b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color.is_equal_approx(UI.WHITE), "button stays white")
+	check(b.icon_color.is_equal_approx(UI.SKY_INK), "button icon stays ink")
+	for control in [ink, muted, b]:
+		control.free()
+	_reset()
+
+
 func test_sky_text_is_tagged_and_coloured_now() -> void:
 	SkyView.show("summer", "night", true)
 	var label := Label.new()
