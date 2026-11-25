@@ -32,6 +32,11 @@ func record(score: int, lines: int, combo: int, streak: int) -> void:
 	longest_streak = maxi(longest_streak, streak)
 
 
+## True once a game has finished, so there is a best score to show (#118).
+func has_best() -> bool:
+	return games_played > 0
+
+
 ## Average score of finished games, rounded to a whole number; 0 before any.
 func average_score() -> int:
 	if games_played == 0:

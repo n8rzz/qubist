@@ -59,6 +59,13 @@ func snap() -> void:
 	_set_shown(host.game.score if host.game != null else 0)
 
 
+## Updates the header's best score, which stays hidden until a game has
+## finished (#118).
+func refresh_best() -> void:
+	host.best_row.visible = host.stats.has_best()
+	host.best_label.text = "BEST %s" % UI.format_number(maxi(host.stats.best_score, shown_score))
+
+
 ## The running count-up, or null. Tests step it by hand.
 func tween() -> Tween:
 	return _tween
@@ -67,7 +74,7 @@ func tween() -> Tween:
 func _set_shown(value: int) -> void:
 	shown_score = value
 	host.score_label.text = UI.format_number(value)
-	host.best_label.text = "BEST %s" % UI.format_number(maxi(host.stats.best_score, value))
+	refresh_best()
 
 
 ## Floating "+points" over the move, and a combo/streak banner when they apply.

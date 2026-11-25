@@ -92,6 +92,8 @@ var viewport_box: SubViewportContainer
 ## Petals, leaves, snow and fireflies over the tower (#168).
 var weather: SkyWeather
 var score_label: Label
+## The header's crown and best score.
+var best_row: HBoxContainer
 var best_label: Label
 var tray_slots: Array[PanelContainer] = []
 var tray_previews: Array = []
@@ -522,6 +524,7 @@ func _record_finished_game() -> void:
 		return
 	_recorded_game = game
 	stats.record_game(game)
+	score_feedback.refresh_best()
 	analytics.game_over(game)
 	SaveFile.write(stats_path, stats.to_dict())
 	SaveFile.remove(game_save_path)
@@ -548,7 +551,7 @@ func show_home() -> void:
 	settings_sheet.visible = false
 	stats_screen.visible = false
 	var resume := can_continue()
-	home.open(stats.best_score, game.score if resume else -1,
+	home.open(stats.best_score if stats.has_best() else -1, game.score if resume else -1,
 		game.grid.filled_cells() if resume else [])
 	# Nothing to draw behind Home, so let the 3D view rest.
 	viewport_box.visible = false
@@ -799,9 +802,9 @@ func _build_header() -> Control:
 	scores.add_theme_constant_override("separation", 2)
 	score_label = SkyView.ink(UI.label("0", 36, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
 	score_label.add_theme_font_override("font", UI.title_font(600))
-	best_label = SkyView.muted(UI.label("BEST 0", 11, UI.SKY_MUTED)) as Label
+	best_label = SkyView.muted(UI.label("", 11, UI.SKY_MUTED)) as Label
 	best_label.add_theme_font_override("font", UI.body_font(700, 1))
-	var best_row := HBoxContainer.new()
+	best_row = HBoxContainer.new()
 	best_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	best_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	best_row.add_theme_constant_override("separation", 4)
