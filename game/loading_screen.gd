@@ -157,7 +157,7 @@ func _build() -> void:
 	art = LoadingArt.new()
 	art.custom_minimum_size = Vector2(300, 330)
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	art.still = DisplayServer.accessibility_should_reduce_animation()
+	art.still = UI.reduce_motion()
 	column.add_child(art)
 
 	var title := VBoxContainer.new()

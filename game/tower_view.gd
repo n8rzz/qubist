@@ -8,6 +8,7 @@ extends Node3D
 const ViewMath := preload("res://game/view_math.gd")
 const CameraRig := preload("res://game/camera_rig.gd")
 const FloatingIsland := preload("res://game/floating_island.gd")
+const UI := preload("res://game/ui_style.gd")
 
 const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
@@ -67,6 +68,7 @@ const SWEEP_BORDER := 0.09
 ## Lifts the lit faces off the cubes so they don't flicker against them.
 const SWEEP_CAP_LIFT := 0.004
 
+const FadingShader := preload("res://game/shaders/block_fading.gdshader")
 const ClearingShader := preload("res://game/shaders/block_clearing.gdshader")
 const CrumblingShader := preload("res://game/shaders/block_crumbling.gdshader")
 
@@ -82,6 +84,9 @@ const RIPPLE_STEP_SECONDS := 0.025
 const FLASH_COLOR := Color("#FFD23F")
 const FLASH_EDGE_COLOR := Color("#B8860B")
 const CRACK_SECONDS := 0.08
+## Under Reduce Motion (#116) cleared cubes light up, hold, then fade.
+const STILL_FLASH_SECONDS := 0.15
+const STILL_FADE_SECONDS := 0.35
 ## A cube swells by this much just before it breaks.
 const CRACK_SWELL := 0.09
 ## How long chips and dust last after a cube breaks.
@@ -151,6 +156,8 @@ var _ghost_lines_material := _ghost_line_material()
 var _landing := MultiMeshInstance3D.new()
 ## Cubes being cleared, drawn apart so the grid can update straight away.
 var _clearing := MultiMeshInstance3D.new()
+## Cleared cubes fading out under Reduce Motion.
+var _fading := MultiMeshInstance3D.new()
 var _chips := MultiMeshInstance3D.new()
 var _dust := MultiMeshInstance3D.new()
 ## Placed cells still landing; update_blocks leaves them out of the solid set.
@@ -226,6 +233,14 @@ func setup(size: Vector3i) -> void:
 	clearing_material.set_shader_parameter("flash_face_color", FLASH_COLOR)
 	clearing_material.set_shader_parameter("flash_edge_color", FLASH_EDGE_COLOR)
 	_clearing.material_override = clearing_material
+	_fading.multimesh = _make_multimesh(true)
+	var fading_material := _block_material(FadingShader, BLOCK_COLOR, EDGE_COLOR)
+	fading_material.set_shader_parameter("flash_face_color", FLASH_COLOR)
+	fading_material.set_shader_parameter("flash_edge_color", FLASH_EDGE_COLOR)
+	# Before swept cubes, like the dust, so their stencil is marked in time.
+	fading_material.render_priority = -3
+	_fading.material_override = fading_material
+	_fading.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_chips.multimesh = _make_multimesh(true, 1.0)
 	var chip_material := _material(Color.WHITE)
 	chip_material.vertex_color_use_as_albedo = true
@@ -248,7 +263,7 @@ func setup(size: Vector3i) -> void:
 	_sweep.material_override = _sweep_material
 	_sweep.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sweep.visible = false
-	for node in [_solid, _behind, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _chips, _dust,
+	for node in [_solid, _behind, _faded, _ghost_fill, _ghost_lines, _landing, _clearing, _fading, _chips, _dust,
 			_crumbling, _rubble, _crumble_dust, _sweep]:
 		add_child(node)
 
@@ -444,9 +459,13 @@ func _build_ghost_lines(cells: Array) -> void:
 ## after another, starting next to the placed piece. `line_count` lines
 ## cleared at once make a bigger burst and, above one, shake the camera. The
 ## grid should already hold the result of the move; call update_blocks()
-## after this so the landing cubes are left out.
+## after this so the landing cubes are left out. Under Reduce Motion the
+## placed cubes appear where they are and the cleared ones just fade.
 func play_move(placed: Array, cleared: Array, skip: Dictionary, line_count := 1) -> void:
 	cancel_move_animation()
+	if UI.reduce_motion():
+		_play_still_move(cleared)
+		return
 	var cleared_set := {}
 	for c in cleared:
 		cleared_set[c] = true
@@ -471,6 +490,23 @@ func play_move(placed: Array, cleared: Array, skip: Dictionary, line_count := 1)
 		_make_debris(CHIPS_PER_CUBE + EXTRA_CHIPS_PER_LINE * extra)
 		total = last + CRACK_SECONDS + BURST_SECONDS
 	_move_tween = _play_timeline(_set_move_time, total, _end_move_animation)
+
+
+## The move without motion. With nothing to clear it still takes
+## LAND_SECONDS, so the game sees the same sequence either way.
+func _play_still_move(cleared: Array) -> void:
+	_clearing_cells = cleared.duplicate()
+	var total := LAND_SECONDS if cleared.is_empty() else STILL_FLASH_SECONDS + STILL_FADE_SECONDS
+	_move_tween = _play_timeline(_set_still_move_time, total, _end_move_animation)
+
+
+func _set_still_move_time(t: float) -> void:
+	var alpha := 1.0 - clampf((t - STILL_FLASH_SECONDS) / STILL_FADE_SECONDS, 0.0, 1.0)
+	var mm := _fading.multimesh
+	mm.instance_count = _clearing_cells.size()
+	for i in range(_clearing_cells.size()):
+		mm.set_instance_transform(i, Transform3D(Basis(), ViewMath.to_world(_clearing_cells[i], grid_size)))
+		mm.set_instance_color(i, Color(1.0, 1.0, 1.0, alpha))
 
 
 func is_animating() -> bool:
@@ -500,7 +536,7 @@ func _end_move_animation(notify: bool) -> void:
 	_chip_list.clear()
 	_dust_list.clear()
 	_shake = 0.0
-	for node in [_landing, _clearing, _chips, _dust]:
+	for node in [_landing, _clearing, _fading, _chips, _dust]:
 		node.multimesh.instance_count = 0
 	_reset_camera()
 	if notify:

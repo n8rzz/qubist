@@ -37,6 +37,8 @@ const SAMPLE_CELLS: Array[Vector3i] = [
 
 var stats_button: IconButton
 var settings_button: IconButton
+## The crown and best score under the wordmark.
+var best_pill: Control
 var best_label: Label
 var island: HomeTowerArt
 var new_game_button: Button
@@ -78,14 +80,13 @@ func _init() -> void:
 	var wordmark: Label = SkyView.ink(UI.label("Qubist", 68, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
 	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
-	title.add_child(_best_pill())
+	best_pill = _best_pill()
+	title.add_child(best_pill)
 	column.add_child(title)
 
 	island = HomeTowerArt.new()
 	island.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	island.cells = SAMPLE_CELLS
-	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
-	island.still = DisplayServer.accessibility_should_reduce_animation() == 1
 	column.add_child(island)
 
 	var buttons := VBoxContainer.new()
@@ -134,14 +135,17 @@ func _init() -> void:
 	add_child(SkyWeather.new())
 
 
-## Shows Home with the best score. `resume_score` is the score of the game
+## Shows Home with the best score, or none while `best` is -1 because no game
+## has finished (#118). `resume_score` is the score of the game
 ## Continue resumes, or -1 to hide Continue; `cells` fill the island's tower.
 ## With no `cells`, the island plays its build-and-crumble loop (the sample
 ## stack, standing still, under Reduce Motion).
 func open(best: int, resume_score: int = -1, cells: Array = []) -> void:
-	best_label.text = "BEST %s" % UI.format_number(best)
+	best_pill.visible = best >= 0
+	best_label.text = "BEST %s" % UI.format_number(maxi(best, 0))
 	continue_button.visible = resume_score >= 0
 	continue_score.text = "· %s" % UI.format_number(maxi(resume_score, 0))
+	island.still = UI.reduce_motion()
 	if cells.is_empty():
 		island.play(SAMPLE_CELLS)
 	else:
@@ -162,7 +166,7 @@ func _best_pill() -> Control:
 	crown.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	crown.draw.connect(_draw_crown.bind(crown))
 	row.add_child(crown)
-	best_label = UI.label("BEST 0", 13, UI.SKY_MUTED)
+	best_label = UI.label("", 13, UI.SKY_MUTED)
 	best_label.add_theme_font_override("font", UI.body_font(700, 1))
 	row.add_child(best_label)
 	pill.add_child(row)

@@ -222,8 +222,7 @@ static var _sky_light_text := -1.0
 ## view `settings` asks for, shown at once. follow_clock() then keeps it in
 ## step with the clock.
 static func start(settings) -> void:
-	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze it.
-	still = DisplayServer.accessibility_should_reduce_animation() == 1
+	still = UI.reduce_motion()
 	_settings = settings
 	_clock_check_in = CLOCK_CHECK_SECONDS
 	follow(settings, true)

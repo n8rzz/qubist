@@ -45,6 +45,20 @@ const SAFE_BOTTOM := 34
 const SIDE_MARGIN := 16
 
 
+## Tests set this to 1 or 0 to force Reduce Motion on or off; -1 asks the
+## device.
+static var motion_override := -1
+
+
+## Whether iOS Reduce Motion is on (#116). Everything that moves on its own
+## checks this and holds still, fades or jumps to its end instead.
+static func reduce_motion() -> bool:
+	if motion_override >= 0:
+		return motion_override == 1
+	# 1 is on; 0 is off and -1 is unknown, which shouldn't freeze anything.
+	return DisplayServer.accessibility_should_reduce_animation() == 1
+
+
 ## Fredoka at `weight` (300–700), for titles, the wordmark and scores.
 ## `spacing` adds that many pixels between glyphs.
 static func title_font(weight: int = 600, spacing: int = 0) -> FontVariation:

@@ -36,13 +36,15 @@ func _init(screen) -> void:
 
 
 ## Counts the header score up to `target`. A new gain mid-tick carries on from
-## the number on screen, so the counter never jumps back.
+## the number on screen, so the counter never jumps back. Under Reduce Motion
+## it shows `target` at once.
 func tick_to(target: int) -> void:
-	if target == shown_score:
+	if _tween != null and target != shown_score:
+		_tween.kill()
+		_tween = null
+	if target == shown_score or UI.reduce_motion():
 		_set_shown(target)
 		return
-	if _tween != null:
-		_tween.kill()
 	_tween = host.create_tween()
 	_tween.tween_method(func(v: float) -> void: _set_shown(roundi(v)),
 		float(shown_score), float(target), SCORE_TICK_SECONDS) \
@@ -57,6 +59,13 @@ func snap() -> void:
 	_set_shown(host.game.score if host.game != null else 0)
 
 
+## Updates the header's best score, which stays hidden until a game has
+## finished (#118).
+func refresh_best() -> void:
+	host.best_row.visible = host.stats.has_best()
+	host.best_label.text = "BEST %s" % UI.format_number(maxi(host.stats.best_score, shown_score))
+
+
 ## The running count-up, or null. Tests step it by hand.
 func tween() -> Tween:
 	return _tween
@@ -65,11 +74,12 @@ func tween() -> Tween:
 func _set_shown(value: int) -> void:
 	shown_score = value
 	host.score_label.text = UI.format_number(value)
-	host.best_label.text = "BEST %s" % UI.format_number(maxi(host.stats.best_score, value))
+	refresh_best()
 
 
 ## Floating "+points" over the move, and a combo/streak banner when they apply.
-## Only line clears score, so a move that clears nothing shows nothing.
+## Only line clears score, so a move that clears nothing shows nothing. Under
+## Reduce Motion both fade out where they appear.
 func show_gain(result: Dictionary) -> void:
 	if int(result.score.total) <= 0:
 		return
@@ -85,8 +95,9 @@ func show_gain(result: Dictionary) -> void:
 	pop.reset_size()
 	pop.position = at - pop.size * 0.5
 	var pt := pop.create_tween().set_parallel()
-	pt.tween_property(pop, "position:y", pop.position.y - SCORE_POP_RISE, SCORE_POP_SECONDS) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	if not UI.reduce_motion():
+		pt.tween_property(pop, "position:y", pop.position.y - SCORE_POP_RISE, SCORE_POP_SECONDS) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	pt.tween_property(pop, "modulate:a", 0.0, SCORE_POP_SECONDS).set_ease(Tween.EASE_IN)
 	pt.chain().tween_callback(pop.queue_free)
 
@@ -105,9 +116,10 @@ func show_gain(result: Dictionary) -> void:
 	banner.position = Vector2(rect.get_center().x - banner.size.x * 0.5, rect.position.y + 56)
 	banner.pivot_offset = banner.size * 0.5
 	banner.rotation = deg_to_rad(-3.0)
-	banner.scale = Vector2(0.6, 0.6)
 	var bt := banner.create_tween()
-	bt.tween_property(banner, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if not UI.reduce_motion():
+		banner.scale = Vector2(0.6, 0.6)
+		bt.tween_property(banner, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	bt.tween_interval(BANNER_SECONDS)
 	bt.tween_property(banner, "modulate:a", 0.0, 0.3)
 	bt.tween_callback(banner.queue_free)
