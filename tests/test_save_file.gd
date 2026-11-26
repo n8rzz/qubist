@@ -8,19 +8,30 @@ const TEST_DIR := "user://test_saves/save_file"
 
 ## Collects every error and warning the engine logs while it's added with
 ## OS.add_logger().
-class ErrorLog extends Logger:
+class ErrorLog:
+	extends Logger
 	var entries: Array[String] = []
 
-	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
-			_editor_notify: bool, _error_type: Logger.ErrorType, _script_backtraces: Array[ScriptBacktrace]) -> void:
-		entries.append("%s (%s:%d %s)" % [rationale if rationale != "" else code, file, line, function])
+	func _log_error(
+		function: String,
+		file: String,
+		line: int,
+		code: String,
+		rationale: String,
+		_editor_notify: bool,
+		_error_type: Logger.ErrorType,
+		_script_backtraces: Array[ScriptBacktrace]
+	) -> void:
+		entries.append(
+			"%s (%s:%d %s)" % [rationale if rationale != "" else code, file, line, function]
+		)
 
 
 func test_json_array_reads_as_empty() -> void:
 	_clean_up()
 	var path := TEST_DIR + "/array.json"
 	# An array of objects is still not a save file's top-level object.
-	for text in ["[1, 2, 3]", "[]", "[{\"best_score\": 5}]"]:
+	for text in ["[1, 2, 3]", "[]", '[{"best_score": 5}]']:
 		check(_write_raw(path, text), "can create the test file")
 		check_eq(SaveFile.read(path), {}, "%s reads as {}" % text)
 	_clean_up()

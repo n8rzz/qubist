@@ -29,10 +29,19 @@ func test_same_seed_same_pieces() -> void:
 
 
 func test_zero_weight_is_never_dealt() -> void:
-	var cfg := Config.new({}, {"pieces": [
-		{"id": "never", "weight": 0.0, "cells": [[0, 0, 0]]},
-		{"id": "always", "weight": 1.0, "cells": [[0, 0, 0]]},
-	]})
+	var cfg := (
+		Config
+		. new(
+			{},
+			{
+				"pieces":
+				[
+					{"id": "never", "weight": 0.0, "cells": [[0, 0, 0]]},
+					{"id": "always", "weight": 1.0, "cells": [[0, 0, 0]]},
+				]
+			}
+		)
+	)
 	var dealer := Dealer.new(cfg.pieces, 3, 0, 7)
 	for _i in range(200):
 		check_eq(dealer.pick().id, "always")
@@ -41,17 +50,27 @@ func test_zero_weight_is_never_dealt() -> void:
 func test_rerolls_sets_that_cannot_be_placed() -> void:
 	# A 1-wide grid: "wide" never fits, "dot" always does. Most picks are
 	# "wide", so without rerolls many trays would be impossible.
-	var cfg := Config.new(
-		{"grid": {"width": 1, "depth": 1, "height": 2}, "dealer": {"max_rerolls": 50}},
-		{"pieces": [
-			{"id": "wide", "weight": 9.0, "cells": [[0, 0, 0], [1, 0, 0]]},
-			{"id": "dot", "weight": 1.0, "cells": [[0, 0, 0]]},
-		]})
+	var cfg := (
+		Config
+		. new(
+			{"grid": {"width": 1, "depth": 1, "height": 2}, "dealer": {"max_rerolls": 50}},
+			{
+				"pieces":
+				[
+					{"id": "wide", "weight": 9.0, "cells": [[0, 0, 0], [1, 0, 0]]},
+					{"id": "dot", "weight": 1.0, "cells": [[0, 0, 0]]},
+				]
+			}
+		)
+	)
 	var grid := Grid.new(1, 1, 2)
 	var dealer := Dealer.new(cfg.pieces, cfg.tray_size, cfg.max_rerolls, 3)
 	for _round in range(20):
 		var tray := dealer.deal(grid)
-		check(tray.any(func(p): return Rules.has_any_legal(grid, p)), "tray %s has no playable piece" % [_ids(tray)])
+		check(
+			tray.any(func(p): return Rules.has_any_legal(grid, p)),
+			"tray %s has no playable piece" % [_ids(tray)]
+		)
 
 
 ## On a full grid nothing fits, so every reroll fails. deal() still hands
@@ -79,10 +98,19 @@ func test_full_tray_when_every_reroll_fails() -> void:
 
 
 func test_picks_follow_the_weights() -> void:
-	var cfg := Config.new({}, {"pieces": [
-		{"id": "heavy", "weight": 3.0, "cells": [[0, 0, 0]]},
-		{"id": "light", "weight": 1.0, "cells": [[0, 0, 0]]},
-	]})
+	var cfg := (
+		Config
+		. new(
+			{},
+			{
+				"pieces":
+				[
+					{"id": "heavy", "weight": 3.0, "cells": [[0, 0, 0]]},
+					{"id": "light", "weight": 1.0, "cells": [[0, 0, 0]]},
+				]
+			}
+		)
+	)
 	var dealer := Dealer.new(cfg.pieces, 3, 0, 21)
 	const PICKS := 4000
 	var heavy := 0
@@ -92,4 +120,7 @@ func test_picks_follow_the_weights() -> void:
 	var share := float(heavy) / PICKS
 	# Expect 75%. One standard deviation is under 1%, so 5% either way is
 	# generous.
-	check(share > 0.70 and share < 0.80, "heavy was picked %.1f%% of the time, expected about 75%%" % (share * 100.0))
+	check(
+		share > 0.70 and share < 0.80,
+		"heavy was picked %.1f%% of the time, expected about 75%%" % (share * 100.0)
+	)

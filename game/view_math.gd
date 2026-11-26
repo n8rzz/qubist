@@ -20,12 +20,32 @@ const MODE_X := 0
 const MODE_Y := 1
 const MODE_Z := 2
 
+## The six face directions of a cube, in core space.
+const FACE_DIRS: Array[Vector3i] = [
+	Vector3i(1, 0, 0),
+	Vector3i(-1, 0, 0),
+	Vector3i(0, 1, 0),
+	Vector3i(0, -1, 0),
+	Vector3i(0, 0, 1),
+	Vector3i(0, 0, -1)
+]
+
+## Grid ticks (#56): short marks on the tower's border, one per cell along
+## the top rim and the base's lip and one per layer on each corner post.
+## Every MAJOR_TICK_EVERY-th mark is a longer major tick. Kept short, and one
+## mark per post rather than one into each wall, so they don't crowd the
+## playfield (#256).
+const MAJOR_TICK_EVERY := 3
+const TICK_LENGTH := 0.12
+const MAJOR_TICK_LENGTH := 0.22
+## Floor ticks lie on the base's lip, which is half a cube wide.
+const FLOOR_TICK_MAX := 0.42
+## Floor ticks sit just above the base, like the floor grid.
+const FLOOR_TICK_LIFT := 0.005
+
 
 static func to_world(c: Vector3i, grid_size: Vector3i) -> Vector3:
-	return Vector3(
-		c.x - (grid_size.x - 1) * 0.5,
-		c.z + 0.5,
-		c.y - (grid_size.y - 1) * 0.5)
+	return Vector3(c.x - (grid_size.x - 1) * 0.5, c.z + 0.5, c.y - (grid_size.y - 1) * 0.5)
 
 
 static func cells_center(cells: Array, grid_size: Vector3i) -> Vector3:
@@ -96,7 +116,9 @@ static func layer_from_viewer(c: Vector3i, mode: int, step: int, grid_size: Vect
 
 ## True if the swiper, cut `depth` layers deep, hides this cell. Depth 0 shows
 ## the whole tower.
-static func is_sliced_away(c: Vector3i, mode: int, step: int, grid_size: Vector3i, depth: int) -> bool:
+static func is_sliced_away(
+	c: Vector3i, mode: int, step: int, grid_size: Vector3i, depth: int
+) -> bool:
 	return depth > 0 and layer_from_viewer(c, mode, step, grid_size) < depth
 
 
@@ -139,7 +161,8 @@ static func preview_point(p: Vector3, step: int) -> Vector2:
 	var pitch := deg_to_rad(PITCH_DEG)
 	return Vector2(
 		ground.dot(screen_right(step)),
-		ground.dot(toward_camera(step)) * sin(pitch) - p.z * cos(pitch))
+		ground.dot(toward_camera(step)) * sin(pitch) - p.z * cos(pitch)
+	)
 
 
 ## How many steps each cleared cell is from the nearest placed cell, as a
@@ -163,13 +186,6 @@ static func ripple_steps(cleared: Array, placed: Array) -> Dictionary:
 ## corners c to c + (1, 1, 1).
 static func corner_to_world(p: Vector3i, grid_size: Vector3i) -> Vector3:
 	return Vector3(p.x - grid_size.x * 0.5, p.z, p.y - grid_size.y * 0.5)
-
-
-## The six face directions of a cube, in core space.
-const FACE_DIRS: Array[Vector3i] = [
-	Vector3i(1, 0, 0), Vector3i(-1, 0, 0),
-	Vector3i(0, 1, 0), Vector3i(0, -1, 0),
-	Vector3i(0, 0, 1), Vector3i(0, 0, -1)]
 
 
 ## Faces of `cells` that don't touch another cell of the same set, as
@@ -231,20 +247,6 @@ static func piece_edges(cells: Array) -> Dictionary:
 	return {"outer": outer, "inner": inner}
 
 
-## Grid ticks (#56): short marks on the tower's border, one per cell along
-## the top rim and the base's lip and one per layer on each corner post.
-## Every MAJOR_TICK_EVERY-th mark is a longer major tick. Kept short, and one
-## mark per post rather than one into each wall, so they don't crowd the
-## playfield (#256).
-const MAJOR_TICK_EVERY := 3
-const TICK_LENGTH := 0.12
-const MAJOR_TICK_LENGTH := 0.22
-## Floor ticks lie on the base's lip, which is half a cube wide.
-const FLOOR_TICK_MAX := 0.42
-## Floor ticks sit just above the base, like the floor grid.
-const FLOOR_TICK_LIFT := 0.005
-
-
 ## World-space line segments for the grid ticks, as consecutive endpoint
 ## pairs: {"minor": Array[Vector3], "major": Array[Vector3]}.
 static func border_ticks(grid_size: Vector3i) -> Dictionary:
@@ -297,11 +299,14 @@ static func _edge_point(axis: int, along: float, across: float, height: float) -
 
 # --- Tower crumble (#132) ---
 
+
 ## Seconds after the shake that each cube breaks when the tower crumbles:
 ## the top layer goes first and each layer below follows `layer_seconds`
 ## later. `jitter` (one value in 0..1 per cube, in the same order as
 ## `cells`) staggers cubes within a layer by up to `jitter_seconds`.
-static func crumble_starts(cells: Array, jitter: Array, layer_seconds: float, jitter_seconds: float) -> Array[float]:
+static func crumble_starts(
+	cells: Array, jitter: Array, layer_seconds: float, jitter_seconds: float
+) -> Array[float]:
 	var top := 0
 	for c in cells:
 		top = maxi(top, (c as Vector3i).z)
@@ -316,7 +321,9 @@ static func crumble_starts(cells: Array, jitter: Array, layer_seconds: float, ji
 ## leaving `fill` cubic units of rubble, heaped in a cone of `radius`.
 ## Clamped to `low`..`high` so a few cubes still make a visible heap and a
 ## full tower doesn't bury the camera.
-static func rubble_peak(cube_count: int, radius: float, fill: float, low: float, high: float) -> float:
+static func rubble_peak(
+	cube_count: int, radius: float, fill: float, low: float, high: float
+) -> float:
 	if cube_count <= 0 or radius <= 0.0:
 		return 0.0
 	var volume := cube_count * fill

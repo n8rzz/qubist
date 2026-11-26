@@ -12,8 +12,18 @@ const TIMES: Array[String] = ["sunrise", "day", "sunset", "night"]
 
 ## Northern-hemisphere season for each month, January first.
 const MONTH_SEASONS: Array[String] = [
-	"winter", "winter", "spring", "spring", "spring", "summer",
-	"summer", "summer", "fall", "fall", "fall", "winter",
+	"winter",
+	"winter",
+	"spring",
+	"spring",
+	"spring",
+	"summer",
+	"summer",
+	"summer",
+	"fall",
+	"fall",
+	"fall",
+	"winter",
 ]
 
 ## Typical sunrise and sunset, in minutes after midnight, by season.
@@ -31,10 +41,38 @@ const GLOW_AFTER := 60
 ## Region codes (from the locale, e.g. "en_AU") of countries that lie mostly
 ## south of the equator.
 const SOUTHERN_REGIONS: Array[String] = [
-	"AR", "AU", "BO", "BR", "BW", "CL", "FJ", "ID", "LS", "MG", "MU", "MW",
-	"MZ", "NA", "NC", "NZ", "PE", "PG", "PY", "SZ", "TO", "UY", "WS", "ZA",
-	"ZM", "ZW",
+	"AR",
+	"AU",
+	"BO",
+	"BR",
+	"BW",
+	"CL",
+	"FJ",
+	"ID",
+	"LS",
+	"MG",
+	"MU",
+	"MW",
+	"MZ",
+	"NA",
+	"NC",
+	"NZ",
+	"PE",
+	"PG",
+	"PY",
+	"SZ",
+	"TO",
+	"UY",
+	"WS",
+	"ZA",
+	"ZM",
+	"ZW",
 ]
+
+## Christmas (#198): Santa flies over the sky from CHRISTMAS_FIRST to
+## CHRISTMAS_LAST December, everywhere, whatever the season.
+const CHRISTMAS_FIRST := 20
+const CHRISTMAS_LAST := 26
 
 
 ## The season for a 1-based `month`.
@@ -78,12 +116,6 @@ static func view_at(datetime: Dictionary, locale: String) -> Array[String]:
 ## [season, time of day] right now, on this device.
 static func now() -> Array[String]:
 	return view_at(Time.get_datetime_dict_from_system(), OS.get_locale())
-
-
-## Christmas (#198): Santa flies over the sky from CHRISTMAS_FIRST to
-## CHRISTMAS_LAST December, everywhere, whatever the season.
-const CHRISTMAS_FIRST := 20
-const CHRISTMAS_LAST := 26
 
 
 ## Whether `datetime` (a Time.get_datetime_dict_from_system() dictionary)

@@ -70,10 +70,22 @@ func test_southern_locales() -> void:
 
 func test_view_at_a_moment() -> void:
 	var july_evening := {"year": 2026, "month": 7, "day": 4, "hour": 22, "minute": 0}
-	check_eq(SkyClock.view_at(july_evening, "en_US"), ["summer", "night"] as Array[String], "US, July 22:00")
-	check_eq(SkyClock.view_at(july_evening, "en_AU"), ["winter", "night"] as Array[String], "Australia, July 22:00")
+	check_eq(
+		SkyClock.view_at(july_evening, "en_US"),
+		["summer", "night"] as Array[String],
+		"US, July 22:00"
+	)
+	check_eq(
+		SkyClock.view_at(july_evening, "en_AU"),
+		["winter", "night"] as Array[String],
+		"Australia, July 22:00"
+	)
 	var spring_noon := {"year": 2026, "month": 4, "day": 1, "hour": 12, "minute": 0}
-	check_eq(SkyClock.view_at(spring_noon, "fr_FR"), ["spring", "day"] as Array[String], "France, April noon")
+	check_eq(
+		SkyClock.view_at(spring_noon, "fr_FR"),
+		["spring", "day"] as Array[String],
+		"France, April noon"
+	)
 
 
 func test_christmas_runs_from_the_20th_to_the_26th_of_december() -> void:

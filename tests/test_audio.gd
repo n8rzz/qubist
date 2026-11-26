@@ -19,7 +19,11 @@ func test_chime_rises_with_combo_size() -> void:
 		check(pitch > last, "%d lines rings higher than %d" % [lines, lines - 1])
 		last = pitch
 	check_eq(Audio.chime_pitch(3), pow(2.0, 7 / 12.0), "three lines is a fifth up")
-	check_eq(Audio.chime_pitch(99), Audio.chime_pitch(Audio.CHIME_SEMITONES.size()), "huge combos stay on the top note")
+	check_eq(
+		Audio.chime_pitch(99),
+		Audio.chime_pitch(Audio.CHIME_SEMITONES.size()),
+		"huge combos stay on the top note"
+	)
 	check_eq(Audio.chime_pitch(0), 1.0, "out of range falls back to the base note")
 
 
@@ -43,10 +47,16 @@ func test_clear_alternates_crumbles_and_pitches_the_chime() -> void:
 	check_eq(started.size(), 2, "a crumble and a chime")
 	check_eq(started[0], [audio.crumble_player, Audio.CRUMBLES[0]])
 	check_eq(started[1], [audio.chime_player, Audio.CHIME])
-	check(is_equal_approx(audio.chime_player.pitch_scale, Audio.chime_pitch(1)), "base chime for one line")
+	check(
+		is_equal_approx(audio.chime_player.pitch_scale, Audio.chime_pitch(1)),
+		"base chime for one line"
+	)
 	audio.clear(3)
 	check_eq(started[2], [audio.crumble_player, Audio.CRUMBLES[1]], "the other crumble")
-	check(is_equal_approx(audio.chime_player.pitch_scale, Audio.chime_pitch(3)), "higher chime for a bigger combo")
+	check(
+		is_equal_approx(audio.chime_player.pitch_scale, Audio.chime_pitch(3)),
+		"higher chime for a bigger combo"
+	)
 	audio.clear(0)
 	check_eq(started.size(), 4, "no lines, no sound")
 	audio.free()
@@ -79,7 +89,10 @@ func test_volumes_scale_their_own_players() -> void:
 	check_eq(audio.music_db(), Audio.MUSIC_DB, "music untouched by the effects volume")
 	audio.music_volume = 0.0
 	check_eq(audio.music_db(), Audio.MUSIC_DB - 80.0, "silent at zero")
-	check(is_equal_approx(audio.clack_player.volume_db, Audio.CLACK_DB + offset), "effects untouched by the music volume")
+	check(
+		is_equal_approx(audio.clack_player.volume_db, Audio.CLACK_DB + offset),
+		"effects untouched by the music volume"
+	)
 	audio.sound_effects_volume = 2.0
 	check_eq(audio.sound_effects_volume, 1.0, "clamped to full")
 	check_eq(audio.chime_player.volume_db, Audio.CHIME_DB, "back to the level")
@@ -142,4 +155,3 @@ func test_next_track_announces_its_title() -> void:
 	check_eq(audio.track_title(), info.title)
 	check_eq(audio.track_artist(), info.artist)
 	audio.free()
-

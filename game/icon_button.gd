@@ -25,10 +25,25 @@ func _draw() -> void:
 	match kind:
 		"home":
 			# A roof over an open-bottomed house, as on the Settings sheet's Home row.
-			draw_polyline(PackedVector2Array([c + Vector2(-8, -1), c + Vector2(0, -8), c + Vector2(8, -1)]),
-				ink, 2.0, true)
-			draw_polyline(PackedVector2Array([c + Vector2(-6, -2.5), c + Vector2(-6, 8),
-				c + Vector2(6, 8), c + Vector2(6, -2.5)]), ink, 2.0, true)
+			draw_polyline(
+				PackedVector2Array([c + Vector2(-8, -1), c + Vector2(0, -8), c + Vector2(8, -1)]),
+				ink,
+				2.0,
+				true
+			)
+			draw_polyline(
+				PackedVector2Array(
+					[
+						c + Vector2(-6, -2.5),
+						c + Vector2(-6, 8),
+						c + Vector2(6, 8),
+						c + Vector2(6, -2.5)
+					]
+				),
+				ink,
+				2.0,
+				true
+			)
 		"settings":
 			draw_line(c + Vector2(-8, -4), c + Vector2(8, -4), ink, 2.0)
 			draw_line(c + Vector2(-8, 4), c + Vector2(8, 4), ink, 2.0)
@@ -38,20 +53,32 @@ func _draw() -> void:
 			for bar in [Vector2(-7, 10), Vector2(0, 16), Vector2(7, 7)]:
 				draw_line(c + Vector2(bar.x, 8), c + Vector2(bar.x, 8 - bar.y), ink, 2.0, true)
 		"back":
-			draw_polyline(PackedVector2Array([c + Vector2(4, -8), c + Vector2(-4, 0), c + Vector2(4, 8)]),
-				ink, 2.0, true)
+			draw_polyline(
+				PackedVector2Array([c + Vector2(4, -8), c + Vector2(-4, 0), c + Vector2(4, 8)]),
+				ink,
+				2.0,
+				true
+			)
 		"undo":
 			# A hook arrow: a line runs left into an arrowhead, its tail
 			# curving back up and round from the right.
 			draw_arc(c + Vector2(1, 1), 6.0, -PI * 0.5, PI * 0.5, 24, ink, 2.0, true)
 			draw_line(c + Vector2(1, -5), c + Vector2(-7, -5), ink, 2.0, true)
 			draw_line(c + Vector2(1, 7), c + Vector2(-4, 7), ink, 2.0, true)
-			draw_polyline(PackedVector2Array([c + Vector2(-3, -9), c + Vector2(-7, -5), c + Vector2(-3, -1)]),
-				ink, 2.0, true)
+			draw_polyline(
+				PackedVector2Array([c + Vector2(-3, -9), c + Vector2(-7, -5), c + Vector2(-3, -1)]),
+				ink,
+				2.0,
+				true
+			)
 		"next":
 			# Skip to the next track (#166): a play triangle up against a bar.
-			draw_colored_polygon(PackedVector2Array([c + Vector2(-6, -6.5), c + Vector2(3, 0),
-				c + Vector2(-6, 6.5)]), ink)
+			draw_colored_polygon(
+				PackedVector2Array(
+					[c + Vector2(-6, -6.5), c + Vector2(3, 0), c + Vector2(-6, 6.5)]
+				),
+				ink
+			)
 			draw_line(c + Vector2(5.5, -6.5), c + Vector2(5.5, 6.5), ink, 2.4, true)
 		"close":
 			draw_line(c + Vector2(-6, -6), c + Vector2(6, 6), ink, 2.0, true)

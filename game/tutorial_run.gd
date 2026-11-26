@@ -7,6 +7,8 @@ extends RefCounted
 ## along with the camera. Reads and drives the screen through `host`
 ## (game/main.gd), like the drag controller.
 
+signal finished(completed: bool)
+
 const Tutorial := preload("res://core/tutorial.gd")
 const ViewMath := preload("res://game/view_math.gd")
 const DragController := preload("res://game/drag_controller.gd")
@@ -16,8 +18,6 @@ const CameraRig := preload("res://game/camera_rig.gd")
 const NEXT_STEP_SECONDS := 0.45
 ## Padding around a lit control, in points.
 const HOLE_PAD := 6.0
-
-signal finished(completed: bool)
 
 ## The game screen (game/main.gd).
 var host
@@ -161,9 +161,11 @@ func move_finished() -> void:
 	if not is_active() or not _moving:
 		return
 	var at := step
-	host.get_tree().create_timer(NEXT_STEP_SECONDS).timeout.connect(func():
-		if step == at and _moving:
-			advance())
+	host.get_tree().create_timer(NEXT_STEP_SECONDS).timeout.connect(
+		func():
+			if step == at and _moving:
+				advance()
+	)
 
 
 ## Goes on to the next step, or ends the tutorial after the last. Called a
@@ -186,8 +188,17 @@ func update() -> void:
 	var tower_rect: Rect2 = host.viewport_box.get_global_rect()
 	var slot_rect: Rect2 = host.tray_slots[0].get_global_rect()
 	var turning: bool = host.tower.rig.is_turning()
-	var key := [step, found, _moving, turning, host.tower.rig.view_step(),
-		tower_rect, slot_rect, host.swiper.depth, host.tutorial_overlay.size]
+	var key := [
+		step,
+		found,
+		_moving,
+		turning,
+		host.tower.rig.view_step(),
+		tower_rect,
+		slot_rect,
+		host.swiper.depth,
+		host.tutorial_overlay.size
+	]
 	if key == _layout_key:
 		return
 	_layout_key = key
@@ -197,11 +208,18 @@ func update() -> void:
 	if data.hidden and not found:
 		# Light only the view controls, and ring the one to press.
 		var turn_right: Rect2 = host.rotate_buttons[1].get_global_rect()
-		overlay.set_spotlight([
-			[host.rotate_buttons[0].get_global_rect().grow(HOLE_PAD), 28 + HOLE_PAD],
-			[turn_right.grow(HOLE_PAD), 28 + HOLE_PAD],
-			[host.swiper_bar.get_global_rect().grow(HOLE_PAD), 28 + HOLE_PAD],
-		], turn_right, 28)
+		(
+			overlay
+			. set_spotlight(
+				[
+					[host.rotate_buttons[0].get_global_rect().grow(HOLE_PAD), 28 + HOLE_PAD],
+					[turn_right.grow(HOLE_PAD), 28 + HOLE_PAD],
+					[host.swiper_bar.get_global_rect().grow(HOLE_PAD), 28 + HOLE_PAD],
+				],
+				turn_right,
+				28
+			)
+		)
 		overlay.place_card_above(turn_right)
 		overlay.show_hand_tap(turn_right.get_center() + Vector2(4, 10))
 		return
@@ -225,7 +243,14 @@ func update() -> void:
 ## piece floats DragController.LIFT above the finger.
 func target_finger() -> Vector2:
 	var data := Tutorial.step(step)
-	var piece = host.game.tray[0] if host.game.tray[0] != null else host.config.piece_by_size(data.piece_size)
+	var piece = (
+		host.game.tray[0]
+		if host.game.tray[0] != null
+		else host.config.piece_by_size(data.piece_size)
+	)
 	var center := ViewMath.cells_center(piece.cells_at(data.target), host.config.grid_size)
-	return host.viewport_box.get_global_rect().position + host.tower.project_point(center) \
+	return (
+		host.viewport_box.get_global_rect().position
+		+ host.tower.project_point(center)
 		+ Vector2(0, DragController.LIFT)
+	)

@@ -10,7 +10,10 @@ func test_restore_wraps_the_step_into_0_to_3() -> void:
 		rig.restore(pair[0], CameraRig.DEFAULT_ZOOM)
 		check_eq(rig.view_step(), pair[1], "step %d" % pair[0])
 		# rotation is stored as 32-bit floats, so compare loosely.
-		check(is_equal_approx(rig.rotation.y, ViewMath.yaw_for_step(pair[1])), "yaw for step %d" % pair[0])
+		check(
+			is_equal_approx(rig.rotation.y, ViewMath.yaw_for_step(pair[1])),
+			"yaw for step %d" % pair[0]
+		)
 	rig.free()
 
 

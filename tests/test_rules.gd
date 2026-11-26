@@ -17,6 +17,7 @@ func _piece(key):
 
 # --- Placement ---
 
+
 func test_floor_placement_is_legal() -> void:
 	check(Rules.can_place(_grid(), _piece(BAR2_X), Vector3i(0, 0, 0)))
 
@@ -129,6 +130,7 @@ func test_cube_blocked_by_checkerboard() -> void:
 
 
 # --- Lines ---
+
 
 func test_full_x_line() -> void:
 	var g = _grid()

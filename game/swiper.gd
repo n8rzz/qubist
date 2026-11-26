@@ -90,6 +90,7 @@ func toward_viewer(step: int) -> Vector3i:
 
 # --- Sweep plane ---
 
+
 ## Marks the swiper as just moved, so the sweep plane shows and then fades.
 func bump() -> void:
 	_sweep_hold = SWEEP_HOLD_SECONDS

@@ -6,14 +6,14 @@ extends Control
 ## the view fades out and frees itself, leaving the game screen as the
 ## current scene.
 
+signal finished
+
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
 const SkyView := preload("res://game/sky_view.gd")
 const Settings := preload("res://core/settings.gd")
 const SaveFile := preload("res://core/save_file.gd")
 const LoadingArt := preload("res://game/loading_art.gd")
 const UI := preload("res://game/ui_style.gd")
-
-signal finished
 
 const MAIN_SCENE := "res://scenes/main.tscn"
 ## The view stays up at least this long, even when the game is ready sooner.
@@ -130,9 +130,11 @@ func _finish() -> void:
 	bar_fill.size.x = BAR_SIZE.x
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, FADE_SECONDS)
-	tween.tween_callback(func():
-		finished.emit()
-		queue_free())
+	tween.tween_callback(
+		func():
+			finished.emit()
+			queue_free()
+	)
 
 
 func _build() -> void:
@@ -163,13 +165,20 @@ func _build() -> void:
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", 14)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var wordmark: Label = SkyView.ink(UI.label("Qubist", 56, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
+	var wordmark: Label = (
+		SkyView.ink(UI.label("Qubist", 56, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
+	)
 	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	title.add_child(_build_bar())
 	column.add_child(title)
 
-	var tip_label: Label = SkyView.muted(UI.label(TIPS[randi() % TIPS.size()], 14, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)) as Label
+	var tip_label: Label = (
+		SkyView.muted(
+			UI.label(TIPS[randi() % TIPS.size()], 14, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+		)
+		as Label
+	)
 	tip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tip_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	tip_label.offset_left = 32

@@ -42,9 +42,8 @@ static func load_json(path: String) -> Dictionary:
 func apply(game_data: Dictionary, pieces_data: Dictionary) -> void:
 	var grid: Dictionary = game_data.get("grid", {})
 	grid_size = Vector3i(
-		int(grid.get("width", 6)),
-		int(grid.get("depth", 6)),
-		int(grid.get("height", 12)))
+		int(grid.get("width", 6)), int(grid.get("depth", 6)), int(grid.get("height", 12))
+	)
 	tray_size = int(game_data.get("tray_size", 3))
 
 	var dealer: Dictionary = game_data.get("dealer", {})
@@ -84,12 +83,17 @@ static func _expand(entry: Dictionary) -> Array:
 		var cells: Array = []
 		for c in turns[i]:
 			cells.append([c.x, c.y, c.z])
-		out.append({
-			"id": "%s_%02d" % [id, i],
-			"shape": str(entry.get("shape", id)),
-			"weight": weight,
-			"cells": cells,
-		})
+		(
+			out
+			. append(
+				{
+					"id": "%s_%02d" % [id, i],
+					"shape": str(entry.get("shape", id)),
+					"weight": weight,
+					"cells": cells,
+				}
+			)
+		)
 	return out
 
 

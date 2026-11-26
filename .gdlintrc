@@ -1,0 +1,4 @@
+disable: []
+max-file-lines: 1300
+max-public-methods: 40
+max-returns: 8

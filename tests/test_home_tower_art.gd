@@ -17,9 +17,15 @@ func test_towers_fit_the_grid_without_overlaps() -> void:
 		var loop := _loop(seed)
 		var seen := {}
 		check(loop.placements.size() > 0, "seed %d built nothing" % seed)
-		check(loop.placements.size() <= HomeTowerArt.MAX_PIECES, "seed %d placed too many pieces" % seed)
+		check(
+			loop.placements.size() <= HomeTowerArt.MAX_PIECES,
+			"seed %d placed too many pieces" % seed
+		)
 		for c: Vector3i in loop.cells:
-			check(c.x >= 0 and c.x < 6 and c.y >= 0 and c.y < 6, "seed %d put %s off the floor" % [seed, c])
+			check(
+				c.x >= 0 and c.x < 6 and c.y >= 0 and c.y < 6,
+				"seed %d put %s off the floor" % [seed, c]
+			)
 			check(c.z >= 0 and c.z < HomeTowerArt.MAX_LAYERS, "seed %d put %s too high" % [seed, c])
 			check(not seen.has(c), "seed %d placed %s twice" % [seed, c])
 			seen[c] = true
@@ -45,8 +51,13 @@ func test_pieces_take_turns() -> void:
 	var last_end := 0.0
 	for placement in loop.placements:
 		check(placement.start >= last_end, "a ghost showed before the piece ahead of it landed")
-		check(is_equal_approx(placement.end - placement.start,
-			HomeTowerArt.GHOST_SECONDS + HomeTowerArt.DROP_SECONDS), "a piece took the wrong time to place")
+		check(
+			is_equal_approx(
+				placement.end - placement.start,
+				HomeTowerArt.GHOST_SECONDS + HomeTowerArt.DROP_SECONDS
+			),
+			"a piece took the wrong time to place"
+		)
 		last_end = placement.end
 	check(loop.build_end >= last_end, "the build ended before the last piece landed")
 
@@ -64,23 +75,46 @@ func test_crumble_breaks_from_the_top_down() -> void:
 		var brk: float = loop.breaks[i]
 		check(brk >= shake_end, "a cube broke during the shake")
 		var layer_start := shake_end + (top - c.z) * HomeTowerArt.LAYER_SECONDS
-		check(brk >= layer_start - 0.0001 and brk <= layer_start + HomeTowerArt.JITTER_SECONDS + 0.0001,
-			"cube %s broke out of its layer's turn" % c)
+		check(
+			(
+				brk >= layer_start - 0.0001
+				and brk <= layer_start + HomeTowerArt.JITTER_SECONDS + 0.0001
+			),
+			"cube %s broke out of its layer's turn" % c
+		)
 
 
 ## Chips land on the floor's heap and the loop ends after the rubble fades.
 func test_chips_land_on_the_heap() -> void:
 	for seed in range(10):
 		var loop := _loop(seed)
-		check(loop.chips.size() == loop.cells.size() * HomeTowerArt.CHIPS_PER_CUBE, "seed %d is missing chips" % seed)
+		check(
+			loop.chips.size() == loop.cells.size() * HomeTowerArt.CHIPS_PER_CUBE,
+			"seed %d is missing chips" % seed
+		)
 		for chip in loop.chips:
 			var rest: Vector3 = chip.rest
-			check(Vector2(rest.x, rest.y).distance_to(Vector2(3, 3)) <= HomeTowerArt.HEAP_RADIUS + 0.001,
-				"seed %d dropped a chip off the heap" % seed)
-			check(chip.start_time + chip.fall <= loop.settled + 0.0001, "seed %d settled before a chip landed" % seed)
-			check(HomeTowerArt.chip_position(chip, chip.start_time + chip.fall + 1.0).is_equal_approx(rest),
-				"seed %d left a chip short of its rest spot" % seed)
-		check(loop.loop_end > loop.fade_at and loop.fade_at > loop.settled, "seed %d ends out of order" % seed)
+			check(
+				(
+					Vector2(rest.x, rest.y).distance_to(Vector2(3, 3))
+					<= HomeTowerArt.HEAP_RADIUS + 0.001
+				),
+				"seed %d dropped a chip off the heap" % seed
+			)
+			check(
+				chip.start_time + chip.fall <= loop.settled + 0.0001,
+				"seed %d settled before a chip landed" % seed
+			)
+			check(
+				HomeTowerArt.chip_position(chip, chip.start_time + chip.fall + 1.0).is_equal_approx(
+					rest
+				),
+				"seed %d left a chip short of its rest spot" % seed
+			)
+		check(
+			loop.loop_end > loop.fade_at and loop.fade_at > loop.settled,
+			"seed %d ends out of order" % seed
+		)
 
 
 func test_chips_start_where_their_cube_stood() -> void:
@@ -89,7 +123,10 @@ func test_chips_start_where_their_cube_stood() -> void:
 		var chip: Dictionary = loop.chips[n]
 		var c: Vector3i = loop.cells[n / HomeTowerArt.CHIPS_PER_CUBE]
 		var at := HomeTowerArt.chip_position(chip, chip.start_time)
-		check(at.distance_to(Vector3(c) + Vector3.ONE * 0.5) < 0.5, "a chip started away from its cube")
+		check(
+			at.distance_to(Vector3(c) + Vector3.ONE * 0.5) < 0.5,
+			"a chip started away from its cube"
+		)
 
 
 func test_phases_follow_the_loop() -> void:

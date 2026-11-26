@@ -6,9 +6,9 @@ extends Control
 ##
 ## game/tutorial_run.gd decides what goes where; this only draws it.
 
-const UI := preload("res://game/ui_style.gd")
-
 signal skip_pressed
+
+const UI := preload("res://game/ui_style.gd")
 
 const DIM := Color(UI.DIM_INK, 0.55)
 const HIGHLIGHT := Color("#FFC94D")
@@ -31,7 +31,13 @@ const HAND_TILT_DEG := -18.0
 const HAND_DRAG_SECONDS := 1.1
 
 ## The design's hand: white with an ink outline (24-unit grid).
-const HAND_SVG := """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#22313F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 10V4.5a1.5 1.5 0 0 1 3 0V11M15 10.5V6.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7L3 14.5a1.6 1.6 0 0 1 2.6-1.9L9 15V8.5"/></svg>"""
+const HAND_SVG := """
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+	fill="#FFFFFF" stroke="#22313F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+	<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 10V4.5a1.5 1.5 0 0 1 3 0V11
+		M15 10.5V6.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7
+		L3 14.5a1.6 1.6 0 0 1 2.6-1.9L9 15V8.5"/>
+</svg>"""
 
 var spotlight: Spotlight
 var ring: Ring
@@ -140,8 +146,7 @@ func set_progress(index: int, count: int) -> void:
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		dot.custom_minimum_size = Vector2(22 if i == index else 8, 8)
 		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		dot.add_theme_stylebox_override("panel",
-			UI.box(HIGHLIGHT if i == index else DOT, 4))
+		dot.add_theme_stylebox_override("panel", UI.box(HIGHLIGHT if i == index else DOT, 4))
 		dots.add_child(dot)
 	step_label.text = "Step %d of %d" % [index + 1, count]
 
@@ -164,8 +169,11 @@ func place_card_above(target: Rect2) -> void:
 	var left := size.x - UI.SIDE_MARGIN - CARD_WIDTH
 	var bottom := target.position.y - CARD_GAP - TAIL_SIZE.y
 	_place_card(left, bottom, Control.GROW_DIRECTION_BEGIN)
-	var tail_x := clampf(target.get_center().x - TAIL_SIZE.x * 0.5,
-		left + CARD_RADIUS, left + CARD_WIDTH - CARD_RADIUS - TAIL_SIZE.x)
+	var tail_x := clampf(
+		target.get_center().x - TAIL_SIZE.x * 0.5,
+		left + CARD_RADIUS,
+		left + CARD_WIDTH - CARD_RADIUS - TAIL_SIZE.x
+	)
 	tail.position = Vector2(tail_x, bottom - 1)
 	tail.size = TAIL_SIZE + Vector2(0, 1)
 	tail.visible = true
@@ -198,8 +206,12 @@ func show_hand_drag(from: Vector2, to: Vector2) -> void:
 	_restart_hand(from)
 	_hand_tween.tween_property(hand, "modulate:a", 1.0, 0.2)
 	_hand_tween.tween_property(hand, "scale", Vector2(0.88, 0.88), 0.15)
-	_hand_tween.tween_property(hand, "position", to - HAND_TIP, HAND_DRAG_SECONDS) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	(
+		_hand_tween
+		. tween_property(hand, "position", to - HAND_TIP, HAND_DRAG_SECONDS)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_IN_OUT)
+	)
 	_hand_tween.tween_property(hand, "scale", Vector2.ONE, 0.15)
 	_hand_tween.tween_property(hand, "modulate:a", 0.0, 0.25).set_delay(0.2)
 	_hand_tween.tween_interval(0.4)
@@ -320,6 +332,13 @@ class Tail:
 		visible = false
 
 	func _draw() -> void:
-		draw_colored_polygon(PackedVector2Array([
-			Vector2.ZERO, Vector2(size.x, 0), Vector2(size.x * 0.5, size.y),
-		]), UI.WHITE)
+		draw_colored_polygon(
+			PackedVector2Array(
+				[
+					Vector2.ZERO,
+					Vector2(size.x, 0),
+					Vector2(size.x * 0.5, size.y),
+				]
+			),
+			UI.WHITE
+		)

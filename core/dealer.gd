@@ -15,7 +15,9 @@ var _pieces: Array = []
 var _total_weight := 0.0
 
 
-func _init(pieces: Array, p_tray_size: int = 3, p_max_rerolls: int = 5, seed_value: int = -1) -> void:
+func _init(
+	pieces: Array, p_tray_size: int = 3, p_max_rerolls: int = 5, seed_value: int = -1
+) -> void:
 	assert(not pieces.is_empty(), "Dealer needs at least one piece")
 	_pieces = pieces
 	tray_size = p_tray_size

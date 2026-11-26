@@ -33,8 +33,18 @@ const DrawUtil := preload("res://game/draw_util.gd")
 ## band that starts CLOUD_TOP points down. x stretches with the width.
 const CLOUD_TOP := 70.0
 const CLOUDS := [
-	[0.85, [Vector2(54, 62), Vector2(38, 13)], [Vector2(74, 52), Vector2(22, 15)], [Vector2(44, 54), Vector2(15, 11)]],
-	[0.7, [Vector2(330, 150), Vector2(44, 12)], [Vector2(312, 140), Vector2(20, 13)], [Vector2(344, 138), Vector2(17, 11)]],
+	[
+		0.85,
+		[Vector2(54, 62), Vector2(38, 13)],
+		[Vector2(74, 52), Vector2(22, 15)],
+		[Vector2(44, 54), Vector2(15, 11)]
+	],
+	[
+		0.7,
+		[Vector2(330, 150), Vector2(44, 12)],
+		[Vector2(312, 140), Vector2(20, 13)],
+		[Vector2(344, 138), Vector2(17, 11)]
+	],
 	[0.55, [Vector2(300, 40), Vector2(24, 7)], [Vector2(292, 35), Vector2(11, 7)]],
 ]
 
@@ -133,8 +143,12 @@ func _draw() -> void:
 		var bottom := stops[i] * size.y
 		var a := SkyView.sky_color(stops[i - 1])
 		var b := SkyView.sky_color(stops[i])
-		draw_polygon(PackedVector2Array([Vector2(0, top), Vector2(w, top), Vector2(w, bottom), Vector2(0, bottom)]),
-			PackedColorArray([a, a, b, b]))
+		draw_polygon(
+			PackedVector2Array(
+				[Vector2(0, top), Vector2(w, top), Vector2(w, bottom), Vector2(0, bottom)]
+			),
+			PackedColorArray([a, a, b, b])
+		)
 
 	var k := w / 390.0
 	var seconds := SkyView.seconds()
@@ -162,7 +176,9 @@ func _draw() -> void:
 		for i in range(1, cloud.size()):
 			var center: Vector2 = cloud[i][0]
 			var radii: Vector2 = cloud[i][1]
-			draw_colored_polygon(DrawUtil.ellipse(Vector2(center.x * k, CLOUD_TOP + center.y) + shift, radii), color)
+			draw_colored_polygon(
+				DrawUtil.ellipse(Vector2(center.x * k, CLOUD_TOP + center.y) + shift, radii), color
+			)
 
 	if SkyView.christmas:
 		_draw_santa(w, seconds)
@@ -204,7 +220,9 @@ func _draw_stars(k: float, seconds: float, alpha: float) -> void:
 		var radius: float = [1.0, 1.0, 1.5, 2.0][int(DrawUtil.rand(i, 3) * 4.0)]
 		var period := 2.0 + 3.0 * DrawUtil.rand(i, 4)
 		var twinkle := 0.6 - 0.4 * cos(TAU * (seconds / period + DrawUtil.rand(i, 5)))
-		var at := Vector2((6.0 + 378.0 * DrawUtil.rand(i, 1)) * k, 8.0 + STAR_BAND * DrawUtil.rand(i, 2))
+		var at := Vector2(
+			(6.0 + 378.0 * DrawUtil.rand(i, 1)) * k, 8.0 + STAR_BAND * DrawUtil.rand(i, 2)
+		)
 		draw_circle(at, radius, Color(1, 1, 1, twinkle * alpha), true, -1.0, true)
 
 
@@ -229,16 +247,25 @@ func _draw_aurora(k: float, seconds: float, alpha: float) -> void:
 		var glow := Color("#5FE3B0", 0.75 * strength * band[2])
 		var foot := Color("#8E7CF5", 0.0)
 		for s in steps:
-			draw_polygon(PackedVector2Array([top[s], top[s + 1], mid[s + 1], mid[s]]),
-				PackedColorArray([edge, edge, glow, glow]))
-			draw_polygon(PackedVector2Array([mid[s], mid[s + 1], bottom[s + 1], bottom[s]]),
-				PackedColorArray([glow, glow, foot, foot]))
+			draw_polygon(
+				PackedVector2Array([top[s], top[s + 1], mid[s + 1], mid[s]]),
+				PackedColorArray([edge, edge, glow, glow])
+			)
+			draw_polygon(
+				PackedVector2Array([mid[s], mid[s + 1], bottom[s + 1], bottom[s]]),
+				PackedColorArray([glow, glow, foot, foot])
+			)
 
 
 func _draw_moon(k: float, seconds: float, alpha: float) -> void:
 	var center := Vector2(MOON_CENTER.x * k, MOON_CENTER.y)
 	var pulse := 0.5 - 0.5 * cos(TAU * seconds / 6.0)
-	DrawUtil.glow(self, center, 46.0 * (1.0 + 0.08 * pulse), Color(MOON, 0.35 * (0.55 + 0.35 * pulse) / 0.55 * alpha))
+	DrawUtil.glow(
+		self,
+		center,
+		46.0 * (1.0 + 0.08 * pulse),
+		Color(MOON, 0.35 * (0.55 + 0.35 * pulse) / 0.55 * alpha)
+	)
 	draw_circle(center, MOON_RADIUS, Color(MOON, alpha), true, -1.0, true)
 	for crater in [[Vector2(-8, -6), 4.0], [Vector2(4, 6), 5.0], [Vector2(7, -11), 2.5]]:
 		draw_circle(center + crater[0], crater[1], Color(MOON_CRATER, alpha), true, -1.0, true)
@@ -253,16 +280,30 @@ func _draw_sun(time: String, k: float, seconds: float, alpha: float) -> void:
 	var bob := SUN_BOB * cos(TAU * seconds / SUN_BOB_PERIOD)
 	var center := Vector2(sun[0].x * k, sun[0].y + bob)
 	var glow_center := Vector2(sun[0].x * k, sun[0].y)
-	DrawUtil.glow(self, glow_center, radius * 2.2 * (1.0 + 0.08 * pulse), Color(light, 0.7 * (0.55 + 0.35 * pulse) * alpha))
+	DrawUtil.glow(
+		self,
+		glow_center,
+		radius * 2.2 * (1.0 + 0.08 * pulse),
+		Color(light, 0.7 * (0.55 + 0.35 * pulse) * alpha)
+	)
 	if time == "day":
 		var turn := TAU * seconds / RAY_TURN_SECONDS
 		for i in 12:
 			var dir := Vector2.UP.rotated(turn + i * TAU / 12.0)
-			draw_line(glow_center + dir * 40.0, glow_center + dir * 52.0, Color(deep, alpha), 4.0, true)
+			draw_line(
+				glow_center + dir * 40.0, glow_center + dir * 52.0, Color(deep, alpha), 4.0, true
+			)
 			draw_circle(glow_center + dir * 40.0, 2.0, Color(deep, alpha), true, -1.0, true)
 			draw_circle(glow_center + dir * 52.0, 2.0, Color(deep, alpha), true, -1.0, true)
 	draw_circle(center, radius, Color(deep, alpha), true, -1.0, true)
-	draw_circle(center - Vector2(radius, radius) * 0.18, radius * 0.72, Color(light, 0.85 * alpha), true, -1.0, true)
+	draw_circle(
+		center - Vector2(radius, radius) * 0.18,
+		radius * 0.72,
+		Color(light, 0.85 * alpha),
+		true,
+		-1.0,
+		true
+	)
 
 
 func _draw_birds(geese: bool, by_day: bool, k: float, seconds: float, alpha: float) -> void:
@@ -291,8 +332,10 @@ func _draw_mist(k: float, seconds: float, alpha: float) -> void:
 		var rings := 8
 		for r in rings:
 			var f := 0.7 * (1.0 - float(r) / rings)
-			draw_colored_polygon(DrawUtil.ellipse(center, Vector2(bank[2] * 0.5 * k, 20.0) * f),
-				Color(1, 1, 1, bank[3] / rings * 1.4 * alpha))
+			draw_colored_polygon(
+				DrawUtil.ellipse(center, Vector2(bank[2] * 0.5 * k, 20.0) * f),
+				Color(1, 1, 1, bank[3] / rings * 1.4 * alpha)
+			)
 
 
 ## Where Santa's sleigh is, `seconds` in, on a backdrop `width` points
@@ -324,7 +367,14 @@ func _draw_santa(width: float, seconds: float) -> void:
 		var twinkle := 0.6 + 0.4 * sin(TAU * (seconds * 3.0 + DrawUtil.rand(j, 7)))
 		var fade := (1.0 - float(j) / (SPARKLES + 1)) * twinkle
 		var jitter := Vector2(DrawUtil.rand(j, 8) - 0.5, DrawUtil.rand(j, 9) - 0.5) * 8.0
-		draw_circle(behind + Vector2(-18, 6) + jitter, 1.2 + 1.3 * fade, Color(SANTA_GOLD, 0.85 * fade), true, -1.0, true)
+		draw_circle(
+			behind + Vector2(-18, 6) + jitter,
+			1.2 + 1.3 * fade,
+			Color(SANTA_GOLD, 0.85 * fade),
+			true,
+			-1.0,
+			true
+		)
 
 	draw_set_transform(at[0], at[1], Vector2.ONE * SANTA_SCALE)
 	var gallop := TAU * seconds / 0.7
@@ -346,17 +396,36 @@ func _draw_santa(width: float, seconds: float) -> void:
 	draw_circle(Vector2(-4, -12), 7.0, SANTA_RED * light, true, -1.0, true)
 	draw_circle(Vector2(-2, -22), 4.5, SANTA_SKIN * light, true, -1.0, true)
 	draw_circle(Vector2(0, -19), 4.0, SANTA_WHITE * light, true, -1.0, true)
-	draw_colored_polygon(PackedVector2Array([Vector2(-7, -24), Vector2(3, -25), Vector2(-9, -33)]), SANTA_RED * light)
+	draw_colored_polygon(
+		PackedVector2Array([Vector2(-7, -24), Vector2(3, -25), Vector2(-9, -33)]), SANTA_RED * light
+	)
 	draw_rect(Rect2(-7.5, -26, 11, 2.5), SANTA_WHITE * light)
 	draw_circle(Vector2(-9, -33), 2.0, SANTA_WHITE * light, true, -1.0, true)
 
-	var sleigh := PackedVector2Array([
-		Vector2(-26, -16), Vector2(-21, -14), Vector2(-18, -4), Vector2(10, -4),
-		Vector2(16, -10), Vector2(20, -8), Vector2(15, 4), Vector2(-20, 4), Vector2(-25, -2),
-	])
+	var sleigh := PackedVector2Array(
+		[
+			Vector2(-26, -16),
+			Vector2(-21, -14),
+			Vector2(-18, -4),
+			Vector2(10, -4),
+			Vector2(16, -10),
+			Vector2(20, -8),
+			Vector2(15, 4),
+			Vector2(-20, 4),
+			Vector2(-25, -2),
+		]
+	)
 	draw_colored_polygon(sleigh, SANTA_RED_DEEP * light)
-	draw_colored_polygon(PackedVector2Array([Vector2(-18, -4), Vector2(10, -4), Vector2(14, 0), Vector2(-19, 0)]), SANTA_RED * light)
-	draw_polyline(PackedVector2Array([Vector2(-24, 10), Vector2(16, 10), Vector2(21, 7), Vector2(22, 3)]), SANTA_GOLD * light, 2.0, true)
+	draw_colored_polygon(
+		PackedVector2Array([Vector2(-18, -4), Vector2(10, -4), Vector2(14, 0), Vector2(-19, 0)]),
+		SANTA_RED * light
+	)
+	draw_polyline(
+		PackedVector2Array([Vector2(-24, 10), Vector2(16, 10), Vector2(21, 7), Vector2(22, 3)]),
+		SANTA_GOLD * light,
+		2.0,
+		true
+	)
 	for strut in [-14.0, 8.0]:
 		draw_line(Vector2(strut, 4), Vector2(strut, 10), SANTA_GOLD * light, 1.5, true)
 	draw_set_transform(Vector2.ZERO)
@@ -365,7 +434,9 @@ func _draw_santa(width: float, seconds: float) -> void:
 ## One reindeer at `at`, facing right, legs swinging with `phase`.
 func _draw_reindeer(at: Vector2, phase: float, lead: bool, light: Color, night: float) -> void:
 	var swing := 0.5 * sin(phase)
-	for leg in [[Vector2(-7, 2), 1.0], [Vector2(-4, 2), -1.0], [Vector2(5, 2), -1.0], [Vector2(8, 2), 1.0]]:
+	for leg in [
+		[Vector2(-7, 2), 1.0], [Vector2(-4, 2), -1.0], [Vector2(5, 2), -1.0], [Vector2(8, 2), 1.0]
+	]:
 		var dir := Vector2.DOWN.rotated(swing * leg[1] + (0.6 if leg[0].x < 0 else -0.6))
 		draw_line(at + leg[0], at + leg[0] + dir * 8.0, REINDEER_DARK * light, 1.6, true)
 	draw_colored_polygon(DrawUtil.ellipse(at, Vector2(11, 5), 20), REINDEER * light)
@@ -377,7 +448,13 @@ func _draw_reindeer(at: Vector2, phase: float, lead: bool, light: Color, night: 
 		var base := head + Vector2(-1.5 + side * 1.2, -2.5)
 		var tip := base + Vector2(-2.0 + side * 2.0, -7)
 		draw_polyline(PackedVector2Array([base, tip]), REINDEER_DARK * light, 1.3, true)
-		draw_line(base.lerp(tip, 0.5), base.lerp(tip, 0.5) + Vector2(side * 2.5 - 1.0, -1.5), REINDEER_DARK * light, 1.1, true)
+		draw_line(
+			base.lerp(tip, 0.5),
+			base.lerp(tip, 0.5) + Vector2(side * 2.5 - 1.0, -1.5),
+			REINDEER_DARK * light,
+			1.1,
+			true
+		)
 	var nose := head + Vector2(4.5, 0.5)
 	if lead:
 		var pulse := 0.5 + 0.5 * sin(TAU * SkyView.seconds() / 1.2)

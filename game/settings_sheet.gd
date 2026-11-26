@@ -14,10 +14,6 @@ extends Control
 ## bar (UI.SAFE_TOP). A vertical swipe anywhere on them scrolls (#213), even
 ## when it starts on a row, and the row it started on isn't tapped.
 
-const UI := preload("res://game/ui_style.gd")
-const IconButton := preload("res://game/icon_button.gd")
-const SkyClock := preload("res://core/sky_clock.gd")
-
 signal stats_pressed
 signal tutorial_pressed
 ## The skip button under the music was pressed (#166).
@@ -31,6 +27,10 @@ signal volume_changed(key: String, value: float)
 ## A choice was picked by the player. `key` is a Settings field name;
 ## `value` is one of Settings.CHOICES[key].
 signal choice_changed(key: String, value: String)
+
+const UI := preload("res://game/ui_style.gd")
+const IconButton := preload("res://game/icon_button.gd")
+const SkyClock := preload("res://core/sky_clock.gd")
 
 ## Colours from the Qubist Settings design.
 const SHEET_BG := Color("#F3F8FA")
@@ -160,8 +160,9 @@ func _init() -> void:
 	music_volume_slider = _volume_row(sound, "music_volume", music_button, "Music volume")
 	_now_playing_row(sound)
 	sound_effects_button = _switch_row(sound, "sound_effects", "Sound effects", "sound")
-	sound_effects_volume_slider = _volume_row(sound, "sound_effects_volume",
-		sound_effects_button, "Sound effects volume")
+	sound_effects_volume_slider = _volume_row(
+		sound, "sound_effects_volume", sound_effects_button, "Sound effects volume"
+	)
 	haptics_button = _switch_row(sound, "haptics", "Haptics", "haptics")
 
 	var display := _card(column, "DISPLAY")
@@ -182,7 +183,9 @@ func _init() -> void:
 	tips_button = _switch_row(game, "tips", "Tips", "tip")
 	tips_button.tooltip_text = "Show tips the first time you use each control"
 	analytics_button = _switch_row(game, "analytics", "Share usage data", "share")
-	analytics_button.tooltip_text = "Send anonymous game events and error reports to help improve Qubist"
+	analytics_button.tooltip_text = (
+		"Send anonymous game events and error reports " + "to help improve Qubist"
+	)
 	home_button = _link_row(game, "Home", "home")
 	home_button.tooltip_text = "Back to the home screen; your game is saved"
 	home_button.pressed.connect(func(): home_pressed.emit())
@@ -297,8 +300,11 @@ func _let_go_of_button() -> void:
 ## The innermost visible button or slider under `point`, or null.
 static func _control_at(node: Node, point: Vector2) -> Control:
 	for child in node.get_children():
-		if not (child is Control and child.is_visible_in_tree()
-				and child.get_global_rect().has_point(point)):
+		if not (
+			child is Control
+			and child.is_visible_in_tree()
+			and child.get_global_rect().has_point(point)
+		):
 			continue
 		if child is BaseButton or child is Range:
 			return child
@@ -479,14 +485,17 @@ func _picker(column: VBoxContainer, key: String, caption: String, values: Array[
 	var group := ButtonGroup.new()
 	var buttons := {}
 	for value in values:
-		var b := UI.segment_button(value.capitalize(), 14,
-				UI.box(SEGMENT_ON, SEGMENT_HEIGHT / 2), UI.WHITE, UI.SKY_INK)
+		var b := UI.segment_button(
+			value.capitalize(), 14, UI.box(SEGMENT_ON, SEGMENT_HEIGHT / 2), UI.WHITE, UI.SKY_INK
+		)
 		b.button_group = group
 		b.custom_minimum_size.y = SEGMENT_HEIGHT
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.toggled.connect(func(pressed):
-			if pressed:
-				choice_changed.emit(key, value))
+		b.toggled.connect(
+			func(pressed):
+				if pressed:
+					choice_changed.emit(key, value)
+		)
 		row.add_child(b)
 		buttons[value] = b
 	_choices[key] = buttons
@@ -498,7 +507,7 @@ func _sync_sky_choices() -> void:
 	if sky_choices == null or christmas_button == null:
 		return
 	var follows := sky_button.button_pressed
-	if sky_choices.get_parent().visible == not follows:
+	if sky_choices.get_parent().visible == (not follows):
 		return
 	sky_choices.get_parent().visible = not follows
 	christmas_button.visible = not follows
@@ -527,8 +536,15 @@ static func _style_slider(slider: HSlider) -> void:
 static func _knob_texture() -> Texture2D:
 	var gradient := Gradient.new()
 	gradient.offsets = PackedFloat32Array([0.0, 0.78, 0.86, 0.96, 1.0])
-	gradient.colors = PackedColorArray([Color.WHITE, Color.WHITE,
-		Color(0.79, 0.84, 0.86), Color(0.79, 0.84, 0.86, 0.5), Color(1, 1, 1, 0)])
+	gradient.colors = PackedColorArray(
+		[
+			Color.WHITE,
+			Color.WHITE,
+			Color(0.79, 0.84, 0.86),
+			Color(0.79, 0.84, 0.86, 0.5),
+			Color(1, 1, 1, 0)
+		]
+	)
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.fill = GradientTexture2D.FILL_RADIAL
@@ -662,8 +678,7 @@ class Icon:
 			for p in list:
 				out.append(o + p * s)
 			return out
-		var line := func(list: Array) -> void:
-			draw_polyline(pts.call(list), color, w, true)
+		var line := func(list: Array) -> void: draw_polyline(pts.call(list), color, w, true)
 		var arc := func(center: Vector2, radius: float, from: float, to: float) -> void:
 			draw_arc(o + center * s, radius * s, from, to, 24, color, w, true)
 		match kind:
@@ -672,8 +687,17 @@ class Icon:
 				arc.call(Vector2(6.5, 18), 2.5, 0.0, TAU)
 				arc.call(Vector2(16.5, 16), 2.5, 0.0, TAU)
 			"sound":
-				line.call([Vector2(4, 10), Vector2(4, 14), Vector2(8, 14), Vector2(13, 18),
-					Vector2(13, 6), Vector2(8, 10), Vector2(4, 10)])
+				line.call(
+					[
+						Vector2(4, 10),
+						Vector2(4, 14),
+						Vector2(8, 14),
+						Vector2(13, 18),
+						Vector2(13, 6),
+						Vector2(8, 10),
+						Vector2(4, 10)
+					]
+				)
 				arc.call(Vector2(13.85, 12), 4.0, -0.85, 0.85)
 				arc.call(Vector2(13.9, 12), 7.5, -0.82, 0.82)
 			"haptics":
@@ -695,18 +719,36 @@ class Icon:
 			"replay":
 				arc.call(Vector2(12, 12), 8.0, PI, -2.4)
 				line.call([Vector2(4, 4), Vector2(4, 9), Vector2(9, 9)])
-				line.call([Vector2(10.5, 9.5), Vector2(14.5, 12), Vector2(10.5, 14.5), Vector2(10.5, 9.5)])
+				line.call(
+					[Vector2(10.5, 9.5), Vector2(14.5, 12), Vector2(10.5, 14.5), Vector2(10.5, 9.5)]
+				)
 			"home":
 				line.call([Vector2(4, 11), Vector2(12, 4), Vector2(20, 11)])
 				line.call([Vector2(6, 9.5), Vector2(6, 20), Vector2(18, 20), Vector2(18, 9.5)])
 			"tip":
 				arc.call(Vector2(12, 10), 6.0, PI * 0.75, PI * 2.25)
-				line.call([Vector2(7.8, 14.2), Vector2(9.5, 16), Vector2(9.5, 17.5),
-					Vector2(14.5, 17.5), Vector2(14.5, 16), Vector2(16.2, 14.2)])
+				line.call(
+					[
+						Vector2(7.8, 14.2),
+						Vector2(9.5, 16),
+						Vector2(9.5, 17.5),
+						Vector2(14.5, 17.5),
+						Vector2(14.5, 16),
+						Vector2(16.2, 14.2)
+					]
+				)
 				line.call([Vector2(10, 20.5), Vector2(14, 20.5)])
 			"share":
-				line.call([Vector2(8, 10), Vector2(5, 10), Vector2(5, 20), Vector2(19, 20),
-					Vector2(19, 10), Vector2(16, 10)])
+				line.call(
+					[
+						Vector2(8, 10),
+						Vector2(5, 10),
+						Vector2(5, 20),
+						Vector2(19, 20),
+						Vector2(19, 10),
+						Vector2(16, 10)
+					]
+				)
 				line.call([Vector2(12, 15), Vector2(12, 3)])
 				line.call([Vector2(8, 7), Vector2(12, 3), Vector2(16, 7)])
 			"grid":
@@ -719,8 +761,18 @@ class Icon:
 				line.call([Vector2(9, 5), Vector2(16, 12), Vector2(9, 19)])
 			"tree":
 				# A Christmas tree: two tiers, a trunk and a star.
-				line.call([Vector2(12, 6), Vector2(7, 12), Vector2(9.5, 12), Vector2(5, 18),
-					Vector2(19, 18), Vector2(14.5, 12), Vector2(17, 12), Vector2(12, 6)])
+				line.call(
+					[
+						Vector2(12, 6),
+						Vector2(7, 12),
+						Vector2(9.5, 12),
+						Vector2(5, 18),
+						Vector2(19, 18),
+						Vector2(14.5, 12),
+						Vector2(17, 12),
+						Vector2(12, 6)
+					]
+				)
 				line.call([Vector2(12, 18), Vector2(12, 21)])
 				line.call([Vector2(12, 1.5), Vector2(12, 4)])
 				line.call([Vector2(10.8, 2.75), Vector2(13.2, 2.75)])
