@@ -9,6 +9,7 @@ const ViewMath := preload("res://game/view_math.gd")
 const CameraRig := preload("res://game/camera_rig.gd")
 const FloatingIsland := preload("res://game/floating_island.gd")
 const UI := preload("res://game/ui_style.gd")
+const IslandArt := preload("res://game/island_art.gd")
 
 const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
@@ -37,10 +38,11 @@ const BEHIND_EDGE_COLOR := Color("#C4BCB0")
 const GHOST_COLOR := Color(64 / 255.0, 201 / 255.0, 135 / 255.0, 0.35)
 const GHOST_LINE_COLOR := Color("#2FAE72")
 const GHOST_INNER_LINE_ALPHA := 0.55
-const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
+## The bounding box, shared with Home's art (#278).
+const GUIDE_COLOR := IslandArt.GUIDE_COLOR
 ## At night the grey lines are lost on the dark sky (#253), so the bounding
-## box and the grid ticks fade to ice blue (SkyView.NIGHT_ACCENT_INK).
-const GUIDE_NIGHT_COLOR := Color("#8CCBE6", 0.65)
+## box and the grid ticks fade to ice blue.
+const GUIDE_NIGHT_COLOR := IslandArt.GUIDE_NIGHT_COLOR
 ## Floor grid lines, white on the green floor as on Home.
 const FLOOR_LINE_COLOR := Color(1, 1, 1, 0.55)
 ## Grid ticks on the tower's border (#56), off unless the player turns them on.
