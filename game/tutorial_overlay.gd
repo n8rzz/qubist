@@ -32,7 +32,11 @@ const HAND_TILT_DEG := -18.0
 const HAND_DRAG_SECONDS := 1.1
 
 ## The design's hand: white with an ink outline (24-unit grid).
-const _HAND_PATH := "M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 10V4.5a1.5 1.5 0 0 1 3 0V11 M15 10.5V6.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7 L3 14.5a1.6 1.6 0 0 1 2.6-1.9L9 15V8.5"
+const _HAND_PATH := (
+	"M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 10V4.5a1.5 1.5 0 0 1 3 0V11"
+	+ " M15 10.5V6.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7"
+	+ " L3 14.5a1.6 1.6 0 0 1 2.6-1.9L9 15V8.5"
+)
 static var _hand_svg := (
 	'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"'
 	+ ' fill="#FFFFFF" stroke="#%s"' % Palette.INK.to_html(false)
