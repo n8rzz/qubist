@@ -68,13 +68,17 @@ jobs:
       - name: Collect the output
         if: always()
         run: |
-          # tests/fixtures/ holds a suite that crashes on purpose, so
-          # tests/test_suite_runner.gd can check the runner fails a test on a
-          # script error. Drop those deliberate errors (the SCRIPT ERROR and
-          # USER ERROR lines from push_error(), and the "at:" line under each);
-          # every other one still counts.
+          # Drop ERROR: lines that tests trigger on purpose (validation errors
+          # from analytics/config called with bad data, and the push_error() in
+          # the fixture that test_suite_runner.gd uses to verify error handling).
+          # Also drop SCRIPT ERROR lines from fixtures (same reason).
+          # Everything else still counts.
           cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | awk '
-            /SCRIPT ERROR|USER ERROR/ { held = $0; next }
+            skip_next == 1 { skip_next = 0; next }
+            /^ERROR: Analytics:|^ERROR: Duplicate piece id|^ERROR: Piece '"'"'|^ERROR: analytics test error|^ERROR: expected error from / {
+              skip_next = 1; next
+            }
+            /SCRIPT ERROR/ { held = $0; next }
             held != "" {
               if ($0 !~ /res:\/\/tests\/fixtures\//) { print held; print }
               held = ""

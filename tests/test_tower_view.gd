@@ -16,10 +16,12 @@ func _rng() -> RandomNumberGenerator:
 
 
 ## The view builds its nodes up front and only parents them in setup(), which
-## these tests skip. Parent them to the view here so view.free() can clean
-## up the whole hierarchy rather than freeing each orphan individually
-## (individual free() on 3D nodes outside the tree triggers engine errors).
+## these tests skip. The orphaned VisualInstance3D members trigger an engine
+## error when freed individually outside the tree (get_global_transform()
+## requires is_inside_tree()). Root view in the SceneTree first so that
+## add_child() and the subsequent free() have a live world context.
 func _free_view(view: Node) -> void:
+	(Engine.get_main_loop() as SceneTree).root.add_child(view)
 	for property in view.get_property_list():
 		var value = view.get(property.name)
 		if (
