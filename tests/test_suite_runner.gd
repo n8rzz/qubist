@@ -20,4 +20,4 @@ func test_script_errors_fail_the_test() -> void:
 			failure.begins_with("crashing_suite::test_hits_a_script_error: script error:"),
 			"names the test: " + failure
 		)
-		check("crashing_suite.gd:16" in failure, "points at the line: " + failure)
+		check("crashing_suite.gd:18" in failure, "points at the line: " + failure)
