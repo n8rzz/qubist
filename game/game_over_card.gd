@@ -11,14 +11,15 @@ extends Control
 signal play_again_pressed
 signal home_pressed
 
+const Palette := preload("res://game/palette.gd")
 const UI := preload("res://game/ui_style.gd")
 
 ## Colours from the Qubist game-over design.
-const INK := Color("#22313F")
-const SUBTLE := Color("#3D5568")
-const TILE := Color("#EEF5F8")
-const BUTTON := Color("#1F5E7A")
-const BUTTON_EDGE := Color("#123D50")
+const INK := Palette.INK
+const SUBTLE := Palette.MUTED
+const TILE := Palette.TILE
+const BUTTON := Palette.ACCENT
+const BUTTON_EDGE := Palette.ACCENT_LEDGE
 const DIM_TOP := Color(UI.DIM_INK, 0.25)
 const DIM_BOTTOM := Color(UI.DIM_INK, 0.6)
 
@@ -280,9 +281,9 @@ class Crown:
 		var shape := PackedVector2Array()
 		for p in POINTS:
 			shape.append(p * s)
-		draw_colored_polygon(shape, Color("#F5C451"))
+		draw_colored_polygon(shape, Palette.CROWN)
 		shape.append(shape[0])
-		draw_polyline(shape, Color("#C98A1E"), 2.2 * s, true)
+		draw_polyline(shape, Palette.CROWN_EDGE, 2.2 * s, true)
 
 
 ## The trophy beside "Score saved to Game Center", stroked in the text colour.
@@ -295,7 +296,7 @@ class Trophy:
 
 	func _draw() -> void:
 		var s := size.x / 24.0
-		var color := Color("#3D5568")
+		var color := Palette.MUTED
 		var w := 2.0 * s
 		# Cup: a rim, straight sides and a round bottom.
 		var cup := PackedVector2Array(

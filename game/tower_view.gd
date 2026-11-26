@@ -17,6 +17,7 @@ const CameraRig := preload("res://game/camera_rig.gd")
 const FloatingIsland := preload("res://game/floating_island.gd")
 const UI := preload("res://game/ui_style.gd")
 const IslandArt := preload("res://game/island_art.gd")
+const Palette := preload("res://game/palette.gd")
 
 const SolidShader := preload("res://game/shaders/block_solid.gdshader")
 const FadedShader := preload("res://game/shaders/block_faded.gdshader")
@@ -29,21 +30,13 @@ const CUBE_SIZE := 0.97
 ## Light grey stone (#22), one material for every placed cube. Lit, it lands
 ## near the designs' #ECE7DD tops and #B7AD9D / #D3CABB sides; the shader adds
 ## the bevel and chipped corners.
-const BLOCK_COLOR := Color("#D9D3C8")
-## Darker line along every cube edge, so cells can be counted.
-const EDGE_COLOR := Color("#857B6D")
-## Swept blocks (#85) are outlines only, with hidden lines removed, so the
-## floor and empty cells show through them.
+const BLOCK_COLOR := Palette.BLOCK_COLOR
+const EDGE_COLOR := Palette.CUBE_EDGE
 const SWEPT_EDGE_COLOR := Color(EDGE_COLOR, 0.3)
-## While sliced, cubes behind the slice are light stone (#85), so the slice
-## itself is the only full-strength grey.
-const BEHIND_COLOR := Color("#F3F0EA")
-const BEHIND_EDGE_COLOR := Color("#C4BCB0")
-## The piece being placed (#22): the cubes' shape in translucent green, with a
-## strong outline round the whole piece and fainter lines between its cubes.
-## It only ever shows on legal spots, so it has no blocked look.
-const GHOST_COLOR := Color(64 / 255.0, 201 / 255.0, 135 / 255.0, 0.35)
-const GHOST_LINE_COLOR := Color("#2FAE72")
+const BEHIND_COLOR := Palette.BEHIND_COLOR
+const BEHIND_EDGE_COLOR := Palette.BEHIND_EDGE_COLOR
+const GHOST_COLOR := Palette.GHOST_COLOR
+const GHOST_LINE_COLOR := Palette.GHOST_LINE_COLOR
 const GHOST_INNER_LINE_ALPHA := 0.55
 ## The bounding box, shared with Home's art (#278).
 const GUIDE_COLOR := IslandArt.GUIDE_COLOR
@@ -51,10 +44,7 @@ const GUIDE_COLOR := IslandArt.GUIDE_COLOR
 ## box and the grid ticks fade to ice blue.
 const GUIDE_NIGHT_COLOR := IslandArt.GUIDE_NIGHT_COLOR
 ## Floor grid lines, white on the green floor as on Home.
-const FLOOR_LINE_COLOR := Color(1, 1, 1, 0.55)
-## Grid ticks on the tower's border (#56), off unless the player turns them on.
-## Faint, so they help count cells without pulling the eye (#256); major
-## ticks are a little stronger as well as longer.
+const FLOOR_LINE_COLOR := Palette.FLOOR_LINES
 const TICK_COLOR := Color(0.45, 0.45, 0.45, 0.3)
 const MAJOR_TICK_COLOR := Color(0.4, 0.4, 0.4, 0.5)
 const TICK_NIGHT_COLOR := Color("#8CCBE6", 0.3)
@@ -69,7 +59,7 @@ const SHADOW_BLUR := 2.5
 
 # Sweep plane (#51): while the swiper moves, a bright pane marks the cut and
 # the cube faces sitting on it light up. main.gd fades it in and out.
-const SWEEP_COLOR := Color("#2559C9")
+const SWEEP_COLOR := Palette.SWEEP_COLOR
 const SWEEP_FILL_ALPHA := 0.22
 const SWEEP_CAP_ALPHA := 0.7
 ## Width of the pane's bright border, in cubes.
@@ -90,8 +80,8 @@ const LAND_SECONDS := 0.1
 # of dust.
 ## Delay between a cube and its neighbour one step further from the piece.
 const RIPPLE_STEP_SECONDS := 0.025
-const FLASH_COLOR := Color("#FFD23F")
-const FLASH_EDGE_COLOR := Color("#B8860B")
+const FLASH_COLOR := Palette.FLASH_COLOR
+const FLASH_EDGE_COLOR := Palette.FLASH_EDGE_COLOR
 const CRACK_SECONDS := 0.08
 ## Under Reduce Motion (#116) cleared cubes light up, hold, then fade.
 const STILL_FLASH_SECONDS := 0.15
@@ -103,7 +93,7 @@ const BURST_SECONDS := 0.5
 const CHIPS_PER_CUBE := 5
 const CHIP_GRAVITY := 11.0
 const DUST_PER_CUBE := 2
-const DUST_COLOR := Color("#D9D6CC")
+const DUST_COLOR := Palette.DUST_COLOR
 ## Clearing more than one line at once: extra chips and speed per extra line,
 ## and a camera shake.
 const EXTRA_CHIPS_PER_LINE := 2

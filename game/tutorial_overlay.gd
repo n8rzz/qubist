@@ -8,10 +8,11 @@ extends Control
 
 signal skip_pressed
 
+const Palette := preload("res://game/palette.gd")
 const UI := preload("res://game/ui_style.gd")
 
-const DIM := Color(UI.DIM_INK, 0.55)
-const HIGHLIGHT := Color("#FFC94D")
+const DIM := Color(Palette.DIM_INK, 0.55)
+const HIGHLIGHT := Palette.GOLD
 const DOT := Color(1, 1, 1, 0.5)
 const SKIP_FACE := Color(1, 1, 1, 0.18)
 const SKIP_PRESSED := Color(1, 1, 1, 0.3)
@@ -31,13 +32,17 @@ const HAND_TILT_DEG := -18.0
 const HAND_DRAG_SECONDS := 1.1
 
 ## The design's hand: white with an ink outline (24-unit grid).
-const HAND_SVG := """
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-	fill="#FFFFFF" stroke="#22313F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-	<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 10V4.5a1.5 1.5 0 0 1 3 0V11
-		M15 10.5V6.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7
-		L3 14.5a1.6 1.6 0 0 1 2.6-1.9L9 15V8.5"/>
-</svg>"""
+const _HAND_PATH := (
+	"M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 10V4.5a1.5 1.5 0 0 1 3 0V11"
+	+ " M15 10.5V6.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7"
+	+ " L3 14.5a1.6 1.6 0 0 1 2.6-1.9L9 15V8.5"
+)
+static var _hand_svg := (
+	'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"'
+	+ ' fill="#FFFFFF" stroke="#%s"' % Palette.INK.to_html(false)
+	+ ' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+	+ '<path d="%s"/></svg>' % _HAND_PATH
+)
 
 var spotlight: Spotlight
 var ring: Ring
@@ -246,7 +251,7 @@ func _restart_hand(at: Vector2) -> void:
 static func _hand_texture() -> ImageTexture:
 	var img := Image.new()
 	# Drawn at twice the size it shows at, so it stays crisp when scaled.
-	img.load_svg_from_string(HAND_SVG, HAND_SIDE * 2.0 / 24.0)
+	img.load_svg_from_string(_hand_svg, HAND_SIDE * 2.0 / 24.0)
 	return ImageTexture.create_from_image(img)
 
 

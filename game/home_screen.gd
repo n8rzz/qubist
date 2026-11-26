@@ -19,10 +19,11 @@ const SkyView := preload("res://game/sky_view.gd")
 const SkyWeather := preload("res://game/sky_weather.gd")
 const HomeTowerArt := preload("res://game/home_tower_art.gd")
 
-const ACCENT_SHADOW := Color("#123D50")
-const CARD_SHADOW := UI.CARD_SHADOW
-const CROWN := Color("#F5C451")
-const CROWN_EDGE := Color("#C98A1E")
+const Palette := preload("res://game/palette.gd")
+const ACCENT_SHADOW := Palette.ACCENT_LEDGE
+const CARD_SHADOW := Palette.CARD_SHADOW
+const CROWN := Palette.CROWN
+const CROWN_EDGE := Palette.CROWN_EDGE
 const SIDE_MARGIN := 20
 const GAP := 16
 
