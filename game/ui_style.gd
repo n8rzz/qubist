@@ -128,11 +128,13 @@ static func style_card_button(b: Button, radius: int, padding := Vector2.ZERO) -
 	b.add_theme_stylebox_override("disabled", card(WHITE, radius, padding))
 
 
-## A white icon tile. Pass `radius` = side / 2 for a round button.
+## A white icon tile. Pass `radius` = side / 2 for a round button. In a row
+## taller than `side` it stays square, centered (#255).
 static func icon_button(kind: String, tooltip: String, side: int = 44, radius: int = 14) -> IconButton:
 	var b := IconButton.new(kind, tooltip)
 	b.icon_color = SKY_INK
 	b.custom_minimum_size = Vector2(side, side)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	style_card_button(b, radius)
 	return b
 

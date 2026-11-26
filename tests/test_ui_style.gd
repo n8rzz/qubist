@@ -3,6 +3,13 @@ extends "res://tests/q_test.gd"
 const UI := preload("res://game/ui_style.gd")
 
 
+func test_icon_button_is_not_stretched_by_a_taller_row() -> void:
+	var b := UI.icon_button("home", "Home")
+	check_eq(b.custom_minimum_size, Vector2(44, 44))
+	check_eq(b.size_flags_vertical, Control.SIZE_SHRINK_CENTER)
+	b.free()
+
+
 func test_format_number_leaves_small_numbers_alone() -> void:
 	check_eq(UI.format_number(0), "0")
 	check_eq(UI.format_number(7), "7")
