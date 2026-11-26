@@ -215,46 +215,84 @@ func _touch_drag(from: Vector2, to: Vector2) -> void:
 func _check_reduce_motion() -> void:
 	UI.motion_override = 1
 	main.show_home()
-	if main.home.island.is_animating():
-		failures.append("Reduce Motion: Home's island still plays its loop")
-	main.home.new_game_button.pressed.emit()
-	if main.tutorial.is_active():
-		main.tutorial.skip()
+	_expect_still(not main.home.island.is_animating(), "Home's island still plays its loop")
+	_start_plain_game()
 	main.new_game()
+	_check_still_clear()
+	_check_still_score()
+	_check_still_gain()
+	_check_still_game_over()
+	UI.motion_override = 0
+
+
+## Records `failure` unless `ok`, as a Reduce Motion failure.
+func _expect_still(ok: bool, failure: String) -> void:
+	if not ok:
+		failures.append("Reduce Motion: " + failure)
+
+
+## A multi-line clear only fades the cleared cubes.
+func _check_still_clear() -> void:
 	var tower = main.tower
 	var cleared: Array = [Vector3i(0, 0, 0), Vector3i(1, 0, 0)]
 	tower.play_move([Vector3i(0, 0, 0)], cleared, {}, 3)
-	if tower._fading.multimesh.instance_count != cleared.size():
-		failures.append("Reduce Motion: cleared cubes are not drawn fading")
-	for node in [tower._landing, tower._clearing, tower._chips, tower._dust]:
-		if node.multimesh.instance_count != 0:
-			failures.append("Reduce Motion: a clear still drops or breaks cubes")
+	_expect_still(tower._fading.multimesh.instance_count == cleared.size(),
+		"cleared cubes are not drawn fading")
+	var moving: Array = [tower._landing, tower._clearing, tower._chips, tower._dust]
+	_expect_still(moving.all(func(node): return node.multimesh.instance_count == 0),
+		"a clear still drops or breaks cubes")
 	tower._move_tween.custom_step(0.2)
-	if tower.rig.camera.h_offset != 0.0 or tower.rig.camera.v_offset != 0.0:
-		failures.append("Reduce Motion: a multi-line clear shook the camera")
+	_expect_still(tower.rig.camera.h_offset == 0.0 and tower.rig.camera.v_offset == 0.0,
+		"a multi-line clear shook the camera")
 	tower.finish_move_animation()
-	if tower._fading.multimesh.instance_count != 0:
-		failures.append("Reduce Motion: faded cubes were left behind")
+	_expect_still(tower._fading.multimesh.instance_count == 0, "faded cubes were left behind")
 
+
+## The header score jumps to its new total.
+func _check_still_score() -> void:
 	main.score_feedback.tick_to(1234)
-	if main.score_feedback.shown_score != 1234:
-		failures.append("Reduce Motion: the score still counts up")
+	_expect_still(main.score_feedback.shown_score == 1234, "the score still counts up")
 	main.score_feedback.snap()
 
+
+## The "+points" pop and the combo banner fade where they appear.
+func _check_still_gain() -> void:
+	var children: int = main.get_child_count()
+	var running := get_processed_tweens()
+	main.score_feedback.show_gain({
+		"score": {"total": 100, "combo": 2, "streak": 1},
+		"cleared": [Vector3i(0, 0, 0)],
+		"lines": [[]],
+	})
+	var added: Array = main.get_children().slice(children)
+	if added.size() != 2:
+		_expect_still(false, "expected a score pop and a banner, found %d nodes" % added.size())
+		return
+	var pop: Label = added[0]
+	var banner: Label = added[1]
+	var at := pop.position
+	_expect_still(banner.scale == Vector2.ONE, "the combo banner still pops in")
+	for tween in get_processed_tweens():
+		if not tween in running:
+			tween.custom_step(ScoreFeedback.SCORE_POP_SECONDS * 0.5)
+	_expect_still(pop.position == at, "the score pop still rises")
+	_expect_still(pop.modulate.a < 1.0, "the score pop does not fade")
+	pop.queue_free()
+	banner.queue_free()
+
+
+## The tower stays standing and the game-over card fades in without sliding.
+func _check_still_game_over() -> void:
 	while not main.game.is_over and main.autoplay_one_move():
 		if not main.game.is_over:
 			main.finish_animations()
-	tower.finish_move_animation()
-	if tower.has_crumbled():
-		failures.append("Reduce Motion: the tower still crumbles")
-	if not main.game_over_card.visible:
-		failures.append("Reduce Motion: no game-over card")
-	if main.game_over_card.slider.position.y != 0.0:
-		failures.append("Reduce Motion: the game-over card still slides")
-	main.game_over_card.finish_animation()
-	if main.game_over_card.slider.modulate.a != 1.0:
-		failures.append("Reduce Motion: the game-over card did not fade in")
-	UI.motion_override = 0
+	main.tower.finish_move_animation()
+	_expect_still(not main.tower.has_crumbled(), "the tower still crumbles")
+	var card = main.game_over_card
+	_expect_still(card.visible, "no game-over card")
+	_expect_still(card.slider.position.y == 0.0, "the game-over card still slides")
+	card.finish_animation()
+	_expect_still(card.slider.modulate.a == 1.0, "the game-over card did not fade in")
 
 
 func _check_layout() -> void:

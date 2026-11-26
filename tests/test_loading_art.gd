@@ -1,6 +1,9 @@
 extends "res://tests/q_test.gd"
 
 const LoadingArt := preload("res://game/loading_art.gd")
+const LoadingScreen := preload("res://game/loading_screen.gd")
+const SkyView := preload("res://game/sky_view.gd")
+const UI := preload("res://game/ui_style.gd")
 
 
 ## The drop keyframes start high and clear, land, bounce and rest.
@@ -43,3 +46,16 @@ func test_bezier_ease_never_decreases() -> void:
 		check(y >= previous, "ease(%.3f) = %f is below ease at the step before (%f)" % [x, y, previous])
 		check(y >= 0.0 and y <= 1.0, "ease(%.3f) = %f is outside 0–1" % [x, y])
 		previous = y
+
+
+## #116: the loading view's art holds still under Reduce Motion. _build() is
+## called directly, so nothing starts loading the game screen.
+func test_loading_view_holds_the_art_still_under_reduce_motion() -> void:
+	for reduce in [1, 0]:
+		UI.motion_override = reduce
+		var loading = LoadingScreen.new()
+		loading._build()
+		check_eq(loading.art.still, reduce == 1, "Reduce Motion %d" % reduce)
+		loading.free()
+	UI.motion_override = -1
+	SkyView.show("spring", "day", true)
