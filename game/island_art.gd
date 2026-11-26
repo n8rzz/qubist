@@ -12,6 +12,7 @@ extends Control
 ## follows the time of day. Home adds the season's tree with draw_tree().
 
 const DrawUtil := preload("res://game/draw_util.gd")
+const Palette := preload("res://game/palette.gd")
 const SkyView := preload("res://game/sky_view.gd")
 
 ## Segments for the bush and loading shadow ellipses.
@@ -26,46 +27,44 @@ const CELL_Y := 10.0
 const LAYER := 20.0
 const GRID := Vector3i(6, 6, 12)
 
-const EARTH_LEFT := Color("#8E6B4F")
-const EARTH_RIGHT := Color("#A47C5B")
-const EARTH_EDGE := Color("#6E523C")
-const EARTH_STRATA := Color("#7E5E45", 0.55)
-const BRICK_LEFT := Color("#C77E54")
-const BRICK_RIGHT := Color("#D8956A")
-const BRICK_EDGE := Color("#8F5235")
-const MORTAR := Color("#F0C9A8", 0.8)
-const GRASS_LEFT := Color("#7DB34A")
-const GRASS_RIGHT := Color("#8BC152")
-const GRASS := Color("#9CCD63")
-const GRASS_EDGE := Color("#6E9E3E")
-const WATER := Color("#79C6E0")
-const WATER_EDGE := Color("#4E9DBB")
-const RIPPLE := Color("#E6F7FC")
-const FLOOR := Color("#B7DE83")
-const FLOOR_EDGE := Color("#7FAE4E")
-const FLOOR_LINES := Color(1, 1, 1, 0.55)
-const BUSH := Color("#5E9E3A")
-const BUSH_LIGHT := Color("#76B84A")
-const BUSH_SHADOW := Color(40 / 255.0, 70 / 255.0, 30 / 255.0, 0.25)
-const ROCK := Color("#C9C1B3")
-## The tower's bounding box, drawn the same here and in the game (#278):
-## grey by day, ice blue (SkyView.NIGHT_ACCENT_INK) at night (#253).
-const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
-const GUIDE_NIGHT_COLOR := Color("#8CCBE6", 0.65)
+const EARTH_LEFT := Palette.EARTH_LEFT
+const EARTH_RIGHT := Palette.EARTH_RIGHT
+const EARTH_EDGE := Palette.EARTH_EDGE
+const EARTH_STRATA := Palette.EARTH_STRATA
+const BRICK_LEFT := Palette.BRICK_LEFT
+const BRICK_RIGHT := Palette.BRICK_RIGHT
+const BRICK_EDGE := Palette.BRICK_EDGE
+const MORTAR := Palette.MORTAR
+const GRASS_LEFT := Palette.GRASS_LEFT
+const GRASS_RIGHT := Palette.GRASS_RIGHT
+const GRASS := Palette.GRASS
+const GRASS_EDGE := Palette.GRASS_EDGE
+const WATER := Palette.WATER
+const WATER_EDGE := Palette.WATER_EDGE
+const RIPPLE := Palette.RIPPLE
+const FLOOR := Palette.FLOOR
+const FLOOR_EDGE := Palette.FLOOR_EDGE
+const FLOOR_LINES := Palette.FLOOR_LINES
+const BUSH := Palette.BUSH
+const BUSH_LIGHT := Palette.BUSH_LIGHT
+const BUSH_SHADOW := Palette.BUSH_SHADOW
+const ROCK := Palette.ROCK
+const GUIDE_COLOR := Palette.GUIDE_COLOR
+const GUIDE_NIGHT_COLOR := Palette.GUIDE_NIGHT_COLOR
 
-const CUBE_TOP := Color("#ECE7DD")
-const CUBE_TOP_INSET := Color("#F6F2EA")
-const CUBE_LEFT := Color("#B7AD9D")
-const CUBE_LEFT_INSET := Color("#C2B9AA")
-const CUBE_RIGHT := Color("#D3CABB")
-const CUBE_RIGHT_INSET := Color("#DCD4C6")
-const CUBE_EDGE := Color("#857B6D")
+const CUBE_TOP := Palette.CUBE_TOP
+const CUBE_TOP_INSET := Palette.CUBE_TOP_INSET
+const CUBE_LEFT := Palette.CUBE_LEFT
+const CUBE_LEFT_INSET := Palette.CUBE_LEFT_INSET
+const CUBE_RIGHT := Palette.CUBE_RIGHT
+const CUBE_RIGHT_INSET := Palette.CUBE_RIGHT_INSET
+const CUBE_EDGE := Palette.CUBE_EDGE
 ## Each face's lighter inset is the face shrunk by this much toward its
 ## center, which reads as a bevel.
 const INSET := 0.78
 ## The tree stands at the grass's front-left corner, in grid cells.
 const TREE_SPOT := Vector2(-0.45, 6.6)
-const TREE_SHADOW := Color(40 / 255.0, 60 / 255.0, 30 / 255.0, 0.22)
+const TREE_SHADOW := Palette.TREE_SHADOW
 ## The tree sways this far either way, over TREE_SWAY_SECONDS.
 const TREE_SWAY := deg_to_rad(2.5)
 const TREE_SWAY_SECONDS := 4.5

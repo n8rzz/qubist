@@ -26,6 +26,7 @@ extends Control
 ## Positions are in the design's 390-point-wide frame: x stretches with the
 ## width, y is in points from the top.
 
+const Palette := preload("res://game/palette.gd")
 const SkyView := preload("res://game/sky_view.gd")
 const DrawUtil := preload("res://game/draw_util.gd")
 
@@ -66,11 +67,7 @@ const BOB_PERIOD := 12.0
 const BOB_STAGGER := 4.0
 
 ## Sun by time of day: [center, radius, light colour, deep colour].
-const SUNS := {
-	"sunrise": [Vector2(52, 300), 36.0, Color("#FFD27A"), Color("#FFB86B")],
-	"day": [Vector2(300, 120), 30.0, Color("#FFE27A"), Color("#FFD24D")],
-	"sunset": [Vector2(290, 318), 42.0, Color("#FF9E5E"), Color("#FF7A45")],
-}
+const SUNS := Palette.SUNS
 ## The sun floats this far up and down over SUN_BOB_PERIOD seconds.
 const SUN_BOB := 6.0
 const SUN_BOB_PERIOD := 14.0
@@ -78,8 +75,8 @@ const SUN_BOB_PERIOD := 14.0
 const RAY_TURN_SECONDS := 40.0
 const MOON_CENTER := Vector2(316, 174)
 const MOON_RADIUS := 22.0
-const MOON := Color("#F4F1DE")
-const MOON_CRATER := Color("#DDD8BF")
+const MOON := Palette.MOON
+const MOON_CRATER := Palette.MOON_CRATER
 const STAR_COUNT := 46
 ## Stars sit above this line, in points.
 const STAR_BAND := 470.0
@@ -105,15 +102,15 @@ const SANTA_SCALE := 0.8
 ## Reindeer, nose to tail, in front of the sleigh: this far apart.
 const REINDEER_COUNT := 3
 const REINDEER_GAP := 30.0
-const SANTA_RED := Color("#C8312F")
-const SANTA_RED_DEEP := Color("#9E2222")
-const SANTA_GOLD := Color("#E8B64C")
-const SANTA_SKIN := Color("#F2C9A8")
-const SANTA_WHITE := Color("#FFFFFF")
-const SANTA_SACK := Color("#8A5A3B")
-const REINDEER := Color("#8B5E3C")
-const REINDEER_DARK := Color("#5E3D26")
-const RED_NOSE := Color("#FF3B30")
+const SANTA_RED := Palette.SANTA_RED
+const SANTA_RED_DEEP := Palette.SANTA_RED_DEEP
+const SANTA_GOLD := Palette.SANTA_GOLD
+const SANTA_SKIN := Palette.SANTA_SKIN
+const SANTA_WHITE := Palette.SANTA_WHITE
+const SANTA_SACK := Palette.SANTA_SACK
+const REINDEER := Palette.REINDEER
+const REINDEER_DARK := Palette.REINDEER_DARK
+const RED_NOSE := Palette.RED_NOSE
 ## Sparkles trail this many seconds behind the sleigh.
 const SPARKLES := 10
 const SPARKLE_GAP_SECONDS := 0.09

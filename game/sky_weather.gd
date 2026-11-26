@@ -12,6 +12,7 @@ extends Control
 ##
 ## Positions are in the design's 390 × 844 frame, stretched to the control.
 
+const Palette := preload("res://game/palette.gd")
 const SkyView := preload("res://game/sky_view.gd")
 const DrawUtil := preload("res://game/draw_util.gd")
 
@@ -25,15 +26,15 @@ const NIGHT_DIM := 0.55
 ## Falling petals and leaves are the spring and fall canopy colours (#210),
 ## so the tree and what drops from it can't drift apart. Leaves add a gold.
 const PETALS: Array = SkyView.TREES["spring"][1]
-const LEAVES: Array = SkyView.TREES["fall"][1] + [Color("#D9A441")]
-const FIREFLY := Color("#FFF3A0")
-const FIREFLY_GLOW := Color(1.0, 236 / 255.0, 120 / 255.0, 0.7)
-const SEED := Color(1.0, 250 / 255.0, 235 / 255.0, 0.9)
+const LEAVES: Array = SkyView.TREES["fall"][1] + [Palette.EXTRA_LEAF_GOLD]
+const FIREFLY := Palette.FIREFLY
+const FIREFLY_GLOW := Palette.FIREFLY_GLOW
+const SEED := Palette.SEED
 ## Butterflies as [home, colour, seconds per loop].
 const BUTTERFLIES := [
 	[Vector2(60, 380), Color("#F5A3C7"), 9.0], [Vector2(250, 300), Color("#FFC94D"), 12.0]
 ]
-const BUTTERFLY_BODY := Color("#3D3A36")
+const BUTTERFLY_BODY := Palette.BUTTERFLY_BODY
 
 ## Kinds of falling things: count, size, sideways drift range, turn range in
 ## degrees, seconds to fall. Each kind draws its own way.

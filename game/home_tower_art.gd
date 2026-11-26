@@ -50,8 +50,8 @@ const CRACK_SECONDS := 0.08
 const CRACK_SWELL := 0.09
 ## How far cracking cubes darken toward CRACK_COLOR.
 const DARKEN := 0.35
-const CRACK_COLOR := Color("#7A6F61")
-const CRACK_LINE := Color("#5E554A")
+const CRACK_COLOR := Palette.CRACK_COLOR
+const CRACK_LINE := Palette.CRACK_LINE
 const CRACKS_PER_CUBE := 2
 ## The sway and rattle of the shaking tower, in design units, and how long
 ## the shake takes to ramp up and down.
@@ -76,7 +76,7 @@ const CHIP_UNITS := 13.0
 const CHIP_POINTS := 5
 const DUST_PER_CUBE := 2
 const DUST_SECONDS := 0.7
-const DUST := Color("#D9D6CC")
+const DUST := Palette.DUST_COLOR
 
 # --- Resetting ---
 ## The rubble rests this long, fades out, then the next build starts after a
@@ -85,8 +85,8 @@ const REST_SECONDS := 1.3
 const FADE_SECONDS := 0.6
 const PAUSE_SECONDS := 0.4
 
-const GHOST_FILL := Color(64 / 255.0, 201 / 255.0, 135 / 255.0, 0.35)
-const GHOST_LINE := Color("#2FAE72")
+const GHOST_FILL := Palette.GHOST_COLOR
+const GHOST_LINE := Palette.GHOST_LINE_COLOR
 
 ## Reduce Motion: show the fixed stack instead of the animation.
 var still := false

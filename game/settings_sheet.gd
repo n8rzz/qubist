@@ -28,17 +28,18 @@ signal volume_changed(key: String, value: float)
 ## `value` is one of Settings.CHOICES[key].
 signal choice_changed(key: String, value: String)
 
+const Palette := preload("res://game/palette.gd")
 const UI := preload("res://game/ui_style.gd")
 const IconButton := preload("res://game/icon_button.gd")
 const SkyClock := preload("res://core/sky_clock.gd")
 
 ## Colours from the Qubist Settings design.
-const SHEET_BG := Color("#F3F8FA")
-const TILE := Color("#EEF5F8")
-const DIVIDER := Color("#E6EEF2")
-const CHEVRON := Color("#8AA0B0")
-const ROW_PRESSED := Color("#F4F8FA")
-const DIM := Color(UI.DIM_INK, 0.45)
+const SHEET_BG := Palette.SHEET_BG
+const TILE := Palette.TILE
+const DIVIDER := Palette.CARD_PRESSED
+const CHEVRON := Palette.CHEVRON
+const ROW_PRESSED := Palette.CARD_HOVER
+const DIM := Color(Palette.DIM_INK, 0.45)
 
 const SHEET_RADIUS := 30
 const ROW_HEIGHT := 56
@@ -46,7 +47,7 @@ const ROW_GAP := 14
 const TILE_SIDE := 36
 const SLIDER_HEIGHT := 36
 ## The segmented pickers, as on the game's swiper axis buttons.
-const SEGMENT_ON := Color("#22313F")
+const SEGMENT_ON := Palette.INK
 const SEGMENT_HEIGHT := 36
 ## How far a finger moves up or down before a press on the cards becomes a
 ## swipe that scrolls them (#213).
@@ -330,7 +331,7 @@ func _close_button() -> IconButton:
 	b.custom_minimum_size = Vector2(44, 44)
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for state in ["normal", "hover", "pressed"]:
-		var face := UI.WHITE if state != "pressed" else Color("#E6EEF2")
+		var face := UI.WHITE if state != "pressed" else Palette.CARD_PRESSED
 		var box := UI.box(face, 22)
 		box.shadow_color = UI.CARD_SHADOW
 		box.shadow_size = 1
@@ -632,7 +633,7 @@ func _update_dividers() -> void:
 class Switch:
 	extends Control
 
-	const ON := Color("#1F5E7A")
+	const ON := Palette.ACCENT
 
 	var row: Button
 

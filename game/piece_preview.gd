@@ -3,17 +3,18 @@ extends Control
 ## camera, so it looks the way it will land. Used in the tray and while
 ## dragging.
 
+const Palette := preload("res://game/palette.gd")
 const ViewMath := preload("res://game/view_math.gd")
 
 ## The same stone as the tower's cubes (#22), with the lighter panel inside
 ## each face that stands for the bevel.
-const TOP_COLOR := Color("#ECE7DD")
-const TOP_INSET := Color("#F6F2EA")
-const LIGHT_SIDE := Color("#D3CABB")
-const LIGHT_INSET := Color("#DCD4C6")
-const DARK_SIDE := Color("#B7AD9D")
-const DARK_INSET := Color("#C2B9AA")
-const EDGE_COLOR := Color("#857B6D")
+const TOP_COLOR := Palette.CUBE_TOP
+const TOP_INSET := Palette.CUBE_TOP_INSET
+const LIGHT_SIDE := Palette.CUBE_RIGHT
+const LIGHT_INSET := Palette.CUBE_RIGHT_INSET
+const DARK_SIDE := Palette.CUBE_LEFT
+const DARK_INSET := Palette.CUBE_LEFT_INSET
+const EDGE_COLOR := Palette.CUBE_EDGE
 ## The panel's size as a share of the face, as on the Home art.
 const INSET := 0.78
 

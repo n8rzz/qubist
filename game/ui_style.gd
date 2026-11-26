@@ -3,6 +3,7 @@ extends RefCounted
 ## the Stats screen and Home, following the Qubist designs canvas.
 
 const IconButton := preload("res://game/icon_button.gd")
+const Palette := preload("res://game/palette.gd")
 
 ## Fredoka for titles and numbers, Inter for UI text. Both are variable fonts,
 ## so each weight is a FontVariation on the one file. Inter at 400 is also the
@@ -13,29 +14,18 @@ const INTER: FontFile = preload("res://assets/fonts/Inter-Variable.ttf")
 const WHITE := Color.WHITE
 ## Fully transparent, for a box with no fill or border.
 const CLEAR := Color(0, 0, 0, 0)
-## The dim navy laid over the screen behind sheets, cards and the tutorial.
-## Each place sets its own alpha: Color(UI.DIM_INK, 0.45).
-const DIM_INK := Color(16 / 255.0, 32 / 255.0, 44 / 255.0)
-
-## Text and accent colours for everything drawn over the sky.
-const SKY_INK := Color("#22313F")
-const SKY_MUTED := Color("#3D5568")
-const SKY_ACCENT := Color("#1F5E7A")
-## The darker ledge under the teal primary button.
-const ACCENT_LEDGE := Color("#123D50")
-
-## The soft blue-grey ledge under every white card and button.
-const CARD_SHADOW := Color(36 / 255.0, 72 / 255.0, 96 / 255.0, 0.16)
-## White cards and buttons while hovered and pressed.
-const CARD_HOVER := Color("#F4F8FA")
-const CARD_PRESSED := Color("#E6EEF2")
-## The pale track behind segmented toggles, and the slider's rail.
-const SEGMENT_TRACK := Color("#EAF1F5")
-const SLIDER_RAIL := Color("#D5E2EA")
-## A switch's track while off, and the Settings sheet's drag handle.
-const SWITCH_OFF := Color("#C9D5DC")
-## Tray cards are slightly see-through so the sky tints them.
-const TRAY_CARD := Color(1, 1, 1, 0.86)
+const DIM_INK := Palette.DIM_INK
+const SKY_INK := Palette.INK
+const SKY_MUTED := Palette.MUTED
+const SKY_ACCENT := Palette.ACCENT
+const ACCENT_LEDGE := Palette.ACCENT_LEDGE
+const CARD_SHADOW := Palette.CARD_SHADOW
+const CARD_HOVER := Palette.CARD_HOVER
+const CARD_PRESSED := Palette.CARD_PRESSED
+const SEGMENT_TRACK := Palette.SEGMENT_TRACK
+const SLIDER_RAIL := Palette.SLIDER_RAIL
+const SWITCH_OFF := Palette.SWITCH_OFF
+const TRAY_CARD := Palette.TRAY_CARD
 
 ## Points kept clear of the notch and the home indicator (390×844 iPhone).
 const SAFE_TOP := 54

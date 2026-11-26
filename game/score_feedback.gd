@@ -6,18 +6,15 @@ extends RefCounted
 ## since the game is replaced on every new game. The pop and banner are added
 ## to `host` and free themselves when their tween ends.
 
+const Palette := preload("res://game/palette.gd")
 const ViewMath := preload("res://game/view_math.gd")
 const UI := preload("res://game/ui_style.gd")
 
-# Placeholder feedback (#47).
-## The "+points" pop: white Fredoka with a gold outline, as in the designs'
-## Line clear artboard.
 const SCORE_POP_COLOR := Color.WHITE
-const SCORE_POP_OUTLINE := Color("#B9832A")
-## The combo/streak banner: sunny yellow, kept for celebrations.
-const BANNER_FILL := Color("#FFC94D")
-const BANNER_LEDGE := Color("#D99A1E")
-const BANNER_TEXT := Color("#4A2E05")
+const SCORE_POP_OUTLINE := Palette.SCORE_POP_OUTLINE
+const BANNER_FILL := Palette.GOLD
+const BANNER_LEDGE := Palette.BANNER_LEDGE
+const BANNER_TEXT := Palette.BANNER_TEXT
 const SCORE_POP_RISE := 56.0
 const SCORE_POP_SECONDS := 0.9
 const BANNER_SECONDS := 1.2

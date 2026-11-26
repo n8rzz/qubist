@@ -5,7 +5,7 @@ extends Button
 ## A disabled button draws its icon faded.
 
 var kind: String
-var icon_color := Color("#22313F"):
+var icon_color := preload("res://game/palette.gd").INK:
 	set(value):
 		icon_color = value
 		queue_redraw()

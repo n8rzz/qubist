@@ -9,6 +9,7 @@ extends RefCounted
 ## change. The backdrop, the particles and the island read it every frame.
 ## Colours follow the "Seasons and time of day" design in Notion.
 
+const Palette := preload("res://game/palette.gd")
 const SkyClock := preload("res://core/sky_clock.gd")
 const UI := preload("res://game/ui_style.gd")
 
@@ -19,105 +20,14 @@ const CROSSFADE_SECONDS := 3.0
 const CLOCK_CHECK_SECONDS := 30.0
 
 ## Sky gradients, top to bottom, as [stop, colour] pairs.
-const GRADIENTS := {
-	"sunrise":
-	[
-		[0.0, Color("#7E9CD3")],
-		[0.38, Color("#E7B3B4")],
-		[0.66, Color("#FFD9AE")],
-		[1.0, Color("#FFF1DC")]
-	],
-	"day": [[0.0, Color("#9FD3EE")], [0.42, Color("#CBE8F6")], [1.0, Color("#F3FAFD")]],
-	"sunset":
-	[
-		[0.0, Color("#48508F")],
-		[0.34, Color("#B96A8E")],
-		[0.62, Color("#F08A6B")],
-		[1.0, Color("#FFC98A")]
-	],
-	"night": [[0.0, Color("#0B1230")], [0.45, Color("#1C2A57")], [1.0, Color("#34467A")]],
-}
+const GRADIENTS := Palette.SKY_GRADIENTS
 ## Cloud colour, and how opaque clouds are compared with the day's.
-const CLOUD_COLORS := {
-	"sunrise": Color("#FFE3DA"),
-	"day": Color.WHITE,
-	"sunset": Color("#F6B1A0"),
-	"night": Color("#4A5C8E"),
-}
+const CLOUD_COLORS := Palette.CLOUD_COLORS
 const CLOUD_OPACITY := {"sunrise": 0.94, "day": 1.0, "sunset": 0.88, "night": 0.65}
-## Light on the island and tower: multiplied over them, as the design's
-## filters warm, dim and cool them. Night stays light enough that the
-## tower's blocks read clearly (#214).
-const TINTS := {
-	"sunrise": Color(1.0, 0.96, 0.88),
-	"day": Color.WHITE,
-	"sunset": Color(0.98, 0.83, 0.74),
-	"night": Color(0.78, 0.82, 0.94),
-}
+const TINTS := Palette.TINTS
 
-## Island colours (as in island_art.gd) swapped for each season. Colours a
-## season doesn't list stay as they are.
-const ISLAND_COLORS := {
-	"spring":
-	{
-		"#9CCD63": "#A9DA6E",
-		"#6E9E3E": "#73A840",
-		"#7DB34A": "#8CC152",
-		"#8BC152": "#97CA5B",
-		"#B7DE83": "#C3E89A",
-		"#5E9E3A": "#F08FB0",
-		"#76B84A": "#F9C9D8",
-	},
-	"summer":
-	{
-		"#9CCD63": "#8CC152",
-		"#6E9E3E": "#5E9233",
-		"#7DB34A": "#73A840",
-		"#8BC152": "#7DB34A",
-		"#B7DE83": "#A8D46F",
-		"#7FAE4E": "#6E9E3E",
-		"#79C6E0": "#5FBDDC",
-		"#4E9DBB": "#3F92B3",
-		"#5E9E3A": "#4E8F30",
-		"#76B84A": "#66A840",
-	},
-	"fall":
-	{
-		"#9CCD63": "#C2B25A",
-		"#6E9E3E": "#8F8238",
-		"#7DB34A": "#A99A45",
-		"#8BC152": "#B5A64E",
-		"#B7DE83": "#D6CC7E",
-		"#7FAE4E": "#A99A45",
-		"#79C6E0": "#6FB3C8",
-		"#4E9DBB": "#4A8CA3",
-		"#E6F7FC": "#E6F2F5",
-		"#5E9E3A": "#D9772B",
-		"#76B84A": "#E8A33A",
-	},
-	"winter":
-	{
-		"#9CCD63": "#EEF3F8",
-		"#6E9E3E": "#B9CAD8",
-		"#7DB34A": "#DCE6EF",
-		"#8BC152": "#E6EEF5",
-		"#B7DE83": "#F7FAFD",
-		"#7FAE4E": "#C3D3E0",
-		"#79C6E0": "#CFE6F0",
-		"#4E9DBB": "#9CC3D4",
-		"#E6F7FC": "#FFFFFF",
-		"#5E9E3A": "#E9F0F6",
-		"#76B84A": "#FFFFFF",
-	},
-}
-## The tree beside the island: trunk and three canopy colours. Winter's tree
-## is bare, with snow on its branches.
-const TREES := {
-	"spring": [Color("#8A6248"), [Color("#F7B6CB"), Color("#FBD3E0"), Color("#F49AB8")]],
-	"summer": [Color("#7A5640"), [Color("#4E9A33"), Color("#6BB548"), Color("#3F8A2A")]],
-	"fall": [Color("#6E4E3A"), [Color("#E0782E"), Color("#F0A33C"), Color("#C8502A")]],
-	"winter": [Color("#6E5A4C"), []],
-}
+const ISLAND_COLORS := Palette.ISLAND_COLORS
+const TREES := Palette.TREES
 ## The tree's shape (#207), shared by Home's 2D tree (island_art.gd, which
 ## flips y) and the game's 3D one (floating_island.gd). In points from the
 ## foot of the trunk, x to the right and y up.
@@ -136,13 +46,11 @@ const TREE_SNOW_LUMPS := [[-12, 38, 4.0], [10, 42, 4.5], [-8, 42, 3.0], [7, 44, 
 ## Fall's leaves on the ground are this canopy colour (the deepest red).
 const TREE_FALLEN_LEAF := 2
 ## Snow on the cubes' tops in winter.
-const SNOW_TOP := Color("#F3F7FB")
-const SNOW_TOP_INSET := Color.WHITE
+const SNOW_TOP := Palette.SNOW_TOP
+const SNOW_TOP_INSET := Palette.SNOW_TOP_INSET
 
-## Text that sits on the sky, by day and by night (#168: at night the score
-## turns white). Cards keep their own colours.
-const NIGHT_INK := Color.WHITE
-const NIGHT_MUTED := Color("#C9D8E6")
+const NIGHT_INK := Palette.NIGHT_INK
+const NIGHT_MUTED := Palette.NIGHT_MUTED
 ## Controls whose text sits on the sky (#204), tagged by ink(), muted() or
 ## on_sky(). The sky backdrop recolours them all through recolor_sky().
 const TEXT_GROUP := &"sky_text"
@@ -157,18 +65,16 @@ const LIGHT_TEXT := {"sunrise": 0.0, "day": 0.0, "sunset": 1.0, "night": 1.0}
 ## day colour they use is swapped for its night colour below: fills are a
 ## box's background, border and ledge; inks are its text and icons. A colour
 ## not listed stays as it is, so white text on the teal key stays white.
-const NIGHT_CARD := Color("#2A3A66")
-const NIGHT_CARD_HOVER := Color("#31426F")
-const NIGHT_CARD_PRESSED := Color("#22305A")
-const NIGHT_LEDGE := Color("#121A36")
-const NIGHT_TRAY_CARD := Color("#26355F")
-const NIGHT_SEGMENT_TRACK := Color("#1D2A50")
-const NIGHT_SLIDER_RAIL := Color("#42557F")
-## The teal key and slider fill, a little brighter so they stand out on navy.
-const NIGHT_ACCENT := Color("#237196")
-const NIGHT_ACCENT_LEDGE := Color("#0F3446")
-## Teal text (Continue, the slice chip), light enough to read on navy.
-const NIGHT_ACCENT_INK := Color("#8CCBE6")
+const NIGHT_CARD := Palette.NIGHT_CARD
+const NIGHT_CARD_HOVER := Palette.NIGHT_CARD_HOVER
+const NIGHT_CARD_PRESSED := Palette.NIGHT_CARD_PRESSED
+const NIGHT_LEDGE := Palette.NIGHT_LEDGE
+const NIGHT_TRAY_CARD := Palette.NIGHT_TRAY_CARD
+const NIGHT_SEGMENT_TRACK := Palette.NIGHT_SEGMENT_TRACK
+const NIGHT_SLIDER_RAIL := Palette.NIGHT_SLIDER_RAIL
+const NIGHT_ACCENT := Palette.NIGHT_ACCENT
+const NIGHT_ACCENT_LEDGE := Palette.NIGHT_ACCENT_LEDGE
+const NIGHT_ACCENT_INK := Palette.NIGHT_ACCENT_INK
 ## [day, night] fills.
 const NIGHT_FILLS := [
 	[UI.WHITE, NIGHT_CARD],
