@@ -68,16 +68,31 @@ jobs:
       - name: Collect the output
         if: always()
         run: |
-          # Drop ERROR: lines that tests trigger on purpose (validation errors
-          # from analytics/config called with bad data, and the push_error() in
-          # the fixture that test_suite_runner.gd uses to verify error handling).
-          # Also drop SCRIPT ERROR lines from fixtures (same reason).
-          # Everything else still counts.
-          cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | awk '
+          # The errors the unit tests trigger on purpose, as whole lines. They
+          # are only dropped from the unit test output, along with the "at:"
+          # line under each. A test that adds one must list it here.
+          cat > expected-errors.txt <<'EOF'
+          ERROR: Analytics: unknown event 'player_email'
+          ERROR: Analytics: 'game_start' takes [], got ["device"]
+          ERROR: Analytics: 'game_over' takes ["score", "moves", "lines"], got ["score"]
+          ERROR: analytics test error
+          ERROR: Duplicate piece id 'dot'
+          ERROR: Piece 'empty_all' has no cells
+          ERROR: Piece 'empty' has no cells
+          ERROR: expected error from tests/fixtures/crashing_suite.gd
+          EOF
+          cat test-output.txt 2>/dev/null | awk '
+            NR == FNR { expected[$0] = 1; next }
             skip_next == 1 { skip_next = 0; next }
-            /^ERROR: Analytics:|^ERROR: Duplicate piece id|^ERROR: Piece '"'"'|^ERROR: analytics test error|^ERROR: expected error from / {
-              skip_next = 1; next
-            }
+            $0 in expected { skip_next = 1; next }
+            { print }
+          ' expected-errors.txt - > test-filtered.txt
+
+          # tests/fixtures/ holds a suite that crashes on purpose, so
+          # tests/test_suite_runner.gd can check the runner fails a test on a
+          # script error. Drop those deliberate errors (the SCRIPT ERROR line
+          # and the "at:" line under it). Everything else still counts.
+          cat test-filtered.txt smoke-output.txt loading-output.txt 2>/dev/null | awk '
             /SCRIPT ERROR/ { held = $0; next }
             held != "" {
               if ($0 !~ /res:\/\/tests\/fixtures\//) { print held; print }
@@ -116,9 +131,8 @@ jobs:
       - name: Fail on engine errors
         if: always()
         run: |
-          # Fail on any engine ERROR: line. These are unexpected; script errors
-          # from tests and push_error() outputs from fixtures are already
-          # filtered out of all-output.txt by the Collect step above.
+          # Fail on any engine ERROR: line. These are unexpected: the Collect
+          # step above already dropped the ones tests trigger on purpose.
           if grep -E "^ERROR:" all-output.txt; then
             echo "::error::Godot reported engine errors (see above)."
             exit 1
