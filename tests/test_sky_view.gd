@@ -79,6 +79,19 @@ func test_start_shows_the_settings_at_once() -> void:
 	_reset()
 
 
+## #116: a screen's sky holds still when the device asks for Reduce Motion.
+func test_start_takes_reduce_motion_from_the_device() -> void:
+	var settings := Settings.new()
+	UI.motion_override = 1
+	SkyView.start(settings)
+	check(SkyView.still, "still under Reduce Motion")
+	UI.motion_override = 0
+	SkyView.start(settings)
+	check(not SkyView.still, "moving otherwise")
+	UI.motion_override = -1
+	_reset()
+
+
 func test_follow_clock_checks_every_interval() -> void:
 	var settings := Settings.new()
 	settings.sky_follows_day = false
