@@ -3,7 +3,6 @@ extends RefCounted
 ## their own read Palette.INK, Palette.CUBE_TOP and so on. Derived values
 ## like Color(Palette.CUBE_EDGE, 0.3) stay where they're used.
 
-
 # -- UI text and accents --
 
 const INK := Color("#22313F")
