@@ -16,7 +16,9 @@ func _rng() -> RandomNumberGenerator:
 
 
 ## The view builds its nodes up front and only parents them in setup(), which
-## these tests skip, so they're freed one by one.
+## these tests skip. Parent them to the view here so view.free() can clean
+## up the whole hierarchy rather than freeing each orphan individually
+## (individual free() on 3D nodes outside the tree triggers engine errors).
 func _free_view(view: Node) -> void:
 	for property in view.get_property_list():
 		var value = view.get(property.name)
@@ -26,7 +28,7 @@ func _free_view(view: Node) -> void:
 			and value is Node
 			and value.get_parent() == null
 		):
-			value.free()
+			view.add_child(value)
 	view.free()
 
 

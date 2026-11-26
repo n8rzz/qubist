@@ -70,10 +70,11 @@ jobs:
         run: |
           # tests/fixtures/ holds a suite that crashes on purpose, so
           # tests/test_suite_runner.gd can check the runner fails a test on a
-          # script error. Drop those deliberate errors (the SCRIPT ERROR line
-          # and the "at:" line under it); every other one still counts.
+          # script error. Drop those deliberate errors (the SCRIPT ERROR and
+          # USER ERROR lines from push_error(), and the "at:" line under each);
+          # every other one still counts.
           cat test-output.txt smoke-output.txt loading-output.txt 2>/dev/null | awk '
-            /SCRIPT ERROR/ { held = $0; next }
+            /SCRIPT ERROR|USER ERROR/ { held = $0; next }
             held != "" {
               if ($0 !~ /res:\/\/tests\/fixtures\//) { print held; print }
               held = ""
@@ -86,12 +87,15 @@ jobs:
       - name: Report failures as annotations
         if: always()
         run: |
-          # Surface each failed check and script error on the pull request.
+          # Surface each failed check, script error, and engine error on the pull request.
           grep -E "^  - " all-output.txt | sed 's/^  - //' | head -50 | while IFS= read -r line; do
             echo "::error title=Test failed::$line"
           done || true
           grep -E -A2 "SCRIPT ERROR|Parse Error" all-output.txt | head -60 | paste -sd' ' | sed 's/--/\n/g' | while IFS= read -r line; do
             [ -n "$line" ] && echo "::error title=Script error::$line"
+          done || true
+          grep -E "^ERROR:" all-output.txt | head -50 | while IFS= read -r line; do
+            echo "::error title=Engine error::$line"
           done || true
 
       - name: Fail on script errors
@@ -102,5 +106,16 @@ jobs:
           # this, so treat any script or parse error in the output as a failure.
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" all-output.txt; then
             echo "::error::Godot reported script errors (see above)."
+            exit 1
+          fi
+
+      - name: Fail on engine errors
+        if: always()
+        run: |
+          # Fail on any engine ERROR: line. These are unexpected; script errors
+          # from tests and push_error() outputs from fixtures are already
+          # filtered out of all-output.txt by the Collect step above.
+          if grep -E "^ERROR:" all-output.txt; then
+            echo "::error::Godot reported engine errors (see above)."
             exit 1
           fi
