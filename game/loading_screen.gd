@@ -14,6 +14,7 @@ const Settings := preload("res://core/settings.gd")
 const SaveFile := preload("res://core/save_file.gd")
 const LoadingArt := preload("res://game/loading_art.gd")
 const UI := preload("res://game/ui_style.gd")
+const FramePacer := preload("res://game/frame_pacer.gd")
 
 const MAIN_SCENE := "res://scenes/main.tscn"
 ## The view stays up at least this long, even when the game is ready sooner.
@@ -73,6 +74,7 @@ func _process(delta: float) -> void:
 	elapsed += delta
 	art.time = elapsed
 	art.queue_redraw()
+	FramePacer.update()
 
 	var loaded := 0.0
 	if main == null:

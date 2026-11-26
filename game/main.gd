@@ -31,6 +31,7 @@ const TutorialOverlay := preload("res://game/tutorial_overlay.gd")
 const HintToast := preload("res://game/hint_toast.gd")
 const Analytics := preload("res://core/analytics.gd")
 const ErrorReporter := preload("res://game/error_reporter.gd")
+const FramePacer := preload("res://game/frame_pacer.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -260,6 +261,9 @@ func _process(delta: float) -> void:
 	update_sky(delta)
 	if swiper.update_sweep(delta, tower.rig.is_turning()):
 		tower.set_sweep_alpha(swiper.sweep_alpha())
+	if drag.is_dragging() or tower.is_animating() or tower.rig.is_turning() or SkyView.is_fading():
+		FramePacer.mark_active()
+	FramePacer.update()
 
 
 ## Follows the clock when Settings says the sky follows the day, but never
