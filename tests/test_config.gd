@@ -3,6 +3,18 @@ extends "res://tests/q_test.gd"
 const Config := preload("res://core/config.gd")
 const Piece := preload("res://core/piece.gd")
 
+## A 4-cube screw: two cubes along x, a third along y, the fourth stacked on
+## top. Its turns run along all three axes, so no rotation matches its mirror
+## image.
+const SCREW: Array[Vector3i] = [
+	Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(1, 1, 0), Vector3i(1, 1, 1)
+]
+## A flat L. Flipping it over is a rotation, so its mirror image is one of
+## its orientations.
+const FLAT_L: Array[Vector3i] = [
+	Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(0, 1, 0)
+]
+
 
 func test_loads_default_files() -> void:
 	var cfg := Config.new()
@@ -21,7 +33,10 @@ func test_loads_every_piece_in_the_file() -> void:
 			var turns := Piece.orientations(Piece.parse_cells(entry.cells)).size()
 			expected += turns
 			check(cfg.piece_by_id("%s_00" % entry.id) != null, "%s_00 is loaded" % entry.id)
-			check(cfg.piece_by_id("%s_%02d" % [entry.id, turns - 1]) != null, "last %s rotation is loaded" % entry.id)
+			check(
+				cfg.piece_by_id("%s_%02d" % [entry.id, turns - 1]) != null,
+				"last %s rotation is loaded" % entry.id
+			)
 		else:
 			expected += 1
 			check(cfg.piece_by_id(entry.id) != null, "%s is loaded" % entry.id)
@@ -66,7 +81,10 @@ func test_bar_orientations_share_the_entry_weight() -> void:
 				total += p.weight
 				count += 1
 		check_eq(count, 3, "%s lies along x, along y or upright" % bar)
-		check(is_equal_approx(total, _entry_weight(bar)), "%s orientations add up to its entry weight" % bar)
+		check(
+			is_equal_approx(total, _entry_weight(bar)),
+			"%s orientations add up to its entry weight" % bar
+		)
 
 
 func test_piece_cells_are_normalized() -> void:
@@ -92,7 +110,9 @@ func test_overrides_fall_back_to_defaults() -> void:
 
 func test_all_orientations_expand_into_rotations() -> void:
 	var cfg := Config.new()
-	var expected_turns := {"L4": 24, "corner3": 12, "T4": 12, "slab4": 3, "tripod4": 8, "bar3": 3, "S4": 12}
+	var expected_turns := {
+		"L4": 24, "corner3": 12, "T4": 12, "slab4": 3, "tripod4": 8, "bar3": 3, "S4": 12
+	}
 	var by_shape := {}
 	for piece in cfg.pieces:
 		var key: String = piece.id.split("_")[0]
@@ -107,7 +127,9 @@ func test_all_orientations_expand_into_rotations() -> void:
 			total += piece.weight
 			check(not seen.has(str(piece.cells)), "%s is listed twice" % piece.id)
 			seen[str(piece.cells)] = true
-		check(absf(total - _entry_weight(key)) < 0.0001, "%s weights add up to its entry weight" % key)
+		check(
+			absf(total - _entry_weight(key)) < 0.0001, "%s weights add up to its entry weight" % key
+		)
 
 
 func test_first_orientation_is_the_one_written() -> void:
@@ -121,7 +143,9 @@ func test_first_orientation_is_the_one_written() -> void:
 
 func test_orientations_cover_every_axis() -> void:
 	var sizes := {}
-	for cells in Piece.orientations([Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(0, 1, 0)]):
+	for cells in Piece.orientations(
+		[Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(0, 1, 0)]
+	):
 		var piece := Piece.new({"id": "t", "cells": cells.map(func(c): return [c.x, c.y, c.z])})
 		sizes[piece.size] = true
 	# A 3x2 L can lie along any two of the three axes.
@@ -134,21 +158,14 @@ func test_symmetric_shapes_have_fewer_orientations() -> void:
 	check_eq(Piece.orientations([Vector3i(0, 0, 0)]).size(), 1)
 
 
-## A 4-cube screw: two cubes along x, a third along y, the fourth stacked on
-## top. Its turns run along all three axes, so no rotation matches its mirror
-## image.
-const SCREW: Array[Vector3i] = [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(1, 1, 0), Vector3i(1, 1, 1)]
-## A flat L. Flipping it over is a rotation, so its mirror image is one of
-## its orientations.
-const FLAT_L: Array[Vector3i] = [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(0, 1, 0)]
-
-
 func test_orientations_never_include_mirror_images() -> void:
 	var turns := _orientation_keys(SCREW)
 	check_eq(turns.size(), 12, "a screw has 12 rotations; with mirror images it would have 24")
 	for axis in 3:
 		var mirror := _mirror_key(SCREW, axis)
-		check(not turns.has(mirror), "the screw mirrored on axis %d is among its orientations" % axis)
+		check(
+			not turns.has(mirror), "the screw mirrored on axis %d is among its orientations" % axis
+		)
 
 
 ## Shows the check above can fail: a mirror image that is also a rotation is
@@ -156,7 +173,10 @@ func test_orientations_never_include_mirror_images() -> void:
 func test_mirror_check_finds_a_mirror_that_is_a_rotation() -> void:
 	var turns := _orientation_keys(FLAT_L)
 	for axis in 3:
-		check(turns.has(_mirror_key(FLAT_L, axis)), "the flat L mirrored on axis %d is a rotation of it" % axis)
+		check(
+			turns.has(_mirror_key(FLAT_L, axis)),
+			"the flat L mirrored on axis %d is a rotation of it" % axis
+		)
 
 
 ## Piece.orientations(), as a set of their printed cells.
@@ -193,11 +213,20 @@ func test_plain_entries_are_not_expanded() -> void:
 
 ## A repeated id logs a push_error and is skipped, so the first entry wins.
 func test_duplicate_piece_id_keeps_the_first() -> void:
-	var cfg := Config.new({}, {"pieces": [
-		{"id": "dot", "cells": [[0, 0, 0]]},
-		{"id": "dot", "cells": [[0, 0, 0], [1, 0, 0]]},
-		{"id": "bar", "cells": [[0, 0, 0], [0, 1, 0]]},
-	]})
+	var cfg := (
+		Config
+		. new(
+			{},
+			{
+				"pieces":
+				[
+					{"id": "dot", "cells": [[0, 0, 0]]},
+					{"id": "dot", "cells": [[0, 0, 0], [1, 0, 0]]},
+					{"id": "bar", "cells": [[0, 0, 0], [0, 1, 0]]},
+				]
+			}
+		)
+	)
 	check_eq(cfg.pieces.size(), 2)
 	check_eq(cfg.piece_by_id("dot").cube_count(), 1)
 	check(cfg.piece_by_id("bar") != null, "pieces after the duplicate still load")
@@ -220,13 +249,22 @@ func test_signature_changes_with_tray_and_grid_size() -> void:
 
 ## An entry with no cells logs a push_error and is skipped, "all" or not.
 func test_entry_with_no_cells_is_skipped() -> void:
-	var cfg := Config.new({}, {"pieces": [
-		{"id": "empty_all", "orientations": "all", "cells": []},
-		{"id": "empty", "cells": []},
-		{"id": "dot", "cells": [[0, 0, 0]]},
-	]})
+	var cfg := (
+		Config
+		. new(
+			{},
+			{
+				"pieces":
+				[
+					{"id": "empty_all", "orientations": "all", "cells": []},
+					{"id": "empty", "cells": []},
+					{"id": "dot", "cells": [[0, 0, 0]]},
+				]
+			}
+		)
+	)
 	check_eq(cfg.pieces.size(), 1)
-	check(cfg.piece_by_id("empty_all") == null, "the \"all\" entry is skipped")
-	check(cfg.piece_by_id("empty_all_00") == null, "the \"all\" entry isn't expanded")
+	check(cfg.piece_by_id("empty_all") == null, 'the "all" entry is skipped')
+	check(cfg.piece_by_id("empty_all_00") == null, 'the "all" entry isn\'t expanded')
 	check(cfg.piece_by_id("empty") == null, "the plain entry is skipped")
 	check(cfg.piece_by_id("dot") != null, "later pieces still load")

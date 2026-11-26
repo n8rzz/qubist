@@ -106,7 +106,9 @@ func test_follow_clock_checks_every_interval() -> void:
 	SkyView.follow_clock(2.0, true)
 	check_eq([SkyView.season, SkyView.time_of_day], ["summer", "day"], "held")
 	SkyView.follow_clock(0.0)
-	check_eq([SkyView.season, SkyView.time_of_day], [clock[0], clock[1]], "checks once the hold clears")
+	check_eq(
+		[SkyView.season, SkyView.time_of_day], [clock[0], clock[1]], "checks once the hold clears"
+	)
 	_reset()
 
 
@@ -132,9 +134,18 @@ func test_gradients_match_the_design_at_their_stops() -> void:
 
 
 func test_island_colours_by_season() -> void:
-	check(SkyView.season_color("winter", IslandArt.GRASS).is_equal_approx(Color("#EEF3F8")), "winter grass is snow")
-	check(SkyView.season_color("fall", IslandArt.BUSH).is_equal_approx(Color("#D9772B")), "fall bushes are orange")
-	check(SkyView.season_color("spring", IslandArt.BRICK_LEFT).is_equal_approx(IslandArt.BRICK_LEFT), "brick never changes")
+	check(
+		SkyView.season_color("winter", IslandArt.GRASS).is_equal_approx(Color("#EEF3F8")),
+		"winter grass is snow"
+	)
+	check(
+		SkyView.season_color("fall", IslandArt.BUSH).is_equal_approx(Color("#D9772B")),
+		"fall bushes are orange"
+	)
+	check(
+		SkyView.season_color("spring", IslandArt.BRICK_LEFT).is_equal_approx(IslandArt.BRICK_LEFT),
+		"brick never changes"
+	)
 	var strata := SkyView.season_color("winter", IslandArt.EARTH_STRATA)
 	check(is_equal_approx(strata.a, IslandArt.EARTH_STRATA.a), "alpha is kept")
 
@@ -154,7 +165,10 @@ func test_tree_shapes_fit_every_season() -> void:
 			continue
 		for puff in SkyView.TREE_PUFFS:
 			check(puff[3] < canopy.size(), "%s has a colour for every puff" % key)
-	check(SkyView.TREES["fall"][1][SkyView.TREE_FALLEN_LEAF] == Color("#C8502A"), "fallen leaves stay deep red")
+	check(
+		SkyView.TREES["fall"][1][SkyView.TREE_FALLEN_LEAF] == Color("#C8502A"),
+		"fallen leaves stay deep red"
+	)
 	for branch in SkyView.TREE_BRANCHES:
 		check(branch[1].y > branch[0].y, "branches point up (y is up)")
 
@@ -171,7 +185,10 @@ func test_cube_tops_turn_snowy_in_winter() -> void:
 	var inset := Color("#F6F2EA")
 	SkyView.show("winter", "day", true)
 	check(SkyView.snowy_top(top).is_equal_approx(SkyView.SNOW_TOP), "snow on top in winter")
-	check(SkyView.snowy_top_inset(inset).is_equal_approx(SkyView.SNOW_TOP_INSET), "snow on the inset in winter")
+	check(
+		SkyView.snowy_top_inset(inset).is_equal_approx(SkyView.SNOW_TOP_INSET),
+		"snow on the inset in winter"
+	)
 	SkyView.show("summer", "day", true)
 	check(SkyView.snowy_top(top).is_equal_approx(top), "bare top in summer")
 	check(SkyView.snowy_top_inset(inset).is_equal_approx(inset), "bare inset in summer")
@@ -180,7 +197,9 @@ func test_cube_tops_turn_snowy_in_winter() -> void:
 
 func test_night_text_turns_light() -> void:
 	SkyView.show("summer", "night", true)
-	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at night")
+	check(
+		SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at night"
+	)
 	SkyView.show("summer", "day", true)
 	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.BLACK), "dark by day")
 	_reset()
@@ -191,10 +210,14 @@ func test_night_text_turns_light() -> void:
 func test_sunset_text_turns_light() -> void:
 	SkyView.show("fall", "sunset", true)
 	check_eq(SkyView.light_text_amount(), 1.0, "light text at sunset")
-	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at sunset")
+	check(
+		SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.WHITE), "white at sunset"
+	)
 	SkyView.show("fall", "sunrise", true)
 	check_eq(SkyView.light_text_amount(), 0.0, "dark text at sunrise")
-	check(SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.BLACK), "dark at sunrise")
+	check(
+		SkyView.text_color(Color.BLACK, Color.WHITE).is_equal_approx(Color.BLACK), "dark at sunrise"
+	)
 	_reset()
 
 
@@ -208,8 +231,13 @@ func test_sunset_lightens_text_but_not_cards() -> void:
 	SkyView.show("summer", "sunset", true)
 	SkyView.recolor([ink, muted, b])
 	check(ink.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "ink at sunset")
-	check(muted.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "muted at sunset")
-	check((b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color.is_equal_approx(UI.WHITE), "button stays white")
+	check(
+		muted.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "muted at sunset"
+	)
+	check(
+		(b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color.is_equal_approx(UI.WHITE),
+		"button stays white"
+	)
 	check(b.icon_color.is_equal_approx(UI.SKY_INK), "button icon stays ink")
 	for control in [ink, muted, b]:
 		control.free()
@@ -221,7 +249,10 @@ func test_sky_text_is_tagged_and_coloured_now() -> void:
 	var label := Label.new()
 	check(SkyView.ink(label) == label, "returns the control")
 	check(label.is_in_group(SkyView.TEXT_GROUP), "tagged")
-	check(label.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "coloured for night at once")
+	check(
+		label.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK),
+		"coloured for night at once"
+	)
 	label.free()
 	_reset()
 
@@ -234,8 +265,13 @@ func test_sky_text_follows_the_time_of_day() -> void:
 	SkyView.show("winter", "night", true)
 	SkyView.recolor([ink, muted, button])
 	check(ink.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "ink at night")
-	check(muted.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "muted at night")
-	check(button.get_theme_color("font_pressed_color").is_equal_approx(Color.BLUE), "button states at night")
+	check(
+		muted.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "muted at night"
+	)
+	check(
+		button.get_theme_color("font_pressed_color").is_equal_approx(Color.BLUE),
+		"button states at night"
+	)
 	SkyView.show("winter", "day", true)
 	SkyView.recolor([ink, muted, button])
 	check(ink.get_theme_color("font_color").is_equal_approx(UI.SKY_INK), "ink by day")
@@ -265,7 +301,12 @@ func test_sky_buttons_turn_midnight_at_night() -> void:
 	var normal := b.get_theme_stylebox("normal") as StyleBoxFlat
 	check(normal.bg_color.is_equal_approx(SkyView.NIGHT_CARD), "navy at once")
 	check(normal.shadow_color.is_equal_approx(SkyView.NIGHT_LEDGE), "dark ledge")
-	check((b.get_theme_stylebox("pressed") as StyleBoxFlat).bg_color.is_equal_approx(SkyView.NIGHT_CARD_PRESSED), "pressed")
+	check(
+		(b.get_theme_stylebox("pressed") as StyleBoxFlat).bg_color.is_equal_approx(
+			SkyView.NIGHT_CARD_PRESSED
+		),
+		"pressed"
+	)
 	check(b.icon_color.is_equal_approx(SkyView.NIGHT_INK), "white icon")
 	SkyView.show("summer", "day", true)
 	SkyView.recolor([b])
@@ -290,10 +331,19 @@ func test_night_swaps_only_listed_colours() -> void:
 	key.add_theme_color_override("font_hover_color", Color.GREEN)
 	card.add_child(key)
 	SkyView.by_night(card)
-	check(caption.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED), "caption lightens")
+	check(
+		caption.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_MUTED),
+		"caption lightens"
+	)
 	check(key.get_theme_color("font_color").is_equal_approx(SkyView.NIGHT_INK), "key text lightens")
-	check(key.get_theme_color("font_pressed_color").is_equal_approx(UI.WHITE), "white on teal stays white")
-	check(key.get_theme_color("font_hover_color").is_equal_approx(Color.GREEN), "unlisted colour left alone")
+	check(
+		key.get_theme_color("font_pressed_color").is_equal_approx(UI.WHITE),
+		"white on teal stays white"
+	)
+	check(
+		key.get_theme_color("font_hover_color").is_equal_approx(Color.GREEN),
+		"unlisted colour left alone"
+	)
 	var pressed := key.get_theme_stylebox("pressed") as StyleBoxFlat
 	check(pressed.bg_color.is_equal_approx(SkyView.NIGHT_ACCENT), "brighter teal")
 	check(pressed.shadow_color.is_equal_approx(SkyView.NIGHT_ACCENT_LEDGE), "teal ledge")
@@ -308,8 +358,15 @@ func test_new_boxes_take_night_colours() -> void:
 	var slot := SkyView.by_night(PanelContainer.new())
 	slot.add_theme_stylebox_override("panel", UI.card(UI.TRAY_CARD, 20))
 	SkyView.paint_night(slot)
-	check((slot.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.is_equal_approx(SkyView.NIGHT_TRAY_CARD), "filled slot")
-	slot.add_theme_stylebox_override("panel", UI.box(Color(1, 1, 1, 0.25), 20, Vector2.ZERO, Color(1, 1, 1, 0.7), 2))
+	check(
+		(slot.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.is_equal_approx(
+			SkyView.NIGHT_TRAY_CARD
+		),
+		"filled slot"
+	)
+	slot.add_theme_stylebox_override(
+		"panel", UI.box(Color(1, 1, 1, 0.25), 20, Vector2.ZERO, Color(1, 1, 1, 0.7), 2)
+	)
 	SkyView.paint_night(slot)
 	var empty := slot.get_theme_stylebox("panel") as StyleBoxFlat
 	check(empty.bg_color.is_equal_approx(Color(1, 1, 1, 0.08)), "empty slot fill")
@@ -328,14 +385,31 @@ func test_night_cards_follow_the_fade() -> void:
 	check(night > 0.0 and night < 1.0, "mid-fade")
 	SkyView.recolor([b])
 	var expected := UI.WHITE.lerp(SkyView.NIGHT_CARD, night)
-	check((b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color.is_equal_approx(expected), "part way to navy")
+	check(
+		(b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color.is_equal_approx(expected),
+		"part way to navy"
+	)
 	b.free()
 	_reset()
 
 
 func test_every_view_lists_its_features() -> void:
-	var known := ["sun", "stars", "aurora", "moon", "birds", "geese", "mist", "blossom", "fallen_leaves",
-		"firefly", "butterfly"] + SkyWeather.FALLING.keys()
+	var known := (
+		[
+			"sun",
+			"stars",
+			"aurora",
+			"moon",
+			"birds",
+			"geese",
+			"mist",
+			"blossom",
+			"fallen_leaves",
+			"firefly",
+			"butterfly"
+		]
+		+ SkyWeather.FALLING.keys()
+	)
 	var particles := ["firefly", "butterfly"] + SkyWeather.FALLING.keys()
 	check_eq(SkyView.FEATURES.size(), 16, "16 views")
 	for season in ["spring", "summer", "fall", "winter"]:
@@ -346,8 +420,16 @@ func test_every_view_lists_its_features() -> void:
 			for feature in features:
 				check(known.has(feature), "%s: %s is drawn somewhere" % [view, feature])
 			check_eq(features.has("sun"), time != "night", "%s sun" % view)
-			check_eq(features.has("stars") and features.has("moon"), time == "night", "%s stars and moon" % view)
-			check_eq(features.filter(func(f): return particles.has(f)).size(), 1, "%s one kind of particle" % view)
+			check_eq(
+				features.has("stars") and features.has("moon"),
+				time == "night",
+				"%s stars and moon" % view
+			)
+			check_eq(
+				features.filter(func(f): return particles.has(f)).size(),
+				1,
+				"%s one kind of particle" % view
+			)
 
 
 func test_features_by_view() -> void:
@@ -417,9 +499,15 @@ func test_settings_sheet_pickers() -> void:
 ## player's switch decides while it doesn't.
 func test_christmas_follows_settings() -> void:
 	var settings := Settings.new()
-	check_eq(SkyView.christmas_for(settings), SkyClock.christmas_now(), "the date decides by default")
+	check_eq(
+		SkyView.christmas_for(settings), SkyClock.christmas_now(), "the date decides by default"
+	)
 	settings.sky_christmas = true
-	check_eq(SkyView.christmas_for(settings), SkyClock.christmas_now(), "the switch is ignored while following the day")
+	check_eq(
+		SkyView.christmas_for(settings),
+		SkyClock.christmas_now(),
+		"the switch is ignored while following the day"
+	)
 	settings.sky_follows_day = false
 	check(SkyView.christmas_for(settings), "the switch turns Santa on")
 	SkyView.follow(settings, true)

@@ -19,8 +19,14 @@ func test_clear_pulse_grows_with_the_lines_cleared() -> void:
 
 
 func test_pulses_get_stronger_from_tap_to_big_clear() -> void:
-	check(Haptics.TAP[0] < Haptics.CLEAR[0] and Haptics.CLEAR[0] < Haptics.BIG_CLEAR[0], "durations grow")
-	check(Haptics.TAP[1] < Haptics.CLEAR[1] and Haptics.CLEAR[1] < Haptics.BIG_CLEAR[1], "amplitudes grow")
+	check(
+		Haptics.TAP[0] < Haptics.CLEAR[0] and Haptics.CLEAR[0] < Haptics.BIG_CLEAR[0],
+		"durations grow"
+	)
+	check(
+		Haptics.TAP[1] < Haptics.CLEAR[1] and Haptics.CLEAR[1] < Haptics.BIG_CLEAR[1],
+		"amplitudes grow"
+	)
 	check(Haptics.BIG_CLEAR[1] <= 1.0, "amplitude stays in range")
 
 

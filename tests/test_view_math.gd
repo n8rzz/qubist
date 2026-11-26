@@ -51,7 +51,10 @@ func test_swiper_cuts_from_the_front() -> void:
 	check(ViewMath.is_sliced_away(Vector3i(0, 5, 0), ViewMath.MODE_X, 0, SIZE, 3))
 	check(ViewMath.is_sliced_away(Vector3i(0, 3, 0), ViewMath.MODE_X, 0, SIZE, 3))
 	check(not ViewMath.is_sliced_away(Vector3i(0, 2, 0), ViewMath.MODE_X, 0, SIZE, 3))
-	check(not ViewMath.is_sliced_away(Vector3i(0, 5, 0), ViewMath.MODE_X, 0, SIZE, 0), "depth 0 shows everything")
+	check(
+		not ViewMath.is_sliced_away(Vector3i(0, 5, 0), ViewMath.MODE_X, 0, SIZE, 0),
+		"depth 0 shows everything"
+	)
 
 
 func test_swiper_front_follows_rotation() -> void:
@@ -64,19 +67,30 @@ func test_y_mode_cuts_from_the_side() -> void:
 	# At the start view Y mode steps along x, and x = 5 is nearest the camera.
 	check_eq(ViewMath.layer_from_viewer(Vector3i(5, 0, 0), ViewMath.MODE_Y, 0, SIZE), 0)
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 0), ViewMath.MODE_Y, 0, SIZE), 5)
-	check_eq(ViewMath.layer_from_viewer(Vector3i(3, 5, 7), ViewMath.MODE_Y, 0, SIZE), 2, "y and h don't matter")
+	check_eq(
+		ViewMath.layer_from_viewer(Vector3i(3, 5, 7), ViewMath.MODE_Y, 0, SIZE),
+		2,
+		"y and h don't matter"
+	)
 	# Depth 2 hides x = 4, 5.
 	check(ViewMath.is_sliced_away(Vector3i(5, 0, 0), ViewMath.MODE_Y, 0, SIZE, 2))
 	check(ViewMath.is_sliced_away(Vector3i(4, 3, 6), ViewMath.MODE_Y, 0, SIZE, 2))
 	check(not ViewMath.is_sliced_away(Vector3i(3, 0, 0), ViewMath.MODE_Y, 0, SIZE, 2))
-	check(not ViewMath.is_sliced_away(Vector3i(5, 0, 0), ViewMath.MODE_Y, 0, SIZE, 0), "depth 0 shows everything")
+	check(
+		not ViewMath.is_sliced_away(Vector3i(5, 0, 0), ViewMath.MODE_Y, 0, SIZE, 0),
+		"depth 0 shows everything"
+	)
 
 
 func test_y_mode_follows_rotation() -> void:
 	# One quarter turn moves Y mode onto y, with y = 0 nearest the camera.
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 0, 0), ViewMath.MODE_Y, 1, SIZE), 0)
 	check_eq(ViewMath.layer_from_viewer(Vector3i(0, 5, 0), ViewMath.MODE_Y, 1, SIZE), 5)
-	check_eq(ViewMath.layer_from_viewer(Vector3i(5, 2, 7), ViewMath.MODE_Y, 1, SIZE), 2, "x and h don't matter")
+	check_eq(
+		ViewMath.layer_from_viewer(Vector3i(5, 2, 7), ViewMath.MODE_Y, 1, SIZE),
+		2,
+		"x and h don't matter"
+	)
 	# Depth 2 hides y = 0, 1.
 	check(ViewMath.is_sliced_away(Vector3i(0, 0, 0), ViewMath.MODE_Y, 1, SIZE, 2))
 	check(ViewMath.is_sliced_away(Vector3i(5, 1, 6), ViewMath.MODE_Y, 1, SIZE, 2))
@@ -113,7 +127,9 @@ func test_slice_plane_follows_rotation() -> void:
 	var x := ViewMath.slice_plane(ViewMath.MODE_X, 1, SIZE, 2)[0].x
 	for c in [Vector3i(0, 0, 0), Vector3i(5, 0, 0)]:
 		var cut: bool = ViewMath.is_sliced_away(c, ViewMath.MODE_X, 1, SIZE, 2)
-		var in_front: bool = c.x >= x if ViewMath.slice_toward_viewer(ViewMath.MODE_X, 1).x > 0 else c.x < x
+		var in_front: bool = (
+			c.x >= x if ViewMath.slice_toward_viewer(ViewMath.MODE_X, 1).x > 0 else c.x < x
+		)
 		check_eq(cut, in_front, "plane at x = %d splits %s correctly" % [x, c])
 
 
@@ -177,13 +193,19 @@ func test_z_mode_fades_layers_above_the_slice_at_every_rotation() -> void:
 	# h = 8 and everything below stay solid, whichever way the tower faces.
 	for step in range(-1, 5):
 		for c in [Vector3i(0, 0, 11), Vector3i(5, 2, 9), Vector3i(3, 5, 9)]:
-			check(ViewMath.is_sliced_away(c, ViewMath.MODE_Z, step, SIZE, 3),
-				"%s hidden at step %d" % [c, step])
+			check(
+				ViewMath.is_sliced_away(c, ViewMath.MODE_Z, step, SIZE, 3),
+				"%s hidden at step %d" % [c, step]
+			)
 		for c in [Vector3i(0, 0, 8), Vector3i(5, 5, 0), Vector3i(2, 3, 4)]:
-			check(not ViewMath.is_sliced_away(c, ViewMath.MODE_Z, step, SIZE, 3),
-				"%s solid at step %d" % [c, step])
-		check(not ViewMath.is_sliced_away(Vector3i(0, 0, 11), ViewMath.MODE_Z, step, SIZE, 0),
-			"depth 0 shows everything")
+			check(
+				not ViewMath.is_sliced_away(c, ViewMath.MODE_Z, step, SIZE, 3),
+				"%s solid at step %d" % [c, step]
+			)
+		check(
+			not ViewMath.is_sliced_away(Vector3i(0, 0, 11), ViewMath.MODE_Z, step, SIZE, 0),
+			"depth 0 shows everything"
+		)
 
 
 func test_z_mode_counts_from_the_top() -> void:
@@ -286,8 +308,12 @@ func test_major_ticks_are_longer() -> void:
 		var points: Array = group[0]
 		for i in range(0, points.size(), 2):
 			var length: float = (points[i + 1] - points[i]).length()
-			var expected: float = minf(group[1], ViewMath.FLOOR_TICK_MAX) if points[i].y < 0.01 else group[1]
-			check(is_equal_approx(length, expected), "tick %s has length %.2f" % [points[i], length])
+			var expected: float = (
+				minf(group[1], ViewMath.FLOOR_TICK_MAX) if points[i].y < 0.01 else group[1]
+			)
+			check(
+				is_equal_approx(length, expected), "tick %s has length %.2f" % [points[i], length]
+			)
 
 
 func test_crumble_starts_at_the_top() -> void:
@@ -312,7 +338,9 @@ func test_rubble_height_slopes_to_the_edge() -> void:
 	check_eq(ViewMath.rubble_height(0.0, 2.0, 3.0), 2.0, "peak in the middle")
 	check_eq(ViewMath.rubble_height(3.0, 2.0, 3.0), 0.0, "flat at the edge")
 	check_eq(ViewMath.rubble_height(5.0, 2.0, 3.0), 0.0, "flat beyond the edge")
-	check(ViewMath.rubble_height(1.0, 2.0, 3.0) > ViewMath.rubble_height(2.0, 2.0, 3.0), "slopes down")
+	check(
+		ViewMath.rubble_height(1.0, 2.0, 3.0) > ViewMath.rubble_height(2.0, 2.0, 3.0), "slopes down"
+	)
 
 
 func test_fall_seconds() -> void:

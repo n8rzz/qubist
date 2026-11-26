@@ -93,7 +93,11 @@ func test_save_file_round_trip() -> void:
 
 
 func test_save_file_ignores_garbage() -> void:
-	var file := FileAccess.open(TEST_PATH, FileAccess.WRITE) if DirAccess.make_dir_recursive_absolute(TEST_PATH.get_base_dir()) == OK else null
+	var file := (
+		FileAccess.open(TEST_PATH, FileAccess.WRITE)
+		if DirAccess.make_dir_recursive_absolute(TEST_PATH.get_base_dir()) == OK
+		else null
+	)
 	check(file != null, "can create test file")
 	if file == null:
 		return

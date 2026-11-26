@@ -38,7 +38,8 @@ func flush() -> void:
 		analytics.report_error(error[0], error[1])
 
 
-class ErrorLog extends Logger:
+class ErrorLog:
+	extends Logger
 	var _mutex := Mutex.new()
 	var _queue: Array = []
 
@@ -49,8 +50,16 @@ class ErrorLog extends Logger:
 		_mutex.unlock()
 		return out
 
-	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
-			_editor_notify: bool, error_type: Logger.ErrorType, script_backtraces: Array[ScriptBacktrace]) -> void:
+	func _log_error(
+		function: String,
+		file: String,
+		line: int,
+		code: String,
+		rationale: String,
+		_editor_notify: bool,
+		error_type: Logger.ErrorType,
+		script_backtraces: Array[ScriptBacktrace]
+	) -> void:
 		if error_type == Logger.ERROR_TYPE_WARNING:
 			return
 		var message := rationale if rationale != "" else code

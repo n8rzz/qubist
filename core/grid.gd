@@ -27,9 +27,7 @@ func cell_count() -> int:
 
 
 func in_bounds(c: Vector3i) -> bool:
-	return c.x >= 0 and c.x < width \
-		and c.y >= 0 and c.y < depth \
-		and c.z >= 0 and c.z < height
+	return c.x >= 0 and c.x < width and c.y >= 0 and c.y < depth and c.z >= 0 and c.z < height
 
 
 ## True if the cell holds a block. Cells outside the grid are never filled.
@@ -70,7 +68,10 @@ func to_array() -> Array:
 
 
 func load_array(values: Array) -> void:
-	assert(values.size() == _cells.size(), "Saved grid has %d cells, expected %d" % [values.size(), _cells.size()])
+	assert(
+		values.size() == _cells.size(),
+		"Saved grid has %d cells, expected %d" % [values.size(), _cells.size()]
+	)
 	for i in range(_cells.size()):
 		_cells[i] = 1 if int(values[i]) != 0 else 0
 

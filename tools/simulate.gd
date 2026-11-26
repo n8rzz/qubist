@@ -30,11 +30,21 @@ const BOTS := ["greedy", "mixed", "random"]
 func _init() -> void:
 	var opts := _parse_args(OS.get_cmdline_user_args())
 	var cfg = _make_config(opts)
-	print("Config: rerolls=%d ppc=%d streak=%d pieces=%d" % [
-		cfg.max_rerolls, cfg.points_per_cube_cleared, cfg.streak_bonus, cfg.pieces.size()])
+	print(
+		(
+			"Config: rerolls=%d ppc=%d streak=%d pieces=%d"
+			% [cfg.max_rerolls, cfg.points_per_cube_cleared, cfg.streak_bonus, cfg.pieces.size()]
+		)
+	)
 	var bots: Array = opts.get("bots", BOTS)
 	for bot in bots:
-		_run(cfg, str(bot), int(opts.get("games", 200)), int(opts.get("seed", 1)), int(opts.get("max_moves", 2000)))
+		_run(
+			cfg,
+			str(bot),
+			int(opts.get("games", 200)),
+			int(opts.get("seed", 1)),
+			int(opts.get("max_moves", 2000))
+		)
 	quit(0)
 
 
@@ -69,8 +79,12 @@ func _run(cfg, bot: String, games: int, first_seed: int, max_moves: int) -> void
 		streak_share.append(0.0 if game.score == 0 else float(bonus_points) / game.score)
 	var secs := (Time.get_ticks_msec() - started) / 1000.0
 	print("")
-	print("== %s bot: %d games in %.1fs%s ==" % [bot, games, secs,
-		"" if capped == 0 else " (%d hit the move cap)" % capped])
+	print(
+		(
+			"== %s bot: %d games in %.1fs%s =="
+			% [bot, games, secs, "" if capped == 0 else " (%d hit the move cap)" % capped]
+		)
+	)
 	print("            min    p10    p25 median    p75    p90    max   mean")
 	_row("moves", moves)
 	_row("score", scores)
@@ -83,9 +97,22 @@ func _run(cfg, bot: String, games: int, first_seed: int, max_moves: int) -> void
 func _row(label: String, values: Array) -> void:
 	var s := values.duplicate()
 	s.sort()
-	print("%-8s %6d %6d %6d %6d %6d %6d %6d %6.0f" % [label,
-		s[0], _pct(s, 0.10), _pct(s, 0.25), _pct(s, 0.50),
-		_pct(s, 0.75), _pct(s, 0.90), s[-1], _mean(s)])
+	print(
+		(
+			"%-8s %6d %6d %6d %6d %6d %6d %6d %6.0f"
+			% [
+				label,
+				s[0],
+				_pct(s, 0.10),
+				_pct(s, 0.25),
+				_pct(s, 0.50),
+				_pct(s, 0.75),
+				_pct(s, 0.90),
+				s[-1],
+				_mean(s)
+			]
+		)
+	)
 
 
 func _pct(sorted: Array, p: float):
@@ -115,7 +142,9 @@ func _choose(game, bot: String, rng: RandomNumberGenerator) -> Dictionary:
 	var best: Dictionary = {}
 	var best_value := -INF
 	for option in options:
-		var value := _evaluate(game.grid, game.tray[option.slot], option.origin) + rng.randf() * 0.01
+		var value := (
+			_evaluate(game.grid, game.tray[option.slot], option.origin) + rng.randf() * 0.01
+		)
 		if value > best_value:
 			best_value = value
 			best = option
@@ -132,7 +161,13 @@ func _evaluate(grid, piece, origin: Vector3i) -> float:
 	var top := 0
 	for c in cells:
 		top = maxi(top, c.z)
-		for d in [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 1, 0), Vector3i(0, -1, 0), Vector3i(0, 0, -1)]:
+		for d in [
+			Vector3i(1, 0, 0),
+			Vector3i(-1, 0, 0),
+			Vector3i(0, 1, 0),
+			Vector3i(0, -1, 0),
+			Vector3i(0, 0, -1)
+		]:
 			var n: Vector3i = c + d
 			if not grid.in_bounds(n) or grid.is_filled(n):
 				contacts += 1

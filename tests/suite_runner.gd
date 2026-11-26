@@ -10,7 +10,8 @@ extends RefCounted
 
 ## Records the script errors the engine logs, into the innermost open
 ## capture, so a suite run from inside a test keeps its errors to itself.
-class ScriptErrorLog extends Logger:
+class ScriptErrorLog:
+	extends Logger
 	var _mutex := Mutex.new()
 	var _captures: Array = []
 
@@ -26,13 +27,26 @@ class ScriptErrorLog extends Logger:
 		_mutex.unlock()
 		return caught
 
-	func _log_error(_function: String, file: String, line: int, code: String, rationale: String,
-			_editor_notify: bool, error_type: Logger.ErrorType, _script_backtraces: Array[ScriptBacktrace]) -> void:
+	func _log_error(
+		_function: String,
+		file: String,
+		line: int,
+		code: String,
+		rationale: String,
+		_editor_notify: bool,
+		error_type: Logger.ErrorType,
+		_script_backtraces: Array[ScriptBacktrace]
+	) -> void:
 		if error_type != Logger.ERROR_TYPE_SCRIPT:
 			return
 		_mutex.lock()
 		if not _captures.is_empty():
-			_captures[-1].append("script error: %s (%s:%d)" % [rationale if rationale != "" else code, file.get_file(), line])
+			_captures[-1].append(
+				(
+					"script error: %s (%s:%d)"
+					% [rationale if rationale != "" else code, file.get_file(), line]
+				)
+			)
 		_mutex.unlock()
 
 

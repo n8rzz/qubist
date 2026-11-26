@@ -51,7 +51,12 @@ func _process(_delta: float) -> bool:
 			return saves.finish(self, failures, WHAT)
 		return false
 	if waited < MIN_SECONDS * 1000:
-		failures.append("the loading view left after %d ms, before its %d ms minimum" % [waited, MIN_SECONDS * 1000])
+		failures.append(
+			(
+				"the loading view left after %d ms, before its %d ms minimum"
+				% [waited, MIN_SECONDS * 1000]
+			)
+		)
 	if not ready_before_min:
 		failures.append("the game wasn't ready before the minimum, so the minimum went untested")
 	var main = current_scene
@@ -60,7 +65,9 @@ func _process(_delta: float) -> bool:
 	elif not main.home.visible:
 		failures.append("the game screen did not open on Home after loading")
 	if root.get_child_count() != 1:
-		failures.append("expected only the game screen under root, found %d nodes" % root.get_child_count())
+		failures.append(
+			"expected only the game screen under root, found %d nodes" % root.get_child_count()
+		)
 	# Free the screen and give the audio thread a moment to drop its sounds
 	# (#26) before quitting, or they show up as leaks at exit.
 	finishing = true
@@ -68,4 +75,3 @@ func _process(_delta: float) -> bool:
 		main.queue_free()
 	create_timer(0.25).timeout.connect(saves.finish.bind(self, failures, WHAT))
 	return false
-

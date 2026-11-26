@@ -11,6 +11,8 @@ extends "res://game/island_art.gd"
 ## With `still` set (Reduce Motion), or after show_cells(), it draws a fixed
 ## stack like the plain island art.
 
+enum Phase { BUILDING, HOLDING, CRUMBLING, RESETTING }
+
 const Config := preload("res://core/config.gd")
 const ViewMath := preload("res://game/view_math.gd")
 
@@ -85,8 +87,6 @@ const PAUSE_SECONDS := 0.4
 
 const GHOST_FILL := Color(64 / 255.0, 201 / 255.0, 135 / 255.0, 0.35)
 const GHOST_LINE := Color("#2FAE72")
-
-enum Phase { BUILDING, HOLDING, CRUMBLING, RESETTING }
 
 ## Reduce Motion: show the fixed stack instead of the animation.
 var still := false
@@ -174,6 +174,7 @@ static func phase_at(loop: Dictionary, t: float) -> Phase:
 
 # --- Planning ---
 
+
 ## One loop: the pieces to build with and when, then the crumble.
 static func plan_loop(deal_from: Array, rng: RandomNumberGenerator) -> Dictionary:
 	var loop := plan_build(deal_from, rng)
@@ -210,7 +211,9 @@ static func plan_build(deal_from: Array, rng: RandomNumberGenerator) -> Dictiona
 			var base := 0
 			for c: Vector3i in piece.cells:
 				base = maxi(base, int(heights.get(Vector2i(ox + c.x, oy + c.y), 0)) - c.z)
-			var off_center := absf(ox + size.x * 0.5 - GRID.x * 0.5) + absf(oy + size.y * 0.5 - GRID.y * 0.5)
+			var off_center := (
+				absf(ox + size.x * 0.5 - GRID.x * 0.5) + absf(oy + size.y * 0.5 - GRID.y * 0.5)
+			)
 			var score := base * 3.0 + off_center * 0.6 + rng.randf() * 0.5
 			if score < best_score:
 				best_score = score
@@ -243,14 +246,18 @@ static func _pick(deal_from: Array, total_weight: float, rng: RandomNumberGenera
 ## breaks (`breaks`, in the order of `cells`), its `cracks`, the `chips` and
 ## `dust` it leaves, and when the rubble has `settled`, starts to fade
 ## (`fade_at`) and the loop ends (`loop_end`).
-static func plan_crumble(cells: Array[Vector3i], build_end: float, rng: RandomNumberGenerator) -> Dictionary:
+static func plan_crumble(
+	cells: Array[Vector3i], build_end: float, rng: RandomNumberGenerator
+) -> Dictionary:
 	var crumble_at := build_end + HOLD_SECONDS
 	var shake_end := crumble_at + SHAKE_SECONDS
 	var jitter: Array = []
 	for c in cells:
 		jitter.append(rng.randf())
 	var starts := ViewMath.crumble_starts(cells, jitter, LAYER_SECONDS, JITTER_SECONDS)
-	var peak := ViewMath.rubble_peak(cells.size(), HEAP_RADIUS, HEAP_FILL, HEAP_MIN_PEAK, HEAP_MAX_PEAK)
+	var peak := ViewMath.rubble_peak(
+		cells.size(), HEAP_RADIUS, HEAP_FILL, HEAP_MIN_PEAK, HEAP_MAX_PEAK
+	)
 	var middle := Vector2(GRID.x, GRID.y) * 0.5
 	var breaks: Array[float] = []
 	var cracks: Array = []
@@ -272,41 +279,75 @@ static func plan_crumble(cells: Array[Vector3i], build_end: float, rng: RandomNu
 		cracks.append(mine)
 		var broken := brk + CRACK_SECONDS
 		for k in range(CHIPS_PER_CUBE):
-			var start := Vector3(c.x + 0.5, c.y + 0.5, c.z + 0.5) \
-				+ Vector3(rng.randf_range(-0.28, 0.28), rng.randf_range(-0.28, 0.28), rng.randf_range(-0.28, 0.28))
-			var spot := middle + Vector2.from_angle(rng.randf() * TAU) * HEAP_RADIUS * sqrt(rng.randf())
+			var start := (
+				Vector3(c.x + 0.5, c.y + 0.5, c.z + 0.5)
+				+ Vector3(
+					rng.randf_range(-0.28, 0.28),
+					rng.randf_range(-0.28, 0.28),
+					rng.randf_range(-0.28, 0.28)
+				)
+			)
+			var spot := (
+				middle + Vector2.from_angle(rng.randf() * TAU) * HEAP_RADIUS * sqrt(rng.randf())
+			)
 			var land := Vector2(start.x, start.y).lerp(spot, SCATTER)
 			if land.distance_to(middle) > HEAP_RADIUS:
 				land = middle + (land - middle).normalized() * HEAP_RADIUS
 			var size := rng.randf_range(CHIP_MIN, CHIP_MAX)
-			var rest_h := ViewMath.rubble_height(land.distance_to(middle), peak, HEAP_RADIUS) \
-				* rng.randf_range(0.7, 1.0) + size * 0.4
+			var rest_h := (
+				(
+					ViewMath.rubble_height(land.distance_to(middle), peak, HEAP_RADIUS)
+					* rng.randf_range(0.7, 1.0)
+				)
+				+ size * 0.4
+			)
 			var up := rng.randf_range(0.5, 2.5)
 			var fall := ViewMath.fall_seconds(start.z - rest_h, up, CHIP_GRAVITY)
 			var outline: Array = []
 			for p in range(CHIP_POINTS):
-				outline.append(Vector2(p * TAU / CHIP_POINTS + rng.randf() * 0.5,
-					size * CHIP_UNITS * rng.randf_range(0.75, 1.15)))
-			chips.append({
-				"start_time": broken,
-				"start": start,
-				"rest": Vector3(land.x, land.y, rest_h),
-				"up": up,
-				"fall": fall,
-				"spin": rng.randf_range(3.0, 8.0) * (1.0 if rng.randf() < 0.5 else -1.0),
-				"outline": outline,
-				"radius": size * CHIP_UNITS,
-				"color": [CUBE_RIGHT, CUBE_LEFT, CUBE_TOP][rng.randi_range(0, 2)],
-			})
+				outline.append(
+					Vector2(
+						p * TAU / CHIP_POINTS + rng.randf() * 0.5,
+						size * CHIP_UNITS * rng.randf_range(0.75, 1.15)
+					)
+				)
+			(
+				chips
+				. append(
+					{
+						"start_time": broken,
+						"start": start,
+						"rest": Vector3(land.x, land.y, rest_h),
+						"up": up,
+						"fall": fall,
+						"spin": rng.randf_range(3.0, 8.0) * (1.0 if rng.randf() < 0.5 else -1.0),
+						"outline": outline,
+						"radius": size * CHIP_UNITS,
+						"color": [CUBE_RIGHT, CUBE_LEFT, CUBE_TOP][rng.randi_range(0, 2)],
+					}
+				)
+			)
 			settled = maxf(settled, broken + fall)
 		for k in range(DUST_PER_CUBE):
-			dust.append({
-				"start_time": broken,
-				"at": Vector3(c.x + 0.5, c.y + 0.5, c.z + 0.5)
-					+ Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(-0.3, 0.3), rng.randf_range(-0.2, 0.2)),
-				"rise": rng.randf_range(0.2, 0.6),
-				"size": rng.randf_range(7.0, 12.0),
-			})
+			(
+				dust
+				. append(
+					{
+						"start_time": broken,
+						"at":
+						(
+							Vector3(c.x + 0.5, c.y + 0.5, c.z + 0.5)
+							+ Vector3(
+								rng.randf_range(-0.3, 0.3),
+								rng.randf_range(-0.3, 0.3),
+								rng.randf_range(-0.2, 0.2)
+							)
+						),
+						"rise": rng.randf_range(0.2, 0.6),
+						"size": rng.randf_range(7.0, 12.0),
+					}
+				)
+			)
 		settled = maxf(settled, broken + DUST_SECONDS)
 	var fade_at := settled + REST_SECONDS
 	return {
@@ -335,6 +376,7 @@ static func chip_position(chip: Dictionary, t: float) -> Vector3:
 
 
 # --- Drawing ---
+
 
 func _draw() -> void:
 	if not _animating or plan.is_empty():
@@ -367,7 +409,11 @@ func _draw() -> void:
 					continue
 				var crack := clampf((t - plan.crumble_at) / SHAKE_SECONDS, 0.0, 1.0)
 				var swell := 1.0 + CRACK_SWELL * clampf((t - brk) / CRACK_SECONDS, 0.0, 1.0)
-				var at := Vector3(c.x + shake.x / (2.0 * CELL_X), c.y - shake.x / (2.0 * CELL_X), c.z - shake.y / LAYER)
+				var at := Vector3(
+					c.x + shake.x / (2.0 * CELL_X),
+					c.y - shake.x / (2.0 * CELL_X),
+					c.z - shake.y / LAYER
+				)
 				items.append([key, _draw_block.bind(at, swell, 1.0, crack, plan.cracks[i])])
 			elif t >= placement.end:
 				items.append([key, _draw_block.bind(Vector3(c), 1.0, 1.0, 0.0, [])])
@@ -379,8 +425,18 @@ func _draw() -> void:
 				var v := clampf((local - GHOST_SECONDS) / DROP_SECONDS, 0.0, 1.0)
 				items.append([key - 0.01, _draw_ghost.bind(c, 1.0 - v)])
 				var lift := DROP_LAYERS * pow(1.0 - v, 2.5)
-				items.append([key + lift + 0.001,
-					_draw_block.bind(Vector3(c) + Vector3(0, 0, lift), 1.0, clampf(v * 4.0, 0.0, 1.0), 0.0, [])])
+				items.append(
+					[
+						key + lift + 0.001,
+						_draw_block.bind(
+							Vector3(c) + Vector3(0, 0, lift),
+							1.0,
+							clampf(v * 4.0, 0.0, 1.0),
+							0.0,
+							[]
+						)
+					]
+				)
 	var fade := clampf(1.0 - (t - plan.fade_at) / FADE_SECONDS, 0.0, 1.0)
 	if fade > 0.0:
 		for chip in plan.chips:
@@ -397,8 +453,11 @@ func _draw() -> void:
 		if u < 0.0 or u > 1.0:
 			continue
 		var at: Vector3 = puff.at
-		draw_circle(iso(at.x, at.y, at.z + puff.rise * u), puff.size * (1.0 + 0.6 * u),
-			Color(DUST, 0.55 * (1.0 - u)))
+		draw_circle(
+			iso(at.x, at.y, at.z + puff.rise * u),
+			puff.size * (1.0 + 0.6 * u),
+			Color(DUST, 0.55 * (1.0 - u))
+		)
 	_draw_outline_front()
 	draw_tree()
 	draw_set_transform(Vector2.ZERO)
@@ -410,9 +469,16 @@ func _shake_offset(t: float) -> Vector2:
 	if t >= plan.settled:
 		return Vector2.ZERO
 	var since: float = t - plan.crumble_at
-	var ramp := clampf(since / SHAKE_RAMP, 0.0, 1.0) * clampf((plan.settled - t) / SHAKE_RAMP, 0.0, 1.0)
-	return Vector2(sin(since * TAU * SWAY_HZ) * SWAY + sin(since * 71.0) * RATTLE,
-		sin(since * 53.0) * RATTLE * 0.75) * ramp
+	var ramp := (
+		clampf(since / SHAKE_RAMP, 0.0, 1.0) * clampf((plan.settled - t) / SHAKE_RAMP, 0.0, 1.0)
+	)
+	return (
+		Vector2(
+			sin(since * TAU * SWAY_HZ) * SWAY + sin(since * 71.0) * RATTLE,
+			sin(since * 53.0) * RATTLE * 0.75
+		)
+		* ramp
+	)
 
 
 ## A cube's top, left and right faces at grid position `at`, scaled by `k`

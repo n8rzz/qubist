@@ -11,6 +11,9 @@ extends Node
 ## and `sound_effects_volume` and `music_volume` follow its sliders (#165).
 ## Credits and licenses are in assets/audio/CREDITS.md.
 
+## A new track started: `title` and `artist` are from TRACK_INFO.
+signal track_changed(title: String, artist: String)
+
 const CLACKS: Array[AudioStream] = [
 	preload("res://assets/audio/footstep_concrete_000.ogg"),
 	preload("res://assets/audio/footstep_concrete_001.ogg"),
@@ -37,9 +40,6 @@ const TRACK_INFO: Array[Dictionary] = [
 	{"title": "Technology Ambient", "artist": "VelarioMusic"},
 	{"title": "Lofi Loop", "artist": "ZephiraMusic"},
 ]
-
-## A new track started: `title` and `artist` are from TRACK_INFO.
-signal track_changed(title: String, artist: String)
 
 ## Semitones above the chime's own pitch for 1, 2, 3… lines cleared at once
 ## (a major arpeggio). Bigger combos stay on the top note.
@@ -80,13 +80,14 @@ var play: Callable = func(player: AudioStreamPlayer) -> void: player.play()
 var clack_player := _player(CLACK_DB, 3)
 var crumble_player := _player(CRUMBLE_DB, 2)
 var chime_player := _player(CHIME_DB, 2)
+## Picks the music order. Tests seed it.
+var rng := RandomNumberGenerator.new()
+
 var _music: AudioStreamPlayer
 var _next_clack := 0
 var _next_crumble := 0
 ## Index into TRACKS of the track playing, or -1 before the first.
 var _track := -1
-## Picks the music order. Tests seed it.
-var rng := RandomNumberGenerator.new()
 
 
 ## The chime's pitch_scale for clearing `lines` lines at once.

@@ -44,8 +44,12 @@ func turn(quarter_turns: int) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	_tween = create_tween()
-	_tween.tween_property(self, "rotation:y", ViewMath.yaw_for_step(_turns), ROTATE_SECONDS) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	(
+		_tween
+		. tween_property(self, "rotation:y", ViewMath.yaw_for_step(_turns), ROTATE_SECONDS)
+		. set_trans(Tween.TRANS_SINE)
+		. set_ease(Tween.EASE_IN_OUT)
+	)
 	_tween.finished.connect(func(): view_changed.emit(view_step()))
 
 

@@ -20,8 +20,12 @@ func _rng() -> RandomNumberGenerator:
 func _free_view(view: Node) -> void:
 	for property in view.get_property_list():
 		var value = view.get(property.name)
-		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE and is_instance_valid(value) \
-				and value is Node and value.get_parent() == null:
+		if (
+			property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE
+			and is_instance_valid(value)
+			and value is Node
+			and value.get_parent() == null
+		):
 			value.free()
 	view.free()
 
@@ -44,7 +48,10 @@ func test_rand_vec3_stays_within_its_extent() -> void:
 	var extent := Vector3(0.25, 0.2, 0.5)
 	for i in ROLLS:
 		var v: Vector3 = view._rand_vec3(rng, extent)
-		check(v.abs().x <= extent.x and v.abs().y <= extent.y and v.abs().z <= extent.z, "%s is outside %s" % [v, extent])
+		check(
+			v.abs().x <= extent.x and v.abs().y <= extent.y and v.abs().z <= extent.z,
+			"%s is outside %s" % [v, extent]
+		)
 	_free_view(view)
 
 
@@ -64,7 +71,10 @@ func test_stone_scales_the_block_colour_and_stays_opaque() -> void:
 		var shade := expected.randf_range(0.8, 1.06)
 		var color: Color = view._stone(rng, 0.8, 1.06)
 		var block := TowerView.BLOCK_COLOR
-		check(color.is_equal_approx(Color(block.r * shade, block.g * shade, block.b * shade, 1.0)), "roll %d" % i)
+		check(
+			color.is_equal_approx(Color(block.r * shade, block.g * shade, block.b * shade, 1.0)),
+			"roll %d" % i
+		)
 		check_eq(color.a, 1.0, "alpha")
 	_free_view(view)
 

@@ -80,7 +80,8 @@ func _process(_delta: float) -> bool:
 		# sounds (#26) before quitting, or they show up as leaks at exit.
 		main.queue_free()
 		create_timer(0.25).timeout.connect(
-			saves.finish.bind(self, failures, "game screen smoke test"))
+			saves.finish.bind(self, failures, "game screen smoke test")
+		)
 	return false
 
 
@@ -164,8 +165,11 @@ func _check_touch_input() -> void:
 	var origins: Array = main.drag.snap_origins(piece)
 	var origin: Vector3i = origins[origins.size() >> 1]
 	var center := ViewMath.cells_center(piece.cells_at(origin), main.config.grid_size)
-	var over_tower: Vector2 = main.viewport_box.get_global_rect().position \
-		+ main.tower.project_point(center) + Vector2(0, DragController.LIFT)
+	var over_tower: Vector2 = (
+		main.viewport_box.get_global_rect().position
+		+ main.tower.project_point(center)
+		+ Vector2(0, DragController.LIFT)
+	)
 
 	_touch(slot, true)
 	if not main.drag.is_dragging():
@@ -236,14 +240,20 @@ func _check_still_clear() -> void:
 	var tower = main.tower
 	var cleared: Array = [Vector3i(0, 0, 0), Vector3i(1, 0, 0)]
 	tower.play_move([Vector3i(0, 0, 0)], cleared, {}, 3)
-	_expect_still(tower._fading.multimesh.instance_count == cleared.size(),
-		"cleared cubes are not drawn fading")
+	_expect_still(
+		tower._fading.multimesh.instance_count == cleared.size(),
+		"cleared cubes are not drawn fading"
+	)
 	var moving: Array = [tower._landing, tower._clearing, tower._chips, tower._dust]
-	_expect_still(moving.all(func(node): return node.multimesh.instance_count == 0),
-		"a clear still drops or breaks cubes")
+	_expect_still(
+		moving.all(func(node): return node.multimesh.instance_count == 0),
+		"a clear still drops or breaks cubes"
+	)
 	tower._move_tween.custom_step(0.2)
-	_expect_still(tower.rig.camera.h_offset == 0.0 and tower.rig.camera.v_offset == 0.0,
-		"a multi-line clear shook the camera")
+	_expect_still(
+		tower.rig.camera.h_offset == 0.0 and tower.rig.camera.v_offset == 0.0,
+		"a multi-line clear shook the camera"
+	)
 	tower.finish_move_animation()
 	_expect_still(tower._fading.multimesh.instance_count == 0, "faded cubes were left behind")
 
@@ -259,11 +269,17 @@ func _check_still_score() -> void:
 func _check_still_gain() -> void:
 	var children: int = main.get_child_count()
 	var running := get_processed_tweens()
-	main.score_feedback.show_gain({
-		"score": {"total": 100, "combo": 2, "streak": 1},
-		"cleared": [Vector3i(0, 0, 0)],
-		"lines": [[]],
-	})
+	(
+		main
+		. score_feedback
+		. show_gain(
+			{
+				"score": {"total": 100, "combo": 2, "streak": 1},
+				"cleared": [Vector3i(0, 0, 0)],
+				"lines": [[]],
+			}
+		)
+	)
 	var added: Array = main.get_children().slice(children)
 	if added.size() != 2:
 		_expect_still(false, "expected a score pop and a banner, found %d nodes" % added.size())
@@ -327,7 +343,9 @@ func _check_settings_swipe() -> void:
 	var sheet := short_sheet
 	var scroll: ScrollContainer = sheet._scroll
 	if scroll.get_v_scroll_bar().max_value <= scroll.size.y:
-		failures.append("the short Settings sheet fits without scrolling, so the swipe check proves nothing")
+		failures.append(
+			"the short Settings sheet fits without scrolling, so the swipe check proves nothing"
+		)
 	var flips := []
 	sheet.setting_toggled.connect(func(key, on): flips.append([key, on]))
 	var music_on := sheet.music_button.button_pressed
@@ -352,8 +370,12 @@ func _check_settings_swipe() -> void:
 		await _swipe(start, start + Vector2(0, -300))
 	var home: Rect2 = sheet.home_button.get_global_rect()
 	if not scroll.get_global_rect().encloses(home):
-		failures.append("Home, the bottom row, could not be scrolled into view: %s in %s" \
-			% [home, scroll.get_global_rect()])
+		failures.append(
+			(
+				"Home, the bottom row, could not be scrolled into view: %s in %s"
+				% [home, scroll.get_global_rect()]
+			)
+		)
 	var went_home := [false]
 	sheet.home_pressed.connect(func(): went_home[0] = true)
 	await _tap(home.get_center())
@@ -545,7 +567,9 @@ func _play() -> void:
 			# The next drag is blocked until the animation ends.
 			main.finish_animations()
 			if main.shown_score != main.game.score:
-				failures.append("move %d: header shows %d, score is %d" % [i, main.shown_score, main.game.score])
+				failures.append(
+					"move %d: header shows %d, score is %d" % [i, main.shown_score, main.game.score]
+				)
 		else:
 			failures.append("move %d did not go through the drag path" % i)
 	main.set_slice(main.swiper.mode, 0)
@@ -633,7 +657,12 @@ func _check_crumble() -> void:
 	var tower = main.tower
 	var cubes: int = main.game.grid.filled_cells().size()
 	if not tower.is_animating():
-		failures.append("the last move was not animating when the game ended, so the held game over went untested")
+		(
+			failures
+			. append(
+				"the last move was not animating when the game ended, so the held game over went untested"
+			)
+		)
 	if main.game_over_card.visible:
 		failures.append("game-over card opened before the last move landed")
 	tower.finish_move_animation()
@@ -647,9 +676,16 @@ func _check_crumble() -> void:
 	if tower.is_crumbling() or not tower.has_crumbled():
 		failures.append("crumble did not finish into rubble")
 	if not main.game_over_card.visible:
-		failures.append("the held game over did not open the game-over card once the tower crumbled")
+		failures.append(
+			"the held game over did not open the game-over card once the tower crumbled"
+		)
 	if tower.rubble_count() != cubes * tower.RUBBLE_PER_CUBE:
-		failures.append("rubble has %d pieces, expected %d" % [tower.rubble_count(), cubes * tower.RUBBLE_PER_CUBE])
+		failures.append(
+			(
+				"rubble has %d pieces, expected %d"
+				% [tower.rubble_count(), cubes * tower.RUBBLE_PER_CUBE]
+			)
+		)
 	if tower.crumbling_count() != 0:
 		failures.append("whole cubes left standing after the crumble")
 	for rest in tower.rubble_rests():
@@ -669,11 +705,21 @@ func _check_puffs() -> void:
 		puffs.append({"cube": cube, "offset": Vector3.ZERO, "rise": 0.5, "size": 1.0})
 	var broken: float = starts[0] + tower.CRACK_SECONDS
 	# [time, puffs drawn]; a life of 1.5 seconds overlaps the two cubes.
-	for expected in [[broken - 0.01, 0], [broken + 0.01, 1], [broken + 1.01, 3], [broken + 1.51, 2],
-			[broken + 2.51, 0]]:
+	for expected in [
+		[broken - 0.01, 0],
+		[broken + 0.01, 1],
+		[broken + 1.01, 3],
+		[broken + 1.51, 2],
+		[broken + 2.51, 0]
+	]:
 		tower._draw_puffs(mm, puffs, [Vector3i.ZERO, Vector3i.ONE], starts, expected[0], 1.5, 0.5)
 		if mm.instance_count != expected[1]:
-			failures.append("%d puffs drawn at %.2fs, expected %d" % [mm.instance_count, expected[0], expected[1]])
+			failures.append(
+				(
+					"%d puffs drawn at %.2fs, expected %d"
+					% [mm.instance_count, expected[0], expected[1]]
+				)
+			)
 
 
 ## With no finished game, neither the header nor Home shows a best score
@@ -707,12 +753,22 @@ func _check_stats() -> void:
 	if not main.best_row.visible:
 		failures.append("the header hides the best score after a finished game")
 	if main.stats.best_score < main.game.score:
-		failures.append("best score %d is below the finished score %d" % [main.stats.best_score, main.game.score])
+		failures.append(
+			(
+				"best score %d is below the finished score %d"
+				% [main.stats.best_score, main.game.score]
+			)
+		)
 	if FileAccess.file_exists(saves.game_path):
 		failures.append("a finished game left its auto-save behind")
 	var saved: Dictionary = SaveFile.read(saves.stats_path)
 	if int(saved.get("games_played", -1)) != main.stats.games_played:
-		failures.append("stats file has %s games, expected %d" % [saved.get("games_played"), main.stats.games_played])
+		failures.append(
+			(
+				"stats file has %s games, expected %d"
+				% [saved.get("games_played"), main.stats.games_played]
+			)
+		)
 	main.game_over_card.play_again_button.pressed.emit()
 	if main.game_over_card.visible or main.game.is_over or main.game.moves != 0:
 		failures.append("Play again did not close the card and start a fresh game")
@@ -726,7 +782,12 @@ func _check_stats() -> void:
 	if main.settings_sheet.visible or not main.stats_screen.visible:
 		failures.append("Settings › Stats did not open the Stats screen")
 	if main.stats_screen.values.games_played.text != str(main.stats.games_played):
-		failures.append("Stats screen shows %s games, expected %d" % [main.stats_screen.values.games_played.text, main.stats.games_played])
+		failures.append(
+			(
+				"Stats screen shows %s games, expected %d"
+				% [main.stats_screen.values.games_played.text, main.stats.games_played]
+			)
+		)
 	main.stats_screen.back_pressed.emit()
 	if main.stats_screen.visible or not main.settings_sheet.visible:
 		failures.append("Back from Stats did not return to Settings")
@@ -799,8 +860,13 @@ func _check_home_buttons() -> void:
 	main.home_button.pressed.emit()
 	if not main.home.visible or not main.home.continue_button.visible:
 		failures.append("the header's Home button did not open Home with Continue")
-	if main.home.island.is_animating() or main.home.island.cells.size() != main.game.grid.filled_cells().size():
-		failures.append("Home with a game to continue did not show that game's tower standing still")
+	if (
+		main.home.island.is_animating()
+		or main.home.island.cells.size() != main.game.grid.filled_cells().size()
+	):
+		failures.append(
+			"Home with a game to continue did not show that game's tower standing still"
+		)
 	main.home.continue_button.pressed.emit()
 	if main.game != playing or main.menu_open():
 		failures.append("Continue after the header's Home button did not return to the game")
@@ -840,7 +906,10 @@ func _check_grid_ticks() -> void:
 		failures.append("Grid ticks were not saved")
 	var reopened = _make_main()
 	root.add_child(reopened)
-	if not reopened.tower.grid_ticks_visible() or not reopened.settings_sheet.grid_ticks_button.button_pressed:
+	if (
+		not reopened.tower.grid_ticks_visible()
+		or not reopened.settings_sheet.grid_ticks_button.button_pressed
+	):
 		failures.append("a fresh screen did not start with Grid ticks on")
 	reopened.queue_free()
 	main.settings_sheet.grid_ticks_button.button_pressed = false
@@ -857,11 +926,18 @@ func _check_night_lines() -> void:
 	SkyView.show("fall", "night", true)
 	main.update_sky(0.0)
 	if not tower.guide_color().is_equal_approx(tower.GUIDE_NIGHT_COLOR):
-		failures.append("bounding box at night is %s, expected %s" % [tower.guide_color(), tower.GUIDE_NIGHT_COLOR])
+		failures.append(
+			(
+				"bounding box at night is %s, expected %s"
+				% [tower.guide_color(), tower.GUIDE_NIGHT_COLOR]
+			)
+		)
 	SkyView.show("fall", "day", true)
 	main.update_sky(0.0)
 	if not tower.guide_color().is_equal_approx(tower.GUIDE_COLOR):
-		failures.append("bounding box by day is %s, expected %s" % [tower.guide_color(), tower.GUIDE_COLOR])
+		failures.append(
+			"bounding box by day is %s, expected %s" % [tower.guide_color(), tower.GUIDE_COLOR]
+		)
 	SkyView.show(was[0], was[1], true)
 	main.update_sky(0.0)
 
@@ -922,7 +998,10 @@ func _check_sound_switches() -> void:
 ## off (#166).
 func _check_now_playing() -> void:
 	var sheet = main.settings_sheet
-	if sheet.track_title_label.text == "" or sheet.track_title_label.text != main.audio.track_title():
+	if (
+		sheet.track_title_label.text == ""
+		or sheet.track_title_label.text != main.audio.track_title()
+	):
 		failures.append("Settings does not show the track playing")
 	var started := [0]
 	var count := func(_t, _a): started[0] += 1
@@ -957,17 +1036,25 @@ func _check_volume_sliders() -> void:
 			failures.append("%s slider did not start full" % key)
 	sheet.music_volume_slider.value = 0.3
 	sheet.sound_effects_volume_slider.value = 0.7
-	if not is_equal_approx(main.audio.music_volume, 0.3) or not is_equal_approx(main.audio.sound_effects_volume, 0.7):
+	if (
+		not is_equal_approx(main.audio.music_volume, 0.3)
+		or not is_equal_approx(main.audio.sound_effects_volume, 0.7)
+	):
 		failures.append("moving a volume slider did not set the audio")
 	if main.audio.music_db() >= main.audio.MUSIC_DB:
 		failures.append("lowering the music volume left the music as loud")
 	var saved: Dictionary = SaveFile.read(saves.settings_path)
-	if not is_equal_approx(saved.get("music_volume", 0.0), 0.3) or not is_equal_approx(saved.get("sound_effects_volume", 0.0), 0.7):
+	if (
+		not is_equal_approx(saved.get("music_volume", 0.0), 0.3)
+		or not is_equal_approx(saved.get("sound_effects_volume", 0.0), 0.7)
+	):
 		failures.append("the volumes were not saved")
 	var reopened = _make_main()
 	root.add_child(reopened)
-	if not is_equal_approx(reopened.settings_sheet.music_volume_slider.value, 0.3) \
-			or not is_equal_approx(reopened.audio.sound_effects_volume, 0.7):
+	if (
+		not is_equal_approx(reopened.settings_sheet.music_volume_slider.value, 0.3)
+		or not is_equal_approx(reopened.audio.sound_effects_volume, 0.7)
+	):
 		failures.append("a fresh screen did not pick up the saved volumes")
 	reopened.queue_free()
 	sheet.music_button.button_pressed = false
@@ -1000,7 +1087,9 @@ func _check_undo() -> void:
 	if JSON.stringify(main.game.to_dict()) != before:
 		failures.append("undo did not restore the game")
 	if main.shown_score != main.game.score:
-		failures.append("header shows %d after undo, score is %d" % [main.shown_score, main.game.score])
+		failures.append(
+			"header shows %d after undo, score is %d" % [main.shown_score, main.game.score]
+		)
 	if main.can_undo():
 		failures.append("undo is offered twice in a row")
 	var saved := SaveFile.read(saves.game_path)
@@ -1035,15 +1124,27 @@ func _check_resume() -> void:
 	if not resumed.home.visible or not resumed.home.continue_button.visible:
 		failures.append("Home did not offer Continue for a saved game")
 	elif resumed.home.continue_score.text != "· %s" % UI.format_number(main.game.score):
-		failures.append("Continue shows %s, expected score %d" % [resumed.home.continue_score.text, main.game.score])
+		failures.append(
+			(
+				"Continue shows %s, expected score %d"
+				% [resumed.home.continue_score.text, main.game.score]
+			)
+		)
 	resumed.home.continue_button.pressed.emit()
 	if resumed.home.visible or resumed.menu_open():
 		failures.append("Continue did not leave Home")
 	if JSON.stringify(resumed.game.to_dict()) != JSON.stringify(expected):
 		failures.append("resumed game differs from the saved one")
-	if resumed.tower.rig.view_step() != step or not is_equal_approx(resumed.tower.rig.camera.size, zoom):
-		failures.append("resumed camera is step %d zoom %.2f, expected %d zoom %.2f" % [
-			resumed.tower.rig.view_step(), resumed.tower.rig.camera.size, step, zoom])
+	if (
+		resumed.tower.rig.view_step() != step
+		or not is_equal_approx(resumed.tower.rig.camera.size, zoom)
+	):
+		failures.append(
+			(
+				"resumed camera is step %d zoom %.2f, expected %d zoom %.2f"
+				% [resumed.tower.rig.view_step(), resumed.tower.rig.camera.size, step, zoom]
+			)
+		)
 	resumed.queue_free()
 
 	var data := SaveFile.read(saves.game_path)
@@ -1072,9 +1173,19 @@ func _check_finished_save() -> void:
 	var first = _make_main()
 	root.add_child(first)
 	if first.stats.games_played != before + 1:
-		failures.append("a finished game in the save was counted %d times on launch" % (first.stats.games_played - before))
+		failures.append(
+			(
+				"a finished game in the save was counted %d times on launch"
+				% (first.stats.games_played - before)
+			)
+		)
 	if first.stats.best_score < 98765:
-		failures.append("launch counted the finished game with best score %d, expected 98765" % first.stats.best_score)
+		failures.append(
+			(
+				"launch counted the finished game with best score %d, expected 98765"
+				% first.stats.best_score
+			)
+		)
 	if int(SaveFile.read(saves.stats_path).get("games_played", -1)) != before + 1:
 		failures.append("the finished game counted on launch was not saved to the stats file")
 	# Launch starts a new game and saves it, so the finished game's save must
@@ -1091,7 +1202,12 @@ func _check_finished_save() -> void:
 	var second = _make_main()
 	root.add_child(second)
 	if second.stats.games_played != before + 1:
-		failures.append("the finished game was counted again on the next launch (%d games, expected %d)" % [second.stats.games_played, before + 1])
+		failures.append(
+			(
+				"the finished game was counted again on the next launch (%d games, expected %d)"
+				% [second.stats.games_played, before + 1]
+			)
+		)
 	second.queue_free()
 	SaveFile.remove(saves.game_path)
 	SaveFile.remove(saves.stats_path)

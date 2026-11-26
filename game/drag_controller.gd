@@ -6,6 +6,11 @@ extends RefCounted
 ## `dropped` fires. Reads the screen's game, tower and widgets through `host`,
 ## since the game is replaced on every new game.
 
+## The ghost moved, appeared or went away, so the blocks need redrawing.
+signal target_changed
+## The piece was let go over a legal spot.
+signal dropped(index: int, origin: Vector3i)
+
 const Rules := preload("res://core/rules.gd")
 const ViewMath := preload("res://game/view_math.gd")
 
@@ -18,11 +23,6 @@ const SNAP_RADIUS := 72.0
 ## Screen distance, in cubes, within which a nearer block counts as hiding
 ## the ghost.
 const OCCLUDE_RADIUS := 1.1
-
-## The ghost moved, appeared or went away, so the blocks need redrawing.
-signal target_changed
-## The piece was let go over a legal spot.
-signal dropped(index: int, origin: Vector3i)
 
 ## The game screen (game/main.gd).
 var host

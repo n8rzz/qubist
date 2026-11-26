@@ -4,6 +4,11 @@ extends RefCounted
 ## The view layer calls `place()` and listens to the signals; nothing here
 ## knows about rendering or platform services.
 
+signal piece_placed(tray_index: int, piece, origin: Vector3i)
+signal lines_cleared(lines: Array, cells: Array)
+signal tray_refilled(tray: Array)
+signal game_over(final_score: int)
+
 const Config := preload("res://core/config.gd")
 const Grid := preload("res://core/grid.gd")
 const Rules := preload("res://core/rules.gd")
@@ -11,11 +16,6 @@ const Scoring := preload("res://core/scoring.gd")
 const Dealer := preload("res://core/dealer.gd")
 
 const SAVE_VERSION := 2
-
-signal piece_placed(tray_index: int, piece, origin: Vector3i)
-signal lines_cleared(lines: Array, cells: Array)
-signal tray_refilled(tray: Array)
-signal game_over(final_score: int)
 
 var config
 var grid
@@ -171,7 +171,8 @@ func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"config": config.signature(),
-		"grid": {
+		"grid":
+		{
 			"size": [grid.width, grid.depth, grid.height],
 			"cells": grid.to_array(),
 		},
@@ -193,17 +194,21 @@ func to_dict() -> Dictionary:
 ## size or unknown pieces); the game is then left unchanged.
 func from_dict(data: Dictionary) -> bool:
 	if int(data.get("version", 0)) != SAVE_VERSION:
-		push_warning("Saved game is version %s, not %d; not restored" % [data.get("version"), SAVE_VERSION])
+		push_warning(
+			"Saved game is version %s, not %d; not restored" % [data.get("version"), SAVE_VERSION]
+		)
 		return false
 	if str(data.get("config", "")) != config.signature():
 		push_warning("Saved game was made with a different config; not restored")
 		return false
 	var saved_grid: Dictionary = data.get("grid", {})
 	var saved_size: Array = saved_grid.get("size", [])
-	if saved_size.size() != 3 \
-			or int(saved_size[0]) != grid.width \
-			or int(saved_size[1]) != grid.depth \
-			or int(saved_size[2]) != grid.height:
+	if (
+		saved_size.size() != 3
+		or int(saved_size[0]) != grid.width
+		or int(saved_size[1]) != grid.depth
+		or int(saved_size[2]) != grid.height
+	):
 		push_warning("Saved game has a different grid size; not restored")
 		return false
 	var saved_cells: Array = saved_grid.get("cells", [])

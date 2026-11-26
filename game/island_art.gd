@@ -17,9 +17,6 @@ const SkyView := preload("res://game/sky_view.gd")
 ## Segments for the bush and loading shadow ellipses.
 const ELLIPSE_SEGMENTS := 24
 
-## Cells to draw, as core Vector3i(x, y, h) with h in .z.
-var cells: Array = []
-
 ## The art's bounds in its own units: the design's view box, extended down
 ## past the island's underside (it ends at y 193) so nothing below the art
 ## covers it.
@@ -75,6 +72,9 @@ const TREE_SWAY_SECONDS := 4.5
 ## The water's ripples glint, over GLINT_SECONDS.
 const GLINT_SECONDS := 2.6
 
+## Cells to draw, as core Vector3i(x, y, h) with h in .z.
+var cells: Array = []
+
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -105,7 +105,9 @@ func _draw() -> void:
 	_draw_outline_back()
 	var sorted := cells.duplicate()
 	# Back to front: unit cubes on a grid never overlap out of this order.
-	sorted.sort_custom(func(a: Vector3i, b: Vector3i) -> bool: return a.x + a.y + a.z < b.x + b.y + b.z)
+	sorted.sort_custom(
+		func(a: Vector3i, b: Vector3i) -> bool: return a.x + a.y + a.z < b.x + b.y + b.z
+	)
 	for c in sorted:
 		_draw_cube(c)
 	_draw_outline_front()
@@ -124,18 +126,40 @@ static func iso(x: float, y: float, h: float) -> Vector2:
 
 
 func _draw_island() -> void:
-	_shape([-138.56, 77, -117.78, 109, -96.99, 127, -71.01, 160, 0, 193, 0, 157], paint(EARTH_LEFT), paint(EARTH_EDGE), 0.6)
-	_shape([0, 157, 0, 193, 69.28, 161, 93.53, 131, 119.51, 106, 138.56, 77], paint(EARTH_RIGHT), paint(EARTH_EDGE), 0.6)
-	draw_polyline(PackedVector2Array([Vector2(-128.17, 94), Vector2(0, 173), Vector2(124.71, 96)]),
-		paint(EARTH_STRATA), 0.8, true)
+	_shape(
+		[-138.56, 77, -117.78, 109, -96.99, 127, -71.01, 160, 0, 193, 0, 157],
+		paint(EARTH_LEFT),
+		paint(EARTH_EDGE),
+		0.6
+	)
+	_shape(
+		[0, 157, 0, 193, 69.28, 161, 93.53, 131, 119.51, 106, 138.56, 77],
+		paint(EARTH_RIGHT),
+		paint(EARTH_EDGE),
+		0.6
+	)
+	draw_polyline(
+		PackedVector2Array([Vector2(-128.17, 94), Vector2(0, 173), Vector2(124.71, 96)]),
+		paint(EARTH_STRATA),
+		0.8,
+		true
+	)
 	# The lower one starts further in, where the underside has narrowed.
-	draw_polyline(PackedVector2Array([Vector2(-110, 119.2), Vector2(0, 187), Vector2(110, 119.1)]),
-		paint(EARTH_STRATA), 0.8, true)
+	draw_polyline(
+		PackedVector2Array([Vector2(-110, 119.2), Vector2(0, 187), Vector2(110, 119.1)]),
+		paint(EARTH_STRATA),
+		0.8,
+		true
+	)
 
 	_shape([-138.56, 60, 0, 140, 0, 157, -138.56, 77], paint(BRICK_LEFT), paint(BRICK_EDGE), 0.6)
 	_shape([138.56, 60, 0, 140, 0, 157, 138.56, 77], paint(BRICK_RIGHT), paint(BRICK_EDGE), 0.6)
-	draw_polyline(PackedVector2Array([Vector2(138.56, 68.5), Vector2(0, 148.5), Vector2(-138.56, 68.5)]),
-		paint(MORTAR), 0.7, true)
+	draw_polyline(
+		PackedVector2Array([Vector2(138.56, 68.5), Vector2(0, 148.5), Vector2(-138.56, 68.5)]),
+		paint(MORTAR),
+		0.7,
+		true
+	)
 	# Brick joints, one per cell along each course; the lower course is
 	# offset by half a cell.
 	for i in range(8):
@@ -153,7 +177,12 @@ func _draw_island() -> void:
 	_shape([0, -7.6, 117.09, 60, 0, 127.6, -117.09, 60], paint(WATER), paint(WATER_EDGE), 0.6)
 	var glint := paint(RIPPLE)
 	glint.a *= 0.675 - 0.325 * cos(TAU * SkyView.seconds() / GLINT_SECONDS)
-	for r in [[86.43, 73.9, 74.3, 80.9], [44.86, 97.9, 32.74, 104.9], [-72.57, 81.9, -60.45, 88.9], [-27.54, 107.9, -15.42, 114.9]]:
+	for r in [
+		[86.43, 73.9, 74.3, 80.9],
+		[44.86, 97.9, 32.74, 104.9],
+		[-72.57, 81.9, -60.45, 88.9],
+		[-27.54, 107.9, -15.42, 114.9]
+	]:
 		draw_line(Vector2(r[0], r[1]), Vector2(r[2], r[3]), glint, 1.4, true)
 
 	_shape([0, 0, 103.92, 60, 0, 120, -103.92, 60], paint(FLOOR), paint(FLOOR_EDGE), 0.8)
@@ -167,7 +196,9 @@ func _draw_island() -> void:
 
 
 func _bush(base: Vector2, k: float) -> void:
-	draw_colored_polygon(DrawUtil.ellipse(base, Vector2(9.24, 3.78) * k, ELLIPSE_SEGMENTS), paint(BUSH_SHADOW))
+	draw_colored_polygon(
+		DrawUtil.ellipse(base, Vector2(9.24, 3.78) * k, ELLIPSE_SEGMENTS), paint(BUSH_SHADOW)
+	)
 	var top := base - Vector2(0, 6.88 * k)
 	draw_circle(top, 8.4 * k, paint(BUSH))
 	draw_circle(top - Vector2(2.1, 2.1) * k, 4.62 * k, paint(BUSH_LIGHT))
@@ -209,12 +240,24 @@ func _draw_cube(c: Vector3i, alpha := 1.0) -> void:
 	var x := c.x
 	var y := c.y
 	var h := c.z
-	_face([iso(x, y, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y + 1, h + 1), iso(x, y + 1, h + 1)],
-		SkyView.snowy_top(CUBE_TOP), SkyView.snowy_top_inset(CUBE_TOP_INSET), alpha)
-	_face([iso(x, y + 1, h + 1), iso(x + 1, y + 1, h + 1), iso(x + 1, y + 1, h), iso(x, y + 1, h)],
-		CUBE_LEFT, CUBE_LEFT_INSET, alpha)
-	_face([iso(x + 1, y + 1, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y, h), iso(x + 1, y + 1, h)],
-		CUBE_RIGHT, CUBE_RIGHT_INSET, alpha)
+	_face(
+		[iso(x, y, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y + 1, h + 1), iso(x, y + 1, h + 1)],
+		SkyView.snowy_top(CUBE_TOP),
+		SkyView.snowy_top_inset(CUBE_TOP_INSET),
+		alpha
+	)
+	_face(
+		[iso(x, y + 1, h + 1), iso(x + 1, y + 1, h + 1), iso(x + 1, y + 1, h), iso(x, y + 1, h)],
+		CUBE_LEFT,
+		CUBE_LEFT_INSET,
+		alpha
+	)
+	_face(
+		[iso(x + 1, y + 1, h + 1), iso(x + 1, y, h + 1), iso(x + 1, y, h), iso(x + 1, y + 1, h)],
+		CUBE_RIGHT,
+		CUBE_RIGHT_INSET,
+		alpha
+	)
 
 
 func _face(corners: Array, color: Color, inset: Color, alpha := 1.0) -> void:
@@ -238,26 +281,44 @@ func draw_tree() -> void:
 	var base := iso(TREE_SPOT.x, TREE_SPOT.y, 0)
 	var turn := TREE_SWAY * sin(TAU * SkyView.seconds() / TREE_SWAY_SECONDS)
 	# SkyView's tree shapes have y up; the screen's y runs down.
-	var at := func(offset: Vector2) -> Vector2: return base + Vector2(offset.x, -offset.y).rotated(turn)
+	var at := func(offset: Vector2) -> Vector2:
+		return base + Vector2(offset.x, -offset.y).rotated(turn)
 	for layer in SkyView.layers():
 		var a: float = layer.weight
 		var tree: Array = SkyView.TREES[layer.season]
 		var trunk: Color = tree[0]
 		var canopy: Array = tree[1]
-		draw_colored_polygon(DrawUtil.ellipse(base + Vector2(0, 2), Vector2(16, 5), ELLIPSE_SEGMENTS),
-			Color(TREE_SHADOW, TREE_SHADOW.a * a))
+		draw_colored_polygon(
+			DrawUtil.ellipse(base + Vector2(0, 2), Vector2(16, 5), ELLIPSE_SEGMENTS),
+			Color(TREE_SHADOW, TREE_SHADOW.a * a)
+		)
 		var top := SkyView.TREE_TRUNK_HEIGHT
-		draw_colored_polygon(PackedVector2Array([at.call(Vector2.ZERO), at.call(Vector2(-3, top)), at.call(Vector2(3, top))]),
-			Color(trunk, a))
+		draw_colored_polygon(
+			PackedVector2Array(
+				[at.call(Vector2.ZERO), at.call(Vector2(-3, top)), at.call(Vector2(3, top))]
+			),
+			Color(trunk, a)
+		)
 		if canopy.is_empty():
 			for branch in SkyView.TREE_BRANCHES:
 				draw_line(at.call(branch[0]), at.call(branch[1]), Color(trunk, a), 2.4, true)
 			for lump in SkyView.TREE_SNOW_LUMPS:
-				draw_colored_polygon(DrawUtil.ellipse(at.call(Vector2(lump[0], lump[1])), Vector2(lump[2], lump[2] * 0.6), 16),
-					Color(1, 1, 1, a))
+				draw_colored_polygon(
+					DrawUtil.ellipse(
+						at.call(Vector2(lump[0], lump[1])), Vector2(lump[2], lump[2] * 0.6), 16
+					),
+					Color(1, 1, 1, a)
+				)
 			continue
 		for puff in SkyView.TREE_PUFFS:
-			draw_circle(at.call(Vector2(puff[0], puff[1])), puff[2], Color(canopy[puff[3]], a), true, -1.0, true)
+			draw_circle(
+				at.call(Vector2(puff[0], puff[1])),
+				puff[2],
+				Color(canopy[puff[3]], a),
+				true,
+				-1.0,
+				true
+			)
 		var features := SkyView.features(layer.season, layer.time)
 		if features.has("blossom"):
 			for i in 10:
@@ -265,8 +326,13 @@ func draw_tree() -> void:
 				draw_circle(at.call(dot), 1.6, Color(1, 1, 1, a), true, -1.0, true)
 		if features.has("fallen_leaves"):
 			for i in 5:
-				var leaf := base + Vector2(-22 + 44 * DrawUtil.rand(i, 9), -2 + 6 * DrawUtil.rand(i, 10))
-				draw_colored_polygon(DrawUtil.ellipse(leaf, Vector2(2.4, 1.4), 12), Color(canopy[SkyView.TREE_FALLEN_LEAF], a))
+				var leaf := (
+					base + Vector2(-22 + 44 * DrawUtil.rand(i, 9), -2 + 6 * DrawUtil.rand(i, 10))
+				)
+				draw_colored_polygon(
+					DrawUtil.ellipse(leaf, Vector2(2.4, 1.4), 12),
+					Color(canopy[SkyView.TREE_FALLEN_LEAF], a)
+				)
 
 
 ## A filled polygon from flat [x, y, ...] coordinates, with an optional edge.

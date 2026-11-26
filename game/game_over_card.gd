@@ -8,10 +8,10 @@ extends Control
 ## hidden until the leaderboard (#30) reports a submit with
 ## show_score_saved().
 
-const UI := preload("res://game/ui_style.gd")
-
 signal play_again_pressed
 signal home_pressed
+
+const UI := preload("res://game/ui_style.gd")
 
 ## Colours from the Qubist game-over design.
 const INK := Color("#22313F")
@@ -136,8 +136,12 @@ func open(game, best_score: int) -> void:
 	else:
 		slider.position.y = size.y
 		slider.modulate.a = 1.0
-		_tween.tween_property(slider, "position:y", 0.0, SLIDE_SECONDS) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		(
+			_tween
+			. tween_property(slider, "position:y", 0.0, SLIDE_SECONDS)
+			. set_trans(Tween.TRANS_CUBIC)
+			. set_ease(Tween.EASE_OUT)
+		)
 
 
 func close() -> void:
@@ -189,7 +193,9 @@ func _play_again_button() -> Button:
 	b.custom_minimum_size.y = 58
 	b.add_theme_font_override("font", UI.title_font(600))
 	b.add_theme_font_size_override("font_size", 20)
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+	for state in [
+		"font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"
+	]:
 		b.add_theme_color_override(state, UI.WHITE)
 	b.add_theme_stylebox_override("normal", _button_box(BUTTON, 4))
 	b.add_theme_stylebox_override("hover", _button_box(BUTTON.lightened(0.06), 4))
@@ -206,7 +212,9 @@ func _home_button() -> Button:
 	b.custom_minimum_size.y = 44
 	b.add_theme_font_override("font", UI.body_font(600))
 	b.add_theme_font_size_override("font_size", 16)
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+	for state in [
+		"font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"
+	]:
 		b.add_theme_color_override(state, BUTTON)
 	b.add_theme_stylebox_override("normal", UI.box(UI.CLEAR, 20))
 	b.add_theme_stylebox_override("hover", UI.box(TILE, 20))
@@ -253,8 +261,15 @@ static func _dim_texture() -> GradientTexture2D:
 class Crown:
 	extends Control
 
-	const POINTS := [Vector2(4, 17), Vector2(3, 8), Vector2(8, 12), Vector2(12, 6),
-		Vector2(16, 12), Vector2(21, 8), Vector2(20, 17)]
+	const POINTS := [
+		Vector2(4, 17),
+		Vector2(3, 8),
+		Vector2(8, 12),
+		Vector2(12, 6),
+		Vector2(16, 12),
+		Vector2(21, 8),
+		Vector2(20, 17)
+	]
 
 	func _init() -> void:
 		custom_minimum_size = Vector2(14, 14)
@@ -283,7 +298,9 @@ class Trophy:
 		var color := Color("#3D5568")
 		var w := 2.0 * s
 		# Cup: a rim, straight sides and a round bottom.
-		var cup := PackedVector2Array([Vector2(8, 9), Vector2(8, 4), Vector2(16, 4), Vector2(16, 9)])
+		var cup := PackedVector2Array(
+			[Vector2(8, 9), Vector2(8, 4), Vector2(16, 4), Vector2(16, 9)]
+		)
 		for i in range(1, 8):
 			var a := PI * i / 8.0
 			cup.append(Vector2(12 + 4 * cos(a), 9 + 4 * sin(a)))

@@ -6,8 +6,8 @@ extends RefCounted
 ##
 ## The loading view and main.gd call start() with the player's settings;
 ## main.gd then calls follow_clock() each frame and follow() when Settings
-## change. The backdrop, the particles and the island read it every frame. Colours follow the "Seasons and time of day" design
-## in Notion.
+## change. The backdrop, the particles and the island read it every frame.
+## Colours follow the "Seasons and time of day" design in Notion.
 
 const SkyClock := preload("res://core/sky_clock.gd")
 const UI := preload("res://game/ui_style.gd")
@@ -20,9 +20,21 @@ const CLOCK_CHECK_SECONDS := 30.0
 
 ## Sky gradients, top to bottom, as [stop, colour] pairs.
 const GRADIENTS := {
-	"sunrise": [[0.0, Color("#7E9CD3")], [0.38, Color("#E7B3B4")], [0.66, Color("#FFD9AE")], [1.0, Color("#FFF1DC")]],
+	"sunrise":
+	[
+		[0.0, Color("#7E9CD3")],
+		[0.38, Color("#E7B3B4")],
+		[0.66, Color("#FFD9AE")],
+		[1.0, Color("#FFF1DC")]
+	],
 	"day": [[0.0, Color("#9FD3EE")], [0.42, Color("#CBE8F6")], [1.0, Color("#F3FAFD")]],
-	"sunset": [[0.0, Color("#48508F")], [0.34, Color("#B96A8E")], [0.62, Color("#F08A6B")], [1.0, Color("#FFC98A")]],
+	"sunset":
+	[
+		[0.0, Color("#48508F")],
+		[0.34, Color("#B96A8E")],
+		[0.62, Color("#F08A6B")],
+		[1.0, Color("#FFC98A")]
+	],
 	"night": [[0.0, Color("#0B1230")], [0.45, Color("#1C2A57")], [1.0, Color("#34467A")]],
 }
 ## Cloud colour, and how opaque clouds are compared with the day's.
@@ -46,24 +58,56 @@ const TINTS := {
 ## Island colours (as in island_art.gd) swapped for each season. Colours a
 ## season doesn't list stay as they are.
 const ISLAND_COLORS := {
-	"spring": {
-		"#9CCD63": "#A9DA6E", "#6E9E3E": "#73A840", "#7DB34A": "#8CC152", "#8BC152": "#97CA5B",
-		"#B7DE83": "#C3E89A", "#5E9E3A": "#F08FB0", "#76B84A": "#F9C9D8",
+	"spring":
+	{
+		"#9CCD63": "#A9DA6E",
+		"#6E9E3E": "#73A840",
+		"#7DB34A": "#8CC152",
+		"#8BC152": "#97CA5B",
+		"#B7DE83": "#C3E89A",
+		"#5E9E3A": "#F08FB0",
+		"#76B84A": "#F9C9D8",
 	},
-	"summer": {
-		"#9CCD63": "#8CC152", "#6E9E3E": "#5E9233", "#7DB34A": "#73A840", "#8BC152": "#7DB34A",
-		"#B7DE83": "#A8D46F", "#7FAE4E": "#6E9E3E", "#79C6E0": "#5FBDDC", "#4E9DBB": "#3F92B3",
-		"#5E9E3A": "#4E8F30", "#76B84A": "#66A840",
+	"summer":
+	{
+		"#9CCD63": "#8CC152",
+		"#6E9E3E": "#5E9233",
+		"#7DB34A": "#73A840",
+		"#8BC152": "#7DB34A",
+		"#B7DE83": "#A8D46F",
+		"#7FAE4E": "#6E9E3E",
+		"#79C6E0": "#5FBDDC",
+		"#4E9DBB": "#3F92B3",
+		"#5E9E3A": "#4E8F30",
+		"#76B84A": "#66A840",
 	},
-	"fall": {
-		"#9CCD63": "#C2B25A", "#6E9E3E": "#8F8238", "#7DB34A": "#A99A45", "#8BC152": "#B5A64E",
-		"#B7DE83": "#D6CC7E", "#7FAE4E": "#A99A45", "#79C6E0": "#6FB3C8", "#4E9DBB": "#4A8CA3",
-		"#E6F7FC": "#E6F2F5", "#5E9E3A": "#D9772B", "#76B84A": "#E8A33A",
+	"fall":
+	{
+		"#9CCD63": "#C2B25A",
+		"#6E9E3E": "#8F8238",
+		"#7DB34A": "#A99A45",
+		"#8BC152": "#B5A64E",
+		"#B7DE83": "#D6CC7E",
+		"#7FAE4E": "#A99A45",
+		"#79C6E0": "#6FB3C8",
+		"#4E9DBB": "#4A8CA3",
+		"#E6F7FC": "#E6F2F5",
+		"#5E9E3A": "#D9772B",
+		"#76B84A": "#E8A33A",
 	},
-	"winter": {
-		"#9CCD63": "#EEF3F8", "#6E9E3E": "#B9CAD8", "#7DB34A": "#DCE6EF", "#8BC152": "#E6EEF5",
-		"#B7DE83": "#F7FAFD", "#7FAE4E": "#C3D3E0", "#79C6E0": "#CFE6F0", "#4E9DBB": "#9CC3D4",
-		"#E6F7FC": "#FFFFFF", "#5E9E3A": "#E9F0F6", "#76B84A": "#FFFFFF",
+	"winter":
+	{
+		"#9CCD63": "#EEF3F8",
+		"#6E9E3E": "#B9CAD8",
+		"#7DB34A": "#DCE6EF",
+		"#8BC152": "#E6EEF5",
+		"#B7DE83": "#F7FAFD",
+		"#7FAE4E": "#C3D3E0",
+		"#79C6E0": "#CFE6F0",
+		"#4E9DBB": "#9CC3D4",
+		"#E6F7FC": "#FFFFFF",
+		"#5E9E3A": "#E9F0F6",
+		"#76B84A": "#FFFFFF",
 	},
 }
 ## The tree beside the island: trunk and three canopy colours. Winter's tree
@@ -83,8 +127,10 @@ const TREE_PUFFS := [[-9, 38, 13.0, 0], [9, 40, 12.0, 2], [0, 50, 13.0, 1], [0, 
 ## Winter's bare branches as [from, to], and the snow on them as
 ## [x, y, radius].
 const TREE_BRANCHES := [
-	[Vector2(0, 24), Vector2(-12, 38)], [Vector2(0, 30), Vector2(10, 42)],
-	[Vector2(-6, 32), Vector2(-14, 41)], [Vector2(5, 36), Vector2(12, 44)],
+	[Vector2(0, 24), Vector2(-12, 38)],
+	[Vector2(0, 30), Vector2(10, 42)],
+	[Vector2(-6, 32), Vector2(-14, 41)],
+	[Vector2(5, 36), Vector2(12, 44)],
 ]
 const TREE_SNOW_LUMPS := [[-12, 38, 4.0], [10, 42, 4.5], [-8, 42, 3.0], [7, 44, 3.0], [0, 36, 3.5]]
 ## Fall's leaves on the ground are this canopy colour (the deepest red).
@@ -165,8 +211,16 @@ const NIGHT_INK_PROPS := [
 	"theme_override_colors/font_disabled_color",
 ]
 const NIGHT_BOXES := [
-	"normal", "hover", "pressed", "hover_pressed", "disabled", "focus", "panel",
-	"slider", "grabber_area", "grabber_area_highlight",
+	"normal",
+	"hover",
+	"pressed",
+	"hover_pressed",
+	"disabled",
+	"focus",
+	"panel",
+	"slider",
+	"grabber_area",
+	"grabber_area_highlight",
 ]
 const NIGHT_FILL_PROPS := ["bg_color", "border_color", "shadow_color"]
 
@@ -289,7 +343,9 @@ static func follow(settings, instant := false) -> void:
 ## How far the current crossfade has got, 0 to 1 (1 when none is running),
 ## eased.
 static func blend() -> float:
-	var t := clampf((Time.get_ticks_msec() - _changed_msec) / (CROSSFADE_SECONDS * 1000.0), 0.0, 1.0)
+	var t := clampf(
+		(Time.get_ticks_msec() - _changed_msec) / (CROSSFADE_SECONDS * 1000.0), 0.0, 1.0
+	)
 	return smoothstep(0.0, 1.0, t)
 
 

@@ -73,8 +73,11 @@ func test_hidden_gap_is_behind_the_wall_until_turned() -> void:
 		var blocked := 0
 		for c in piece.cells_at(data.target):
 			var ahead: Vector3i = c + front
-			if game.grid.in_bounds(ahead) and game.grid.is_filled(ahead) \
-					and game.grid.is_filled(ahead + Vector3i(0, 0, 1)):
+			if (
+				game.grid.in_bounds(ahead)
+				and game.grid.is_filled(ahead)
+				and game.grid.is_filled(ahead + Vector3i(0, 0, 1))
+			):
 				blocked += 1
 		if step == 0:
 			check_eq(blocked, piece.cube_count(), "hidden at the starting view")

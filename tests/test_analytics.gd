@@ -27,18 +27,24 @@ func test_game_events_carry_only_their_numbers() -> void:
 	check_eq(analytics.backend.names(), ["game_start", "game_over", "game_quit"])
 	check_eq(events[0][1], {}, "game_start props")
 	check_eq(events[1][1], {"score": 120, "moves": 9, "lines": 2}, "game_over props")
-	check_eq(events[2][1], {"score": 120, "moves": 9, "lines": 2, "reason": "backgrounded"},
-		"game_quit props")
+	check_eq(
+		events[2][1],
+		{"score": 120, "moves": 9, "lines": 2, "reason": "backgrounded"},
+		"game_quit props"
+	)
 
 
 func test_tutorial_steps_count_from_one() -> void:
 	var analytics := _make()
 	analytics.tutorial_step(0, 3)
 	analytics.tutorial_ended(false, 1)
-	check_eq(analytics.backend.events, [
-		["tutorial_step", {"step": 1, "of": 3}],
-		["tutorial_end", {"completed": false, "step": 2}],
-	])
+	check_eq(
+		analytics.backend.events,
+		[
+			["tutorial_step", {"step": 1, "of": 3}],
+			["tutorial_end", {"completed": false, "step": 2}],
+		]
+	)
 
 
 func test_unknown_events_and_extra_props_are_refused() -> void:

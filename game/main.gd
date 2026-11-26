@@ -74,10 +74,6 @@ var analytics: Analytics = Analytics.new()
 ## The in-progress game and camera, saved after every placement and when the
 ## app goes to the background, and resumed on launch (#18).
 var game_save_path := "user://game.json"
-## The game already added to `stats`, so it is never counted twice.
-var _recorded_game: Game
-## The last game a game_quit was sent for, so leaving it twice sends once.
-var _quit_sent_game: Game
 ## The "+points" pop, the combo/streak banner and the header count-up.
 var score_feedback := ScoreFeedback.new(self)
 ## The score the header shows; trails game.score while the counter ticks up.
@@ -116,9 +112,6 @@ var stats_screen: StatsScreen
 var home: HomeScreen
 var tutorial_overlay: TutorialOverlay
 var hint_toast: HintToast
-## Stats was opened from the Settings sheet, so Back returns there; from
-## Home, Back just closes it.
-var _stats_from_settings := false
 
 ## Slice mode, depth and the sweep plane's fade.
 var swiper: Swiper = Swiper.new(config.grid_size)
@@ -127,6 +120,14 @@ var swiper: Swiper = Swiper.new(config.grid_size)
 var drag := DragController.new(self)
 ## The three-move tutorial (#29), played on this screen.
 var tutorial := TutorialRun.new(self)
+
+## The game already added to `stats`, so it is never counted twice.
+var _recorded_game: Game
+## The last game a game_quit was sent for, so leaving it twice sends once.
+var _quit_sent_game: Game
+## Stats was opened from the Settings sheet, so Back returns there; from
+## Home, Back just closes it.
+var _stats_from_settings := false
 var _touches := {}
 var _pinch_distance := 0.0
 ## Game over arrived while the move animation was playing; show it after.
@@ -159,12 +160,17 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
-	match what:
-		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST:
-			save_game()
-	match what:
-		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST:
-			_send_quit(Analytics.QUIT_BACKGROUNDED)
+	if (
+		what
+		in [
+			NOTIFICATION_APPLICATION_PAUSED,
+			NOTIFICATION_APPLICATION_FOCUS_OUT,
+			NOTIFICATION_WM_CLOSE_REQUEST
+		]
+	):
+		save_game()
+	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST]:
+		_send_quit(Analytics.QUIT_BACKGROUNDED)
 
 
 ## Sends game_quit if a game is in progress (not the tutorial's), once per
@@ -217,10 +223,16 @@ func save_game() -> void:
 	if _recorded_game == game:
 		SaveFile.remove(game_save_path)
 		return
-	SaveFile.write(game_save_path, {
-		"game": game.to_dict(),
-		"view": {"step": tower.rig.view_step(), "zoom": tower.rig.camera.size},
-	})
+	(
+		SaveFile
+		. write(
+			game_save_path,
+			{
+				"game": game.to_dict(),
+				"view": {"step": tower.rig.view_step(), "zoom": tower.rig.camera.size},
+			}
+		)
+	)
 
 
 func _use_game(next: Game) -> void:
@@ -279,12 +291,17 @@ func _update_axis_labels(delta: float) -> void:
 
 # --- Input ---
 
+
 func _input(event: InputEvent) -> void:
 	if drag.is_dragging():
 		if event is InputEventMouseMotion:
 			drag.update(event.position)
 			get_viewport().set_input_as_handled()
-		elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		elif (
+			event is InputEventMouseButton
+			and event.button_index == MOUSE_BUTTON_LEFT
+			and not event.pressed
+		):
 			drag.end(event.position)
 			_refresh()
 			get_viewport().set_input_as_handled()
@@ -339,12 +356,19 @@ func _touch_spread() -> float:
 
 # --- Dragging a piece ---
 
+
 ## A finger went down on tray slot `index`. Does nothing while a move can't
 ## start.
 func start_drag(index: int, finger: Vector2) -> void:
 	# No new move until the last one has finished animating, so the grid and
 	# the view stay in step.
-	if game.is_over or game_over_card.visible or menu_open() or tower.is_animating() or game.tray[index] == null:
+	if (
+		game.is_over
+		or game_over_card.visible
+		or menu_open()
+		or tower.is_animating()
+		or game.tray[index] == null
+	):
 		return
 	drag.start(index, finger)
 
@@ -364,8 +388,12 @@ func _place(index: int, origin: Vector3i) -> void:
 			cubes_break.connect(haptics.clear.bind(lines))
 			cubes_break.connect(audio.clear.bind(lines))
 		# Sliced-away cubes stay faded instead of animating.
-		tower.play_move(result.placed, result.cleared, _faded_cells(game.grid.filled_cells()),
-			result.lines.size())
+		tower.play_move(
+			result.placed,
+			result.cleared,
+			_faded_cells(game.grid.filled_cells()),
+			result.lines.size()
+		)
 		score_feedback.show_gain(result)
 		if tutorial.is_active():
 			tutorial.placed()
@@ -378,9 +406,15 @@ func _place(index: int, origin: Vector3i) -> void:
 ## tutorial, a drag or a move animation, and not with anything covering the
 ## game.
 func can_undo() -> bool:
-	return game != null and game.can_undo() and not tutorial.is_active() \
-		and not drag.is_dragging() and not tower.is_animating() \
-		and not game_over_card.visible and not menu_open()
+	return (
+		game != null
+		and game.can_undo()
+		and not tutorial.is_active()
+		and not drag.is_dragging()
+		and not tower.is_animating()
+		and not game_over_card.visible
+		and not menu_open()
+	)
 
 
 ## Takes back the last move (#184): the piece goes back to its slot and the
@@ -395,6 +429,7 @@ func undo() -> void:
 
 
 # --- View controls ---
+
 
 func _turn(quarter_turns: int) -> void:
 	tower.rig.turn(quarter_turns)
@@ -425,6 +460,7 @@ func _set_slice_depth(depth: int) -> void:
 
 # --- Drawing state ---
 
+
 func _refresh() -> void:
 	if game == null:
 		return
@@ -434,8 +470,7 @@ func _refresh() -> void:
 	for i in range(tray_slots.size()):
 		var piece = game.tray[i] if i < game.tray.size() else null
 		tray_previews[i].set_piece(piece, step)
-		tray_slots[i].add_theme_stylebox_override("panel",
-			_tray_card(piece != null))
+		tray_slots[i].add_theme_stylebox_override("panel", _tray_card(piece != null))
 		SkyView.paint_night(tray_slots[i])
 
 	swiper.fit(step)
@@ -528,9 +563,11 @@ func _record_finished_game() -> void:
 
 ## True while Home, the Settings sheet or the Stats screen covers the game.
 func menu_open() -> bool:
-	return (settings_sheet != null and settings_sheet.visible) \
-		or (stats_screen != null and stats_screen.visible) \
+	return (
+		(settings_sheet != null and settings_sheet.visible)
+		or (stats_screen != null and stats_screen.visible)
 		or (home != null and home.visible)
+	)
 
 
 ## True if there's a game worth resuming: started and not over.
@@ -546,8 +583,11 @@ func show_home() -> void:
 	settings_sheet.visible = false
 	stats_screen.visible = false
 	var resume := can_continue()
-	home.open(stats.best_score if stats.has_best() else -1, game.score if resume else -1,
-		game.grid.filled_cells() if resume else [])
+	home.open(
+		stats.best_score if stats.has_best() else -1,
+		game.score if resume else -1,
+		game.grid.filled_cells() if resume else []
+	)
 	# Nothing to draw behind Home, so let the 3D view rest.
 	viewport_box.visible = false
 
@@ -710,6 +750,7 @@ func _on_tray_refilled(_tray: Array) -> void:
 
 # --- Building the UI ---
 
+
 func _build_ui() -> void:
 	# The sky shows through the tower's viewport, behind the island (#23).
 	add_child(SkyBackdrop.new())
@@ -861,7 +902,9 @@ func _build_tower_area() -> Control:
 	tower.crumble_finished.connect(_on_crumble_finished)
 
 	for axis_name in Swiper.AXIS_NAMES:
-		var axis_label := UI.label(axis_name, AXIS_LABEL_SIZE, AXIS_LABEL_COLOR, HORIZONTAL_ALIGNMENT_CENTER)
+		var axis_label := UI.label(
+			axis_name, AXIS_LABEL_SIZE, AXIS_LABEL_COLOR, HORIZONTAL_ALIGNMENT_CENTER
+		)
 		area.add_child(axis_label)
 		axis_labels.append(axis_label)
 
@@ -889,8 +932,12 @@ func _build_tower_area() -> Control:
 	# can use the whole controls row (it has a third, Z, axis button the
 	# design's row leaves out). Round white 56-point buttons, as designed.
 	for dir in [-1, 1]:
-		var b := UI.icon_button("rotate_left" if dir < 0 else "rotate_right",
-			"Rotate tower left" if dir < 0 else "Rotate tower right", 56, 28)
+		var b := UI.icon_button(
+			"rotate_left" if dir < 0 else "rotate_right",
+			"Rotate tower left" if dir < 0 else "Rotate tower right",
+			56,
+			28
+		)
 		b.set_anchors_preset(Control.PRESET_BOTTOM_LEFT if dir < 0 else Control.PRESET_BOTTOM_RIGHT)
 		b.offset_left = 4 if dir < 0 else -60
 		b.offset_right = 60 if dir < 0 else -4
@@ -938,7 +985,6 @@ func _build_controls() -> Control:
 	row.custom_minimum_size.y = CONTROLS_HEIGHT
 	row.add_theme_constant_override("separation", 8)
 
-
 	swiper_bar = PanelContainer.new()
 	swiper_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	swiper_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -959,8 +1005,9 @@ func _build_controls() -> Control:
 	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var group := ButtonGroup.new()
 	for mode in [ViewMath.MODE_X, ViewMath.MODE_Y, ViewMath.MODE_Z]:
-		var b := UI.segment_button(Swiper.AXIS_NAMES[mode], 15,
-				UI.accent_key(20, UI.SKY_ACCENT, 3), UI.WHITE, UI.SKY_MUTED)
+		var b := UI.segment_button(
+			Swiper.AXIS_NAMES[mode], 15, UI.accent_key(20, UI.SKY_ACCENT, 3), UI.WHITE, UI.SKY_MUTED
+		)
 		b.add_theme_font_override("font", UI.title_font(600))
 		b.button_group = group
 		b.custom_minimum_size = Vector2(40, 40)
@@ -986,10 +1033,14 @@ func _build_controls() -> Control:
 	slice_slider.add_theme_icon_override("grabber_highlight", grabber)
 	slice_slider.add_theme_stylebox_override("slider", UI.slider_track(UI.SLIDER_RAIL))
 	slice_slider.add_theme_stylebox_override("grabber_area", UI.slider_track(UI.SKY_ACCENT))
-	slice_slider.add_theme_stylebox_override("grabber_area_highlight", UI.slider_track(UI.SKY_ACCENT))
-	slice_slider.value_changed.connect(func(v: float):
-		_set_slice_depth(int(v))
-		_on_swiper_used())
+	slice_slider.add_theme_stylebox_override(
+		"grabber_area_highlight", UI.slider_track(UI.SKY_ACCENT)
+	)
+	slice_slider.value_changed.connect(
+		func(v: float):
+			_set_slice_depth(int(v))
+			_on_swiper_used()
+	)
 	slice_slider.drag_started.connect(swiper.begin_sweep)
 	slice_slider.drag_ended.connect(func(_changed: bool): swiper.end_sweep())
 	inner.add_child(slice_slider)
@@ -1001,6 +1052,7 @@ func _build_controls() -> Control:
 
 
 # --- Test hooks ---
+
 
 ## Turns the view as the rotate buttons do. With `instant`, the turn ends at
 ## once instead of animating. Used by the smoke test.
@@ -1030,8 +1082,11 @@ func autoplay_one_move() -> bool:
 			continue
 		var origin: Vector3i = options[options.size() >> 1]
 		var center := ViewMath.cells_center(piece.cells_at(origin), config.grid_size)
-		var finger := viewport_box.get_global_rect().position + tower.project_point(center) \
+		var finger := (
+			viewport_box.get_global_rect().position
+			+ tower.project_point(center)
 			+ Vector2(0, DragController.LIFT)
+		)
 		var before := game.moves
 		start_drag(i, finger)
 		if not drag.is_dragging():

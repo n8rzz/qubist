@@ -16,5 +16,8 @@ func test_script_errors_fail_the_test() -> void:
 	check_eq(run.failures.size(), 1, "one failure, for the script error")
 	if run.failures.size() == 1:
 		var failure: String = run.failures[0]
-		check(failure.begins_with("crashing_suite::test_hits_a_script_error: script error:"), "names the test: " + failure)
+		check(
+			failure.begins_with("crashing_suite::test_hits_a_script_error: script error:"),
+			"names the test: " + failure
+		)
 		check("crashing_suite.gd:16" in failure, "points at the line: " + failure)

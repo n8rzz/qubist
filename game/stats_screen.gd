@@ -2,11 +2,11 @@ extends Control
 ## Full-screen lifetime stats (#32), opened from Settings › Stats. Back
 ## returns to the Settings sheet.
 
+signal back_pressed
+
 const UI := preload("res://game/ui_style.gd")
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
 const SkyView := preload("res://game/sky_view.gd")
-
-signal back_pressed
 
 const CARD_RADIUS := 22
 
@@ -63,7 +63,13 @@ func _init() -> void:
 		grid.add_child(card)
 	column.add_child(grid)
 
-	column.add_child(SkyView.muted(UI.label("Stats are kept on this device.", 13, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER)))
+	column.add_child(
+		SkyView.muted(
+			UI.label(
+				"Stats are kept on this device.", 13, UI.SKY_MUTED, HORIZONTAL_ALIGNMENT_CENTER
+			)
+		)
+	)
 
 
 ## Shows the screen with `stats` (a core/stats.gd instance).
@@ -79,8 +85,7 @@ func open(stats) -> void:
 
 func _card(key: String, title: String, value_size: int) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel",
-		UI.card(UI.WHITE, CARD_RADIUS, Vector2(16, 18)))
+	card.add_theme_stylebox_override("panel", UI.card(UI.WHITE, CARD_RADIUS, Vector2(16, 18)))
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 6)
 	var caption := UI.label(title, 13, UI.SKY_MUTED)

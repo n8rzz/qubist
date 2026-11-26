@@ -30,7 +30,9 @@ const FIREFLY := Color("#FFF3A0")
 const FIREFLY_GLOW := Color(1.0, 236 / 255.0, 120 / 255.0, 0.7)
 const SEED := Color(1.0, 250 / 255.0, 235 / 255.0, 0.9)
 ## Butterflies as [home, colour, seconds per loop].
-const BUTTERFLIES := [[Vector2(60, 380), Color("#F5A3C7"), 9.0], [Vector2(250, 300), Color("#FFC94D"), 12.0]]
+const BUTTERFLIES := [
+	[Vector2(60, 380), Color("#F5A3C7"), 9.0], [Vector2(250, 300), Color("#FFC94D"), 12.0]
+]
 const BUTTERFLY_BODY := Color("#3D3A36")
 
 ## Kinds of falling things: count, size, sideways drift range, turn range in
@@ -129,7 +131,9 @@ func _draw_fireflies(k: Vector2, seconds: float, alpha: float) -> void:
 		var p := fposmod(seconds / period + DrawUtil.rand(i + 300, 2), 1.0)
 		# Out and back along a short diagonal, blinking twice on the way.
 		var reach := 1.0 - absf(1.0 - 2.0 * p)
-		var home := Vector2(30.0 + 330.0 * DrawUtil.rand(i + 300, 3), 250.0 + 310.0 * DrawUtil.rand(i + 300, 4))
+		var home := Vector2(
+			30.0 + 330.0 * DrawUtil.rand(i + 300, 3), 250.0 + 310.0 * DrawUtil.rand(i + 300, 4)
+		)
 		var at := home + Vector2(14, -12) * reach
 		var blink := 0.575 - 0.425 * cos(TAU * p * 2.0)
 		var pos := Vector2(at.x * k.x, at.y * k.y)
@@ -143,11 +147,16 @@ func _draw_butterflies(k: Vector2, seconds: float, alpha: float) -> void:
 		var p := fposmod((seconds + j * 4.0) / spec[2], 1.0)
 		# A loop: up and right, down, back under and home.
 		var a := TAU * p
-		var offset := Vector2(40.0 - 40.0 * cos(a), -30.0 * sin(a) if sin(a) > 0.0 else -24.0 * sin(a))
+		var offset := Vector2(
+			40.0 - 40.0 * cos(a), -30.0 * sin(a) if sin(a) > 0.0 else -24.0 * sin(a)
+		)
 		var at: Vector2 = spec[0] + offset
 		var pos := Vector2(at.x * k.x, at.y * k.y)
 		var wing := 0.6 + 0.4 * cos(TAU * seconds / 0.35)
 		var color := Color(spec[1], alpha)
 		for side in [-1.0, 1.0]:
-			draw_colored_polygon(DrawUtil.ellipse(pos + Vector2(4.5 * side * wing, -1), Vector2(4.5 * wing, 5), 16), color)
+			draw_colored_polygon(
+				DrawUtil.ellipse(pos + Vector2(4.5 * side * wing, -1), Vector2(4.5 * wing, 5), 16),
+				color
+			)
 		draw_rect(Rect2(pos - Vector2(0.8, 5), Vector2(1.6, 10)), Color(BUTTERFLY_BODY, alpha))

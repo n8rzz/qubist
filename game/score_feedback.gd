@@ -46,9 +46,17 @@ func tick_to(target: int) -> void:
 		_set_shown(target)
 		return
 	_tween = host.create_tween()
-	_tween.tween_method(func(v: float) -> void: _set_shown(roundi(v)),
-		float(shown_score), float(target), SCORE_TICK_SECONDS) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	(
+		_tween
+		. tween_method(
+			func(v: float) -> void: _set_shown(roundi(v)),
+			float(shown_score),
+			float(target),
+			SCORE_TICK_SECONDS
+		)
+		. set_ease(Tween.EASE_OUT)
+		. set_trans(Tween.TRANS_CUBIC)
+	)
 
 
 ## Stops any tick and shows the current score at once.
@@ -84,10 +92,16 @@ func show_gain(result: Dictionary) -> void:
 	if int(result.score.total) <= 0:
 		return
 	var rect: Rect2 = host.viewport_box.get_global_rect()
-	var at: Vector2 = rect.position \
+	var at: Vector2 = (
+		rect.position
 		+ host.tower.project_point(ViewMath.cells_center(result.cleared, host.config.grid_size))
-	var pop := UI.label("+%s" % UI.format_number(int(result.score.total)), 30, SCORE_POP_COLOR,
-		HORIZONTAL_ALIGNMENT_CENTER)
+	)
+	var pop := UI.label(
+		"+%s" % UI.format_number(int(result.score.total)),
+		30,
+		SCORE_POP_COLOR,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
 	pop.add_theme_font_override("font", UI.title_font(700))
 	pop.add_theme_color_override("font_outline_color", SCORE_POP_OUTLINE)
 	pop.add_theme_constant_override("outline_size", 5)
@@ -96,8 +110,12 @@ func show_gain(result: Dictionary) -> void:
 	pop.position = at - pop.size * 0.5
 	var pt := pop.create_tween().set_parallel()
 	if not UI.reduce_motion():
-		pt.tween_property(pop, "position:y", pop.position.y - SCORE_POP_RISE, SCORE_POP_SECONDS) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		(
+			pt
+			. tween_property(pop, "position:y", pop.position.y - SCORE_POP_RISE, SCORE_POP_SECONDS)
+			. set_ease(Tween.EASE_OUT)
+			. set_trans(Tween.TRANS_CUBIC)
+		)
 	pt.tween_property(pop, "modulate:a", 0.0, SCORE_POP_SECONDS).set_ease(Tween.EASE_IN)
 	pt.chain().tween_callback(pop.queue_free)
 
@@ -119,7 +137,9 @@ func show_gain(result: Dictionary) -> void:
 	var bt := banner.create_tween()
 	if not UI.reduce_motion():
 		banner.scale = Vector2(0.6, 0.6)
-		bt.tween_property(banner, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		bt.tween_property(banner, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(
+			Tween.EASE_OUT
+		)
 	bt.tween_interval(BANNER_SECONDS)
 	bt.tween_property(banner, "modulate:a", 0.0, 0.3)
 	bt.tween_callback(banner.queue_free)

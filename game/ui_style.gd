@@ -10,8 +10,6 @@ const IconButton := preload("res://game/icon_button.gd")
 const FREDOKA: FontFile = preload("res://assets/fonts/Fredoka-Variable.ttf")
 const INTER: FontFile = preload("res://assets/fonts/Inter-Variable.ttf")
 
-static var _fonts := {}
-
 const WHITE := Color.WHITE
 ## Fully transparent, for a box with no fill or border.
 const CLEAR := Color(0, 0, 0, 0)
@@ -44,6 +42,7 @@ const SAFE_TOP := 54
 const SAFE_BOTTOM := 34
 const SIDE_MARGIN := 16
 
+static var _fonts := {}
 
 ## Tests set this to 1 or 0 to force Reduce Motion on or off; -1 asks the
 ## device.
@@ -77,14 +76,18 @@ static func _font(base: FontFile, weight: int, spacing: int) -> FontVariation:
 	if not _fonts.has(key):
 		var font := FontVariation.new()
 		font.base_font = base
-		font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+		font.variation_opentype = {
+			TextServerManager.get_primary_interface().name_to_tag("wght"): weight
+		}
 		font.spacing_glyph = spacing
 		_fonts[key] = font
 	return _fonts[key]
 
 
 ## A rounded `bg` box. It has no border unless `width` and `border` are given.
-static func box(bg: Color, radius: int, padding := Vector2.ZERO, border := CLEAR, width: int = 0) -> StyleBoxFlat:
+static func box(
+	bg: Color, radius: int, padding := Vector2.ZERO, border := CLEAR, width: int = 0
+) -> StyleBoxFlat:
 	var b := StyleBoxFlat.new()
 	b.bg_color = bg
 	b.border_color = border
@@ -98,8 +101,9 @@ static func box(bg: Color, radius: int, padding := Vector2.ZERO, border := CLEAR
 	return b
 
 
-static func label(text: String, font_size: int, color: Color,
-		align := HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+static func label(
+	text: String, font_size: int, color: Color, align := HORIZONTAL_ALIGNMENT_LEFT
+) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.horizontal_alignment = align
@@ -130,7 +134,9 @@ static func style_card_button(b: Button, radius: int, padding := Vector2.ZERO) -
 
 ## A white icon tile. Pass `radius` = side / 2 for a round button. In a row
 ## taller than `side` it stays square, centered (#255).
-static func icon_button(kind: String, tooltip: String, side: int = 44, radius: int = 14) -> IconButton:
+static func icon_button(
+	kind: String, tooltip: String, side: int = 44, radius: int = 14
+) -> IconButton:
 	var b := IconButton.new(kind, tooltip)
 	b.icon_color = SKY_INK
 	b.custom_minimum_size = Vector2(side, side)
@@ -172,8 +178,9 @@ static func accent_key(radius: int, face: Color = SKY_ACCENT, drop: int = 4) -> 
 ## One choice of a segmented toggle: `on_style` and `on_color` text while
 ## picked, no fill and `off_color` text otherwise. The caller gives the
 ## buttons of a toggle one ButtonGroup.
-static func segment_button(text: String, font_size: int, on_style: StyleBox,
-		on_color: Color, off_color: Color) -> Button:
+static func segment_button(
+	text: String, font_size: int, on_style: StyleBox, on_color: Color, off_color: Color
+) -> Button:
 	var b := text_button(text, font_size)
 	b.toggle_mode = true
 	var off := box(CLEAR, 0)

@@ -86,8 +86,12 @@ func setup(size: Vector3i) -> void:
 func _process(_delta: float) -> void:
 	if _painted_version != SkyView.version or SkyView.is_fading():
 		paint()
-	_ripple_material.albedo_color.a = 0.675 - 0.325 * cos(TAU * SkyView.seconds() / IslandArt.GLINT_SECONDS)
-	_tree_pivot.rotation.z = IslandArt.TREE_SWAY * sin(TAU * SkyView.seconds() / IslandArt.TREE_SWAY_SECONDS)
+	_ripple_material.albedo_color.a = (
+		0.675 - 0.325 * cos(TAU * SkyView.seconds() / IslandArt.GLINT_SECONDS)
+	)
+	_tree_pivot.rotation.z = (
+		IslandArt.TREE_SWAY * sin(TAU * SkyView.seconds() / IslandArt.TREE_SWAY_SECONDS)
+	)
 	_fade_tree()
 
 
@@ -95,10 +99,16 @@ func _process(_delta: float) -> void:
 func paint() -> void:
 	_painted_version = SkyView.version
 	_tops.mesh = _tops_mesh()
-	_ripple_material.albedo_color = Color(SkyView.island_color(IslandArt.RIPPLE) * TOP_TINT, _ripple_material.albedo_color.a)
+	_ripple_material.albedo_color = Color(
+		SkyView.island_color(IslandArt.RIPPLE) * TOP_TINT, _ripple_material.albedo_color.a
+	)
 	for side in _sides:
-		(side[0] as ShaderMaterial).set_shader_parameter("left_color", SkyView.island_color(side[1]))
-		(side[0] as ShaderMaterial).set_shader_parameter("right_color", SkyView.island_color(side[2]))
+		(side[0] as ShaderMaterial).set_shader_parameter(
+			"left_color", SkyView.island_color(side[1])
+		)
+		(side[0] as ShaderMaterial).set_shader_parameter(
+			"right_color", SkyView.island_color(side[2])
+		)
 	_bush_material.albedo_color = SkyView.island_color(IslandArt.BUSH)
 	var weights := {}
 	for layer in SkyView.layers():
@@ -213,7 +223,9 @@ func _ring_band(top_half: Vector2, top_y: float, bottom_half: Vector2, bottom_y:
 
 ## Four faces joining a rectangle at `top_y` to a smaller or equal one at
 ## `bottom_y`, each with an outward normal.
-func _band(st: SurfaceTool, top_half: Vector2, top_y: float, bottom_half: Vector2, bottom_y: float) -> void:
+func _band(
+	st: SurfaceTool, top_half: Vector2, top_y: float, bottom_half: Vector2, bottom_y: float
+) -> void:
 	var signs := [Vector2(1, 1), Vector2(1, -1), Vector2(-1, -1), Vector2(-1, 1)]
 	for i in range(4):
 		var s0: Vector2 = signs[i]
@@ -357,11 +369,20 @@ func _fade_tree() -> void:
 		for part in tree.get_children():
 			var m: StandardMaterial3D = (part as MeshInstance3D).material_override
 			m.albedo_color.a = a
-			m.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED if a >= 0.999 else BaseMaterial3D.TRANSPARENCY_ALPHA
+			m.transparency = (
+				BaseMaterial3D.TRANSPARENCY_DISABLED
+				if a >= 0.999
+				else BaseMaterial3D.TRANSPARENCY_ALPHA
+			)
 
 
 func _rect(st: SurfaceTool, hx: float, hz: float, y: float, color: Color) -> void:
-	_quad(st, [Vector3(-hx, 0, -hz), Vector3(hx, 0, -hz), Vector3(hx, 0, hz), Vector3(-hx, 0, hz)], y, color)
+	_quad(
+		st,
+		[Vector3(-hx, 0, -hz), Vector3(hx, 0, -hz), Vector3(hx, 0, hz), Vector3(-hx, 0, hz)],
+		y,
+		color
+	)
 
 
 func _quad(st: SurfaceTool, corners: Array, y: float, color: Color) -> void:

@@ -96,4 +96,11 @@ func from_dict(data: Dictionary) -> void:
 		set(key, clampf(value, 0.0, 1.0) if is_number else VOLUME_DEFAULTS[key])
 	for key in CHOICE_DEFAULTS:
 		var value = data.get(key)
-		set(key, value if value is String and (CHOICES[key] as Array).has(value) else CHOICE_DEFAULTS[key])
+		set(
+			key,
+			(
+				value
+				if value is String and (CHOICES[key] as Array).has(value)
+				else CHOICE_DEFAULTS[key]
+			)
+		)

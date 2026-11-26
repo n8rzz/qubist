@@ -12,7 +12,11 @@ const DROP_DELAY := 0.32
 ## The cubes, in drop order, in a grid of cubes two cells wide and two layers
 ## tall: the design's cubes are twice the size of the tower's.
 const DROP_CELLS: Array[Vector3i] = [
-	Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(0, 1, 0), Vector3i(0, 0, 1), Vector3i(2, 0, 0),
+	Vector3i(0, 0, 0),
+	Vector3i(1, 0, 0),
+	Vector3i(0, 1, 0),
+	Vector3i(0, 0, 1),
+	Vector3i(2, 0, 0),
 ]
 const CUBE_SCALE := 2.0
 
@@ -40,7 +44,9 @@ func _draw() -> void:
 	var origin := size * 0.5 - LOADING_VIEW.get_center() * s
 	# The shadow stays put while the island bobs above it.
 	draw_set_transform(origin, 0.0, Vector2(s, s))
-	draw_colored_polygon(DrawUtil.ellipse(Vector2(0, 205), Vector2(110, 14), ELLIPSE_SEGMENTS), SHADOW)
+	draw_colored_polygon(
+		DrawUtil.ellipse(Vector2(0, 205), Vector2(110, 14), ELLIPSE_SEGMENTS), SHADOW
+	)
 
 	var bob := 0.0 if still else -BOB * (1.0 - cos(TAU * time / LOOP_SECONDS)) * 0.5
 	draw_set_transform(origin + Vector2(0, bob * s), 0.0, Vector2(s, s))
@@ -48,10 +54,12 @@ func _draw() -> void:
 
 	var order := range(DROP_CELLS.size())
 	# Back to front, as on Home.
-	order.sort_custom(func(a: int, b: int) -> bool:
-		var ca := DROP_CELLS[a]
-		var cb := DROP_CELLS[b]
-		return ca.x + ca.y + ca.z < cb.x + cb.y + cb.z)
+	order.sort_custom(
+		func(a: int, b: int) -> bool:
+			var ca := DROP_CELLS[a]
+			var cb := DROP_CELLS[b]
+			return ca.x + ca.y + ca.z < cb.x + cb.y + cb.z
+	)
 	for i: int in order:
 		var lift := 0.0
 		var alpha := 1.0

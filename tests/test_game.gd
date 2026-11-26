@@ -221,12 +221,33 @@ func test_placement_that_strands_the_tray_ends_the_game() -> void:
 func test_refill_that_cannot_be_placed_ends_the_game() -> void:
 	# The dot is never dealt (weight 0), so every refill is 2x2x2 blocks,
 	# which a checkerboard leaves no room for.
-	var cfg := Config.new({}, {"pieces": [
-		{"id": "dot", "weight": 0.0, "cells": [[0, 0, 0]]},
-		{"id": "block", "weight": 1.0, "cells": [
-			[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0],
-			[0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]]},
-	]})
+	var cfg := (
+		Config
+		. new(
+			{},
+			{
+				"pieces":
+				[
+					{"id": "dot", "weight": 0.0, "cells": [[0, 0, 0]]},
+					{
+						"id": "block",
+						"weight": 1.0,
+						"cells":
+						[
+							[0, 0, 0],
+							[1, 0, 0],
+							[0, 1, 0],
+							[1, 1, 0],
+							[0, 0, 1],
+							[1, 0, 1],
+							[0, 1, 1],
+							[1, 1, 1]
+						]
+					},
+				]
+			}
+		)
+	)
 	var game := Game.new(cfg, 7)
 	game.start()
 	game.grid.clear_all()
@@ -378,7 +399,9 @@ func test_save_and_restore() -> void:
 	check_eq(restored.tray[2].id, "cube2")
 	check_eq(restored.tray[1].size, BAR4_X)
 	for _i in range(5):
-		check_eq(restored.dealer.pick().id, game.dealer.pick().id, "dealer continues the same sequence")
+		check_eq(
+			restored.dealer.pick().id, game.dealer.pick().id, "dealer continues the same sequence"
+		)
 
 
 func test_restore_rejects_other_grid_size() -> void:
@@ -488,5 +511,9 @@ func test_random_games_play_to_the_end() -> void:
 			else:
 				check(game.score > last_score, "a move that clears a line scores")
 			last_score = game.score
-			check_eq(Rules.full_lines_through(game.grid, game.grid.filled_cells()).size(), 0, "no full line is left on the grid")
+			check_eq(
+				Rules.full_lines_through(game.grid, game.grid.filled_cells()).size(),
+				0,
+				"no full line is left on the grid"
+			)
 		check(game.is_over, "seed %d ended within 2000 moves" % game_seed)

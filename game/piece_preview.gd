@@ -42,24 +42,53 @@ func _draw() -> void:
 
 	# Paint back to front: furthest from the camera first, then lowest first.
 	var cubes: Array = piece.cells.duplicate()
-	cubes.sort_custom(func(a: Vector3i, b: Vector3i) -> bool:
-		var da := Vector2(a.x + 0.5, a.y + 0.5).dot(toward)
-		var db := Vector2(b.x + 0.5, b.y + 0.5).dot(toward)
-		if absf(da - db) > 0.01:
-			return da < db
-		return a.z < b.z)
+	cubes.sort_custom(
+		func(a: Vector3i, b: Vector3i) -> bool:
+			var da := Vector2(a.x + 0.5, a.y + 0.5).dot(toward)
+			var db := Vector2(b.x + 0.5, b.y + 0.5).dot(toward)
+			if absf(da - db) > 0.01:
+				return da < db
+			return a.z < b.z
+	)
 
 	var faces: Array = []
 	for cell in cubes:
 		var c: Vector3i = cell
 		var fx: int = c.x + 1 if toward.x > 0.0 else c.x
 		var fy: int = c.y + 1 if toward.y > 0.0 else c.y
-		faces.append([[Vector3(fx, c.y, c.z), Vector3(fx, c.y + 1, c.z), Vector3(fx, c.y + 1, c.z + 1), Vector3(fx, c.y, c.z + 1)],
-			[DARK_SIDE, DARK_INSET] if x_face_on_left else [LIGHT_SIDE, LIGHT_INSET]])
-		faces.append([[Vector3(c.x, fy, c.z), Vector3(c.x + 1, fy, c.z), Vector3(c.x + 1, fy, c.z + 1), Vector3(c.x, fy, c.z + 1)],
-			[LIGHT_SIDE, LIGHT_INSET] if x_face_on_left else [DARK_SIDE, DARK_INSET]])
-		faces.append([[Vector3(c.x, c.y, c.z + 1), Vector3(c.x + 1, c.y, c.z + 1), Vector3(c.x + 1, c.y + 1, c.z + 1), Vector3(c.x, c.y + 1, c.z + 1)],
-			[TOP_COLOR, TOP_INSET]])
+		faces.append(
+			[
+				[
+					Vector3(fx, c.y, c.z),
+					Vector3(fx, c.y + 1, c.z),
+					Vector3(fx, c.y + 1, c.z + 1),
+					Vector3(fx, c.y, c.z + 1)
+				],
+				[DARK_SIDE, DARK_INSET] if x_face_on_left else [LIGHT_SIDE, LIGHT_INSET]
+			]
+		)
+		faces.append(
+			[
+				[
+					Vector3(c.x, fy, c.z),
+					Vector3(c.x + 1, fy, c.z),
+					Vector3(c.x + 1, fy, c.z + 1),
+					Vector3(c.x, fy, c.z + 1)
+				],
+				[LIGHT_SIDE, LIGHT_INSET] if x_face_on_left else [DARK_SIDE, DARK_INSET]
+			]
+		)
+		faces.append(
+			[
+				[
+					Vector3(c.x, c.y, c.z + 1),
+					Vector3(c.x + 1, c.y, c.z + 1),
+					Vector3(c.x + 1, c.y + 1, c.z + 1),
+					Vector3(c.x, c.y + 1, c.z + 1)
+				],
+				[TOP_COLOR, TOP_INSET]
+			]
+		)
 
 	var polys: Array = []
 	var lo := Vector2(INF, INF)

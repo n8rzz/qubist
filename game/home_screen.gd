@@ -6,18 +6,18 @@ extends Control
 ## The sky, island and drifting particles follow the season and time of day
 ## (#168); at night the wordmark and How to play turn light.
 
+signal new_game_pressed
+signal continue_pressed
+signal stats_pressed
+signal settings_pressed
+signal how_to_play_pressed
+
 const UI := preload("res://game/ui_style.gd")
 const IconButton := preload("res://game/icon_button.gd")
 const SkyBackdrop := preload("res://game/sky_backdrop.gd")
 const SkyView := preload("res://game/sky_view.gd")
 const SkyWeather := preload("res://game/sky_weather.gd")
 const HomeTowerArt := preload("res://game/home_tower_art.gd")
-
-signal new_game_pressed
-signal continue_pressed
-signal stats_pressed
-signal settings_pressed
-signal how_to_play_pressed
 
 const ACCENT_SHADOW := Color("#123D50")
 const CARD_SHADOW := UI.CARD_SHADOW
@@ -29,10 +29,20 @@ const GAP := 16
 ## The stack shown on the island when there's no game to continue and
 ## Reduce Motion is on.
 const SAMPLE_CELLS: Array[Vector3i] = [
-	Vector3i(1, 1, 0), Vector3i(2, 1, 0), Vector3i(3, 1, 0), Vector3i(1, 2, 0),
-	Vector3i(1, 3, 0), Vector3i(3, 3, 0), Vector3i(4, 3, 0), Vector3i(4, 4, 0),
-	Vector3i(2, 4, 0), Vector3i(1, 1, 1), Vector3i(2, 1, 1), Vector3i(1, 2, 1),
-	Vector3i(1, 1, 2), Vector3i(4, 4, 1),
+	Vector3i(1, 1, 0),
+	Vector3i(2, 1, 0),
+	Vector3i(3, 1, 0),
+	Vector3i(1, 2, 0),
+	Vector3i(1, 3, 0),
+	Vector3i(3, 3, 0),
+	Vector3i(4, 3, 0),
+	Vector3i(4, 4, 0),
+	Vector3i(2, 4, 0),
+	Vector3i(1, 1, 1),
+	Vector3i(2, 1, 1),
+	Vector3i(1, 2, 1),
+	Vector3i(1, 1, 2),
+	Vector3i(4, 4, 1),
 ]
 
 var stats_button: IconButton
@@ -77,7 +87,9 @@ func _init() -> void:
 
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", 6)
-	var wordmark: Label = SkyView.ink(UI.label("Qubist", 68, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
+	var wordmark: Label = (
+		SkyView.ink(UI.label("Qubist", 68, UI.SKY_INK, HORIZONTAL_ALIGNMENT_CENTER)) as Label
+	)
 	wordmark.add_theme_font_override("font", UI.title_font(600))
 	title.add_child(wordmark)
 	best_pill = _best_pill()
@@ -157,8 +169,7 @@ func _best_pill() -> Control:
 	var pill := PanelContainer.new()
 	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pill.add_theme_stylebox_override("panel",
-		UI.box(Color(1, 1, 1, 0.85), 999, Vector2(14, 6)))
+	pill.add_theme_stylebox_override("panel", UI.box(Color(1, 1, 1, 0.85), 999, Vector2(14, 6)))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	var crown := Control.new()
@@ -178,7 +189,15 @@ func _draw_crown(on: Control) -> void:
 	# The design's 24-unit crown, scaled into the 14-point box.
 	var k := on.size.x / 24.0
 	var points := PackedVector2Array()
-	for p in [Vector2(4, 17), Vector2(3, 8), Vector2(8, 12), Vector2(12, 6), Vector2(16, 12), Vector2(21, 8), Vector2(20, 17)]:
+	for p in [
+		Vector2(4, 17),
+		Vector2(3, 8),
+		Vector2(8, 12),
+		Vector2(12, 6),
+		Vector2(16, 12),
+		Vector2(21, 8),
+		Vector2(20, 17)
+	]:
 		points.append(p * k)
 	on.draw_colored_polygon(points, CROWN)
 	points.append(points[0])
@@ -203,4 +222,3 @@ static func _card(color: Color, radius: int, shadow: Color, drop: int) -> StyleB
 	b.shadow_size = 1
 	b.shadow_offset = Vector2(0, drop)
 	return b
-
