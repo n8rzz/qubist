@@ -1,7 +1,7 @@
 extends Control
 ## The tower on its floating island, drawn flat in 2D for the Home screen
 ## (#72): earth underside, brick rim, grass, a water channel, the 6×6 floor,
-## a dashed outline of the tower and stone cubes in it.
+## the outline of the tower and stone cubes in it.
 ##
 ## Shapes follow the Home design, in its units: a cube edge runs 17.32 across
 ## and 10 down per cell, and 20 up per layer, with the floor's back corner at
@@ -51,8 +51,10 @@ const BUSH := Color("#5E9E3A")
 const BUSH_LIGHT := Color("#76B84A")
 const BUSH_SHADOW := Color(40 / 255.0, 70 / 255.0, 30 / 255.0, 0.25)
 const ROCK := Color("#C9C1B3")
-const OUTLINE_BACK := Color(1, 1, 1, 0.9)
-const OUTLINE_FRONT := Color(1, 1, 1, 0.55)
+## The tower's bounding box, drawn the same here and in the game (#278):
+## grey by day, ice blue (SkyView.NIGHT_ACCENT_INK) at night (#253).
+const GUIDE_COLOR := Color(0.45, 0.45, 0.45, 0.55)
+const GUIDE_NIGHT_COLOR := Color("#8CCBE6", 0.65)
 
 const CUBE_TOP := Color("#ECE7DD")
 const CUBE_TOP_INSET := Color("#F6F2EA")
@@ -171,6 +173,11 @@ func _bush(base: Vector2, k: float) -> void:
 	draw_circle(top - Vector2(2.1, 2.1) * k, 4.62 * k, paint(BUSH_LIGHT))
 
 
+## The bounding box's colour for the time of day.
+static func guide_color() -> Color:
+	return GUIDE_COLOR.lerp(GUIDE_NIGHT_COLOR, SkyView.night_amount())
+
+
 ## The tower's back edges, behind the cubes.
 func _draw_outline_back() -> void:
 	var h := GRID.z
@@ -182,10 +189,10 @@ func _draw_outline_back() -> void:
 		[iso(GRID.x, 0, 0), iso(GRID.x, 0, h)],
 		[iso(0, GRID.y, 0), iso(0, GRID.y, h)],
 	]:
-		draw_dashed_line(line[0], line[1], OUTLINE_BACK, 0.9, 4.4)
+		draw_line(line[0], line[1], guide_color(), 0.9, true)
 
 
-## The tower's front edges, faint, over the cubes.
+## The tower's front edges, over the cubes.
 func _draw_outline_front() -> void:
 	var h := GRID.z
 	var top_front := iso(GRID.x, GRID.y, h)
@@ -194,7 +201,7 @@ func _draw_outline_front() -> void:
 		[iso(GRID.x, 0, h), top_front],
 		[iso(0, GRID.y, h), top_front],
 	]:
-		draw_dashed_line(line[0], line[1], OUTLINE_FRONT, 0.9, 4.4)
+		draw_line(line[0], line[1], guide_color(), 0.9, true)
 
 
 ## Draws one cube; `alpha` fades it (the loading view's falling cubes, #69).
