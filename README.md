@@ -42,7 +42,7 @@ godot --headless --path . --script res://tests/run_tests.gd
 
 A test fails if one of its checks fails or if it hits a script error, such as a call on a null value. Warnings and `push_error()` messages don't fail a test, since some tests trigger them on purpose.
 
-A smoke test loads the game screen headless and plays moves through the real drag path:
+A smoke test loads the game screen headless, plays moves through the real drag path, places a piece with touch events and checks that backgrounding or closing the app saves the game:
 
 ```sh
 godot --headless --path . --script res://tests/smoke_main.gd

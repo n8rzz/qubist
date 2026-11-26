@@ -18,6 +18,8 @@ const Analytics := preload("res://core/analytics.gd")
 const HintToast := preload("res://game/hint_toast.gd")
 const SettingsSheet := preload("res://game/settings_sheet.gd")
 const SkyView := preload("res://game/sky_view.gd")
+const ViewMath := preload("res://game/view_math.gd")
+const DragController := preload("res://game/drag_controller.gd")
 
 var main
 var frame := 0
@@ -70,12 +72,142 @@ func _process(_delta: float) -> bool:
 	elif frame == 20:
 		_check_reduce_motion()
 	elif frame == 21:
+		_check_lifecycle()
+	elif frame == 22:
+		_check_touch_input()
+	elif frame == 23:
 		# Free the screen and give the audio thread a moment to drop its
 		# sounds (#26) before quitting, or they show up as leaks at exit.
 		main.queue_free()
 		create_timer(0.25).timeout.connect(
 			saves.finish.bind(self, failures, "game screen smoke test"))
 	return false
+
+
+## Going to the background, losing focus and closing each save the game and
+## camera. Going to the background and closing also send game_quit, once per
+## game; losing focus doesn't, and the tutorial does neither (#291).
+func _check_lifecycle() -> void:
+	var saving := {
+		"pause": Node.NOTIFICATION_APPLICATION_PAUSED,
+		"focus loss": Node.NOTIFICATION_APPLICATION_FOCUS_OUT,
+		"close": Node.NOTIFICATION_WM_CLOSE_REQUEST,
+	}
+	var quitting := ["pause", "close"]
+	for what in saving:
+		_start_plain_game()
+		var quits := _quit_count()
+		main.notification(saving[what])
+		if _quit_count() != quits:
+			failures.append("%s: game_quit sent for a game with no moves" % what)
+		if not main.autoplay_one_move():
+			failures.append("%s: could not place a piece" % what)
+			continue
+		main.finish_animations()
+		# Turning doesn't save by itself, so only the notification can have
+		# written this view.
+		main.turn(1, true)
+		SaveFile.remove(saves.game_path)
+		main.notification(saving[what])
+		var saved := SaveFile.read(saves.game_path)
+		var current = JSON.parse_string(JSON.stringify(main.game.to_dict()))
+		if saved.get("game") != current:
+			failures.append("%s did not save the game" % what)
+		if int(saved.get("view", {}).get("step", -1)) != main.tower.rig.view_step():
+			failures.append("%s did not save the camera" % what)
+		var expected := quits + (1 if what in quitting else 0)
+		if _quit_count() != expected:
+			failures.append("%s sent game_quit %d times" % [what, _quit_count() - quits])
+		elif what in quitting:
+			var props: Dictionary = main.analytics.backend.events.back()[1]
+			if props.get("reason") != Analytics.QUIT_BACKGROUNDED:
+				failures.append("%s sent game_quit with reason %s" % [what, props.get("reason")])
+		main.notification(saving[what])
+		if _quit_count() != expected:
+			failures.append("a second %s sent game_quit again" % what)
+
+	_start_plain_game()
+	main.autoplay_one_move()
+	main.finish_animations()
+	main.start_tutorial()
+	var before := FileAccess.get_file_as_string(saves.game_path)
+	var quits_before := _quit_count()
+	for what in saving:
+		main.notification(saving[what])
+	if FileAccess.get_file_as_string(saves.game_path) != before:
+		failures.append("backgrounding during the tutorial overwrote the saved game")
+	if _quit_count() != quits_before:
+		failures.append("backgrounding during the tutorial sent game_quit")
+	main.tutorial.skip()
+
+
+func _quit_count() -> int:
+	return main.analytics.backend.names().count("game_quit")
+
+
+## A new game on screen, with Home and the tutorial out of the way.
+func _start_plain_game() -> void:
+	main.show_home()
+	main.home.new_game_button.pressed.emit()
+	if main.tutorial.is_active():
+		main.tutorial.skip()
+
+
+## A finger on a tray slot drags its piece onto the tower and places it, and
+## one lifted off the tower puts the piece back. The events go in through
+## Input, as a phone's do, so the slot's press handler and the screen's
+## _input are both part of it (#291).
+func _check_touch_input() -> void:
+	_start_plain_game()
+	var slot: Vector2 = main.tray_slots[0].get_global_rect().get_center()
+	var piece = main.game.tray[0]
+	var origins: Array = main.drag.snap_origins(piece)
+	var origin: Vector3i = origins[origins.size() >> 1]
+	var center := ViewMath.cells_center(piece.cells_at(origin), main.config.grid_size)
+	var over_tower: Vector2 = main.viewport_box.get_global_rect().position \
+		+ main.tower.project_point(center) + Vector2(0, DragController.LIFT)
+
+	_touch(slot, true)
+	if not main.drag.is_dragging():
+		failures.append("touching a tray slot did not start a drag")
+		_touch(slot, false)
+		return
+	_touch_drag(slot, over_tower)
+	_touch(slot, false)
+	if main.drag.is_dragging():
+		failures.append("lifting the finger did not end the drag")
+	if main.game.moves != 0 or main.game.tray[0] != piece:
+		failures.append("a piece let go back on the tray was placed")
+	if main.tray_previews[0].modulate.a != 1.0:
+		failures.append("a piece put back stayed dimmed in its slot")
+
+	_touch(slot, true)
+	_touch_drag(slot, over_tower)
+	# Before the finger lifts: the piece follows it, floating just above.
+	var floating: Vector2 = main.drag_preview.position + main.drag_preview.size * 0.5
+	if floating.distance_to(over_tower - Vector2(0, DragController.LIFT)) > 1.0:
+		failures.append("the dragged piece did not follow the finger")
+	_touch(over_tower, false)
+	if main.game.moves != 1 or main.game.tray[0] != null:
+		failures.append("dragging a piece onto the tower did not place it")
+	main.finish_animations()
+
+
+## A finger down or up at `at`, in screen points.
+func _touch(at: Vector2, pressed: bool) -> void:
+	var event := InputEventScreenTouch.new()
+	event.position = root.get_final_transform() * at
+	event.pressed = pressed
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()
+
+
+func _touch_drag(from: Vector2, to: Vector2) -> void:
+	for i in range(1, 6):
+		var event := InputEventScreenDrag.new()
+		event.position = root.get_final_transform() * from.lerp(to, i / 5.0)
+		Input.parse_input_event(event)
+		Input.flush_buffered_events()
 
 
 ## Under Reduce Motion (#116) nothing drops, flies, shakes or slides, and the

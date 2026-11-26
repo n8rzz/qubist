@@ -10,8 +10,8 @@ extends SceneTree
 
 const SmokeSaves := preload("res://tests/support/smoke_saves.gd")
 ## Shorter than the real minimum so the test doesn't wait 3 s, but long
-## enough that the game is ready well before it.
-const MIN_SECONDS := 0.6
+## enough that the game is ready well before it, even on a slow machine.
+const MIN_SECONDS := 2.0
 const TIMEOUT_MSEC := 15000
 const WHAT := "loading view hands off to Home after its minimum time"
 
