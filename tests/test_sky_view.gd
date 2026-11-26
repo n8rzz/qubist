@@ -381,14 +381,16 @@ func test_night_cards_follow_the_fade() -> void:
 	var b := SkyView.by_night(UI.icon_button("home", "Home"))
 	SkyView.show("summer", "night")
 	SkyView._changed_msec = Time.get_ticks_msec() - int(SkyView.CROSSFADE_SECONDS * 500.0)
-	var night := SkyView.night_amount()
-	check(night > 0.0 and night < 1.0, "mid-fade")
+	# The fade runs on the real clock, so recolor() reads an amount between
+	# these two.
+	var before := SkyView.night_amount()
 	SkyView.recolor([b])
-	var expected := UI.WHITE.lerp(SkyView.NIGHT_CARD, night)
-	check(
-		(b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color.is_equal_approx(expected),
-		"part way to navy"
-	)
+	var after := SkyView.night_amount()
+	check(before > 0.0 and after < 1.0, "mid-fade")
+	var painted := (b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color
+	var amount := inverse_lerp(UI.WHITE.r, SkyView.NIGHT_CARD.r, painted.r)
+	check(amount > before - 0.001 and amount < after + 0.001, "as far as the fade")
+	check(painted.is_equal_approx(UI.WHITE.lerp(SkyView.NIGHT_CARD, amount)), "part way to navy")
 	b.free()
 	_reset()
 
