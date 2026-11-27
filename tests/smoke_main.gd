@@ -431,9 +431,15 @@ func _check_home() -> void:
 		failures.append("Home offered Continue with no game to resume")
 	if not main.home.island.is_animating():
 		failures.append("Home's island did not play its tower loop with no game to resume")
+	if main.perf_monitor != null:
+		failures.append("the perf monitor (#321) ran headless")
+	if main.perf_scene() != "home":
+		failures.append("perf_scene() on Home was %s" % main.perf_scene())
 	main.home.new_game_button.pressed.emit()
 	if main.home.visible or main.menu_open():
 		failures.append("New game did not leave Home")
+	if main.perf_scene() != "tutorial":
+		failures.append("perf_scene() in the first-run tutorial was %s" % main.perf_scene())
 	if main.game == null or main.game.moves != 0:
 		failures.append("New game did not start a fresh game")
 	_check_tutorial()
