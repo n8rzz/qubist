@@ -42,10 +42,10 @@ jobs:
         run: |
           base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
           name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          curl -fsSL -o godot.zip "$base/$name.zip"
+          curl -fsSL -o "$name.zip" "$base/$name.zip"
           curl -fsSL -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
           grep "$name.zip" SHA512-SUMS.txt | sha512sum -c -
-          unzip -q godot.zip
+          unzip -q "$name.zip"
           mv "$name" godot
           chmod +x godot
           ./godot --version
