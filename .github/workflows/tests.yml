@@ -5,13 +5,16 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint and format
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -33,14 +36,16 @@ jobs:
     env:
       GODOT_VERSION: ${{ vars.GODOT_VERSION || '4.7.2' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download Godot
         run: |
           base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
           name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          curl -fsSL -o godot.zip "$base/$name.zip"
-          unzip -q godot.zip
+          curl -fsSL -o "$name.zip" "$base/$name.zip"
+          curl -fsSL -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+          grep "$name.zip" SHA512-SUMS.txt | sha512sum -c -
+          unzip -q "$name.zip"
           mv "$name" godot
           chmod +x godot
           ./godot --version
