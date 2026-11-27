@@ -32,6 +32,7 @@ const HintToast := preload("res://game/hint_toast.gd")
 const Analytics := preload("res://core/analytics.gd")
 const ErrorReporter := preload("res://game/error_reporter.gd")
 const FramePacer := preload("res://game/frame_pacer.gd")
+const PerfMonitor := preload("res://game/perf_monitor.gd")
 
 # Layout, in points (one point is one pixel of the 390×844 base viewport).
 const GAP := 8
@@ -75,6 +76,10 @@ var analytics: Analytics = Analytics.new()
 ## The in-progress game and camera, saved after every placement and when the
 ## app goes to the background, and resumed on launch (#18).
 var game_save_path := "user://game.json"
+## Adds the perf monitor (#321): debug builds with a screen only, so release
+## builds and the headless tests never run it.
+var perf_enabled := OS.is_debug_build() and DisplayServer.get_name() != "headless"
+var perf_monitor: PerfMonitor
 ## The "+points" pop, the combo/streak banner and the header count-up.
 var score_feedback := ScoreFeedback.new(self)
 ## The score the header shows; trails game.score while the counter ticks up.
@@ -155,6 +160,9 @@ func _ready() -> void:
 	drag.target_changed.connect(_refresh_blocks)
 	drag.dropped.connect(_place)
 	_build_ui()
+	if perf_enabled:
+		perf_monitor = PerfMonitor.new(perf_scene, viewport_box.get_child(0))
+		add_child(perf_monitor)
 	if not resume_game():
 		new_game()
 	show_home()
@@ -572,6 +580,25 @@ func menu_open() -> bool:
 		or (stats_screen != null and stats_screen.visible)
 		or (home != null and home.visible)
 	)
+
+
+## What is on screen, for the perf monitor's log (#321).
+func perf_scene() -> String:
+	if home != null and home.visible:
+		return "home"
+	if stats_screen != null and stats_screen.visible:
+		return "stats"
+	if settings_sheet != null and settings_sheet.visible:
+		return "settings"
+	if game_over_card != null and game_over_card.visible:
+		return "game_over"
+	if tutorial.is_active():
+		return "tutorial"
+	if drag.is_dragging():
+		return "drag"
+	if FramePacer.current_target() == FramePacer.ACTIVE_FPS:
+		return "game_active"
+	return "game_idle"
 
 
 ## True if there's a game worth resuming: started and not over.

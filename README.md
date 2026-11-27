@@ -13,7 +13,7 @@ The product requirements live in Notion (Qubist › PRD and Concept wireframes).
 | `game/` | The greybox game screen: layout, 3D tower view, camera, piece previews and touch input. Builds its UI in code. |
 | `assets/` | The app icon, the Fredoka and Inter fonts (`assets/fonts/`, each with its OFL license), the sound effects and music (`assets/audio/`, with every source and license in `CREDITS.md`) and `ui_theme.tres`, the project theme that makes Inter the default font. |
 | `scenes/` | `loading.tscn`, the loading view the app starts in, and `main.tscn`, the game screen it hands off to (opening on Home). |
-| `tools/` | `simulate.gd`, which plays many games with bots to check game length and score spread. Results and the chosen config values are in [docs/tuning.md](docs/tuning.md). |
+| `tools/` | `simulate.gd`, which plays many games with bots to check game length and score spread (results and the chosen config values are in [docs/tuning.md](docs/tuning.md)), and `benchmark.gd`, which times the per-frame CPU work headless. How to measure performance, on a desktop and on the device, is in [docs/performance.md](docs/performance.md). |
 | `tests/` | Unit tests for everything in `core/`, with a small built-in runner (no add-ons needed). |
 
 ## Coordinates
